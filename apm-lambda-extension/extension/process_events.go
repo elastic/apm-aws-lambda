@@ -43,7 +43,7 @@ func ProcessEvents(
 			log.Println("Waiting for event...")
 			res, err := extensionClient.NextEvent(ctx)
 			if err != nil {
-				log.Printf("Error: %v\n")
+				log.Printf("Error: %v\n", err)
 				log.Println("Exiting")
 				return
 			}

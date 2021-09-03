@@ -1,11 +1,13 @@
 package extension
 
-import "fmt"
-import "net/http"
-import "time"
-import "io/ioutil"
-import "bytes"
-import "compress/gzip"
+import (
+	"bytes"
+	"compress/gzip"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"time"
+)
 
 type serverHandler struct {
 	data chan []byte
@@ -65,12 +67,12 @@ func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func NewHttpServer() chan []byte {
+func NewHttpServer(config *extensionConfig) chan []byte {
 	dataChannel := make(chan []byte)
 	var handler = serverHandler{data: dataChannel}
 	// todo: use configured port value?
 	s := &http.Server{
-		Addr:           ":8200",
+		Addr:           config.dataReceiverServerPort,
 		Handler:        &handler,
 		ReadTimeout:    15 * time.Second,
 		WriteTimeout:   15 * time.Second,
