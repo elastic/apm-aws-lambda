@@ -7,17 +7,17 @@ import "io/ioutil"
 import "bytes"
 import "compress/gzip"
 
-type serverHandler struct{
+type serverHandler struct {
 	data chan []byte
 }
 
 func contains(haystack []string, needle string) bool {
-    for _, value := range haystack {
-        if value == needle {
-            return true
-        }
-    }
-    return false
+	for _, value := range haystack {
+		if value == needle {
+			return true
+		}
+	}
+	return false
 }
 
 func getDecompressedBytesFromRequest(r *http.Request) ([]byte, error) {
@@ -29,18 +29,18 @@ func getDecompressedBytesFromRequest(r *http.Request) ([]byte, error) {
 	// decompress
 	var bodyBytes []byte
 	var err2 error
-	if(contains(r.Header["Content-Encoding"], "gzip")) {
+	if contains(r.Header["Content-Encoding"], "gzip") {
 		reader := bytes.NewReader([]byte(rawBytes))
-		gzreader, err1 := gzip.NewReader(reader);
-		if(err1 != nil){
-				fmt.Println("could not create gzip.NewReader")
-				return nil, err1
+		gzreader, err1 := gzip.NewReader(reader)
+		if err1 != nil {
+			fmt.Println("could not create gzip.NewReader")
+			return nil, err1
 		}
 
-		bodyBytes, err2 = ioutil.ReadAll(gzreader);
-		if(err2 != nil){
-				fmt.Println("could not create ioutil.ReadAll")
-				return nil, err2
+		bodyBytes, err2 = ioutil.ReadAll(gzreader)
+		if err2 != nil {
+			fmt.Println("could not create ioutil.ReadAll")
+			return nil, err2
 		}
 		// end decompress
 	} else {
@@ -49,11 +49,11 @@ func getDecompressedBytesFromRequest(r *http.Request) ([]byte, error) {
 	return bodyBytes, nil
 }
 
-func(handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if "/intake/v2/events" == r.URL.Path {
 		bodyBytes, err := getDecompressedBytesFromRequest(r)
 		if nil != err {
-			fmt.Printf("could not get bytes from body")
+			fmt.Println("could not get bytes from body")
 		} else {
 			handler.data <- bodyBytes
 		}
@@ -65,17 +65,17 @@ func(handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func NewHttpServer() (chan []byte){
-		dataChannel := make(chan []byte)
-		var handler = serverHandler{data: dataChannel}
-		// todo: use configured port value?
-		s := &http.Server{
-			Addr:           ":8200",
-			Handler:        &handler,
-			ReadTimeout:    15 * time.Second,
-			WriteTimeout:   15 * time.Second,
-			MaxHeaderBytes: 1 << 20,
-		}
-		go s.ListenAndServe()
-		return handler.data
+func NewHttpServer() chan []byte {
+	dataChannel := make(chan []byte)
+	var handler = serverHandler{data: dataChannel}
+	// todo: use configured port value?
+	s := &http.Server{
+		Addr:           ":8200",
+		Handler:        &handler,
+		ReadTimeout:    15 * time.Second,
+		WriteTimeout:   15 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+	go s.ListenAndServe()
+	return handler.data
 }
