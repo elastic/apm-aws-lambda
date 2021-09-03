@@ -20,12 +20,6 @@ var (
 )
 
 /* --- elastic vars  --- */
-var (
-	apmServerEndpoint    string
-	apmServerSecretToken string
-)
-
-/* --- elastic vars  --- */
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
