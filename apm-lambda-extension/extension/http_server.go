@@ -1,4 +1,4 @@
-package main
+package extension
 
 import "fmt"
 import "net/http"
@@ -65,23 +65,17 @@ func(handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func main() {
+func NewHttpServer() (chan []byte){
 		dataChannel := make(chan []byte)
 		var handler = serverHandler{data: dataChannel}
+		// todo: use configured port value?
 		s := &http.Server{
-			Addr:           ":8080",
+			Addr:           ":8200",
 			Handler:        &handler,
 			ReadTimeout:    15 * time.Second,
 			WriteTimeout:   15 * time.Second,
 			MaxHeaderBytes: 1 << 20,
 		}
 		go s.ListenAndServe()
-
-		for (true) {
-			select {
-				case agentBytes := <-handler.data:
-					fmt.Println("Reading from Channel")
-					fmt.Println(agentBytes)
-			}
-		}
+		return handler.data
 }

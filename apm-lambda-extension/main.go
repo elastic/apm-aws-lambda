@@ -3,7 +3,6 @@
 
 package main
 
-// import "time"
 import "log"
 import "bytes"
 import "compress/gzip"
@@ -60,8 +59,8 @@ func main() {
 	// pulls ELASTIC_ env variable into globals for easy access
 	processEnv()
 	// setup named/fifo pipe for data and get a channel into that pipe
-	dataChannel := setupNamedSocket()
-
+	// dataChannel := setupNamedSocket()
+	dataChannel := extension.NewHttpServer()
 	// Will block until shutdown event is received or cancelled via the context.
 	processEvents(ctx, dataChannel)
 }
@@ -167,7 +166,7 @@ func postToApmServer(postBody []byte) {
 
 	//Read the response body
 	defer resp.Body.Close()
-	println(printPrefix, "reading request body")
+	println(printPrefix, "reading response body")
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		println(printPrefix, "there was an error reading the resp body")
