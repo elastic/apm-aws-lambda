@@ -43,8 +43,8 @@ func pollSocketForData() []byte {
 	return bytes
 }
 
-func close(thing io.Closer) {
-	err := thing.Close()
+func close(io io.Closer) {
+	err := io.Close()
 	if err != nil {
 		log.Println(err)
 	}
