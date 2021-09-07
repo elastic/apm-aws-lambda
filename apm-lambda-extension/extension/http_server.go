@@ -54,7 +54,7 @@ func getDecompressedBytesFromRequest(r *http.Request) ([]byte, error) {
 func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if "/intake/v2/events" == r.URL.Path {
 		bodyBytes, err := getDecompressedBytesFromRequest(r)
-		if nil != err {
+		if err != nil {
 			fmt.Println("could not get bytes from body")
 		} else {
 			handler.data <- bodyBytes
