@@ -27,6 +27,11 @@ func TestNewPersonPositiveAge(t *testing.T) {
 		t.Fail()
 	}
 
+	if config.dataReceiverTimeoutSeconds != 15 {
+		t.Log("Default timeout not set correctly")
+		t.Fail()
+	}
+
 	os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", ":8201")
 	config = ProcessEnv()
 	if config.dataReceiverServerPort != ":8201" {
@@ -34,4 +39,17 @@ func TestNewPersonPositiveAge(t *testing.T) {
 		t.Fail()
 	}
 
+	os.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "10")
+	config = ProcessEnv()
+	if config.dataReceiverTimeoutSeconds != 10 {
+		t.Log("Timeout not set correctly")
+		t.Fail()
+	}
+
+	os.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "foo")
+	config = ProcessEnv()
+	if config.dataReceiverTimeoutSeconds != 15 {
+		t.Log("Timeout not set correctly")
+		t.Fail()
+	}
 }
