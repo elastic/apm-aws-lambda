@@ -63,8 +63,7 @@ func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 }
 
-func NewHttpServer(config *extensionConfig) chan []byte {
-	dataChannel := make(chan []byte)
+func NewHttpServer(dataChannel chan []byte, config *extensionConfig) *http.Server {
 	var handler = serverHandler{data: dataChannel}
 	s := &http.Server{
 		Addr:           config.dataReceiverServerPort,
@@ -74,5 +73,5 @@ func NewHttpServer(config *extensionConfig) chan []byte {
 		MaxHeaderBytes: 1 << 20,
 	}
 	go s.ListenAndServe()
-	return handler.data
+	return s
 }

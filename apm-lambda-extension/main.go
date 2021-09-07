@@ -45,7 +45,8 @@ func main() {
 
 	// setup http server to receive data from agent
 	// and get a channel to listen for that data
-	dataChannel := extension.NewHttpServer(config)
+	dataChannel := make(chan []byte)
+	extension.NewHttpServer(dataChannel, config)
 
 	// processEvents will block until shutdown event is received or cancelled via the context.
 	extension.ProcessEvents(ctx, dataChannel, extensionClient, config)
