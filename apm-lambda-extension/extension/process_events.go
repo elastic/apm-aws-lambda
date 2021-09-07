@@ -11,7 +11,7 @@ func processShutdown() {
 	log.Println("Exiting")
 }
 
-func processNonShutdownEvent(dataChannel chan []byte, config *extensionConfig) {
+func processEvent(dataChannel chan []byte, config *extensionConfig) {
 	// Wait for agent to send data to the channel
 	//
 	// to do: this will hang if the lambda times out or crashes or the agent
@@ -56,7 +56,7 @@ func ProcessEvents(
 				return
 			}
 
-			processNonShutdownEvent(dataChannel, config)
+			processEvent(dataChannel, config)
 		}
 	}
 }
