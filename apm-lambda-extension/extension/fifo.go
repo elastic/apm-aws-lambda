@@ -14,7 +14,7 @@ var (
 
 func setupNamedSocket() chan []byte {
 	err := syscall.Mkfifo(socketPath, 0666)
-	if nil != err {
+	if err != nil {
 		log.Printf("error creating pipe %v\n", err)
 	}
 	dataChannel := make(chan []byte)
