@@ -53,24 +53,19 @@ func getDecompressedBytesFromRequest(r *http.Request) ([]byte, error) {
 
 func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if "/intake/v2/events" == r.URL.Path {
-		bodyBytes, err := getDecompressedBytesFromRequest(r)
-		if nil != err {
-			fmt.Println("could not get bytes from body")
-		} else {
-			handler.data <- bodyBytes
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
-	} else {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("404"))
+		handleIntakeV2Events(handler, w, r)
+		return
 	}
+
+	// if we have not yet returned, 404
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte("404"))
+
 }
 
 func NewHttpServer(config *extensionConfig) chan []byte {
 	dataChannel := make(chan []byte)
 	var handler = serverHandler{data: dataChannel}
-	// todo: use configured port value?
 	s := &http.Server{
 		Addr:           config.dataReceiverServerPort,
 		Handler:        &handler,
