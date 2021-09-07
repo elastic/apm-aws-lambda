@@ -61,7 +61,7 @@ pipeline {
           }
         }
         stages {
-          stage('build'){
+          stage('Build'){
             steps {
               withGithubNotify(context: "Build-${GO_VERSION}-${PLATFORM}") {
                 deleteDir()
