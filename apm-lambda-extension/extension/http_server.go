@@ -65,11 +65,12 @@ func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 func NewHttpServer(dataChannel chan []byte, config *extensionConfig) *http.Server {
 	var handler = serverHandler{data: dataChannel}
+	timeout := time.Duration(config.dataReceiverTimeoutSeconds) * time.Second
 	s := &http.Server{
 		Addr:           config.dataReceiverServerPort,
 		Handler:        &handler,
-		ReadTimeout:    15 * time.Second,
-		WriteTimeout:   15 * time.Second,
+		ReadTimeout:    timeout,
+		WriteTimeout:   timeout,
 		MaxHeaderBytes: 1 << 20,
 	}
 	go s.ListenAndServe()
