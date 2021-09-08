@@ -3,7 +3,7 @@
 @Library('apm@current') _
 
 pipeline {
-  agent { label 'ubuntu-20 && immutable' }
+  agent { label 'ubuntu-18 && immutable' }
   environment {
     REPO = 'apm-aws-lambda'
     BASE_DIR = "src/github.com/elastic/${env.REPO}"
@@ -53,7 +53,7 @@ pipeline {
         axes {
           axis {
             name 'PLATFORM'
-            values 'macosx && x86_64', 'ubuntu-20 && immutable', 'windows-2019 && windows-immutable'
+            values 'macosx && x86_64', 'ubuntu-18 && immutable', 'windows-2019 && windows-immutable'
           }
           axis {
             name 'GO_VERSION'
