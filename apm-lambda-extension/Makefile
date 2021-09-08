@@ -7,3 +7,6 @@ build-GoExampleExtensionLayer:
 
 run-GoExampleExtensionLayer:
 	go run apm-lambda-extension/main.go
+
+test:
+	go test extension/*.go -v
