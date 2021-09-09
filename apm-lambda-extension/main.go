@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"elastic/apm-lambda-extension/extension"
+	"elastic/apm-lambda-extension/logsapi"
 )
 
 var (
@@ -48,6 +49,61 @@ func main() {
 	dataChannel := make(chan []byte)
 	extension.NewHttpServer(dataChannel, config)
 
-	// processEvents will block until shutdown event is received or cancelled via the context.
-	extension.ProcessEvents(ctx, dataChannel, extensionClient, config)
+	// Make channel for collecting logs coming in as HTTP requests
+	logsChannel := make(chan string)
+
+	// Subscribe to the Logs API
+	logsapi.Subscribe(extensionClient.ExtensionID, []logsapi.EventType{logsapi.Platform})
+
+	// Create an http server to listen for log event requests
+	logsApiListener, err := logsapi.NewLogsApiHttpListener(logsChannel)
+	if err != nil {
+		println("Error while creating Logs API listener: %v", err)
+	}
+
+	// Start the http server
+	_, err = logsApiListener.Start()
+	if err != nil {
+		println("Error while starting Logs API listener: %v", err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			// call Next method of extension API.  This long polling HTTP method
+			// will block until there's an invocation of the function
+			log.Println("Waiting for event...")
+			res, err := extensionClient.NextEvent(ctx)
+			if err != nil {
+				log.Printf("Error: %v\n", err)
+				log.Println("Exiting")
+				return
+			}
+			log.Printf("Received event: %v\n", extension.PrettyPrint(res))
+
+			// A shutdown event indicates the execution enviornment is shutting down.
+			// This is usually due to inactivity.
+			if res.EventType == extension.Shutdown {
+				extension.ProcessShutdown()
+				return
+			}
+
+			// // wait for platform.runtimeDone event
+			// logsapi.waitForRuntimeDone()
+			// // send to APM server
+			// extension.ProcessAPMData(dataChannel, config)
+
+			go func() {
+				for {
+					logs := <-logsChannel
+					log.Printf("Received logs from Logs API: %v\n", logs)
+
+				}
+			}()
+
+			extension.ProcessAPMData(dataChannel, config)
+		}
+	}
 }
