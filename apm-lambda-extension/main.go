@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"elastic/apm-lambda-extension/extension"
@@ -90,20 +91,17 @@ func main() {
 				return
 			}
 
-			// // wait for platform.runtimeDone event
-			// logsapi.waitForRuntimeDone()
-			// // send to APM server
-			// extension.ProcessAPMData(dataChannel, config)
-
-			go func() {
-				for {
-					logs := <-logsChannel
-					log.Printf("Received logs from Logs API: %v\n", logs)
-
+			for {
+				logs := <-logsChannel
+				log.Printf("Received logs from Logs API: %v\n", logs)
+				if strings.Contains(logs, string(logsapi.RuntimeDone)) {
+					log.Println("Received runtimeDone event")
+					// Flush apm data
+					extension.ProcessAPMData(dataChannel, config)
+					log.Println("Breaking")
+					break
 				}
-			}()
-
-			extension.ProcessAPMData(dataChannel, config)
+			}
 		}
 	}
 }
