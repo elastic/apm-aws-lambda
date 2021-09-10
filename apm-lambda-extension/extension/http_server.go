@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"time"
 )
@@ -74,7 +73,7 @@ func NewHttpServer(dataChannel chan []byte, config *extensionConfig) *http.Serve
 		WriteTimeout:   timeout,
 		MaxHeaderBytes: 1 << 20,
 	}
-	log.Printf("Server started %v\n", s)
+
 	go s.ListenAndServe()
 	return s
 }
