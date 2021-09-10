@@ -2,6 +2,7 @@ package logsapi
 
 import (
 	"context"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -9,15 +10,26 @@ import (
 	"time"
 )
 
+type LogEvent struct {
+	Time   time.Time      `json:"time"`
+	Type   string         `json:"type"`
+	Record LogEventRecord `json:"record"`
+}
+
+type LogEventRecord struct {
+	RequestId string `json:"requestId"`
+	Status    string `json:"status"`
+}
+
 // LogsApiHttpListener is used to listen to the Logs API using HTTP
 type LogsApiHttpListener struct {
 	httpServer *http.Server
 
-	logChannel chan string
+	logChannel chan LogEvent
 }
 
 // NewLogsApiHttpListener returns a LogsApiHttpListener with the given log queue
-func NewLogsApiHttpListener(lc chan string) (*LogsApiHttpListener, error) {
+func NewLogsApiHttpListener(lc chan LogEvent) (*LogsApiHttpListener, error) {
 
 	return &LogsApiHttpListener{
 		httpServer: nil,
@@ -64,8 +76,15 @@ func (h *LogsApiHttpListener) http_handler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Send the log string to the channel
-	h.logChannel <- string(body)
+	var logEvents []LogEvent
+	err = json.Unmarshal(body, &logEvents)
+	if err != nil {
+		log.Println("error unmarshaling log event:", err)
+	}
+	// Send the log events to the channel
+	for _, logEvent := range logEvents {
+		h.logChannel <- logEvent
+	}
 }
 
 func (s *LogsApiHttpListener) Shutdown() {

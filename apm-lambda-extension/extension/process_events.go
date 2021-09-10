@@ -3,6 +3,7 @@ package extension
 import (
 	"encoding/json"
 	"log"
+	"time"
 )
 
 func ProcessShutdown() {
@@ -24,6 +25,8 @@ func ProcessAPMData(dataChannel chan []byte, config *extensionConfig) {
 			config,
 		)
 		log.Println("done with post")
+	case <-time.After(1 * time.Second):
+		log.Println("timed out waiting for APM data")
 	}
 }
 

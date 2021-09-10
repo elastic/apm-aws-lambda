@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 
 	"elastic/apm-lambda-extension/extension"
@@ -51,7 +50,7 @@ func main() {
 	extension.NewHttpServer(dataChannel, config)
 
 	// Make channel for collecting logs coming in as HTTP requests
-	logsChannel := make(chan string)
+	logsChannel := make(chan logsapi.LogEvent)
 
 	// Subscribe to the Logs API
 	logsapi.Subscribe(extensionClient.ExtensionID, []logsapi.EventType{logsapi.Platform})
@@ -91,14 +90,11 @@ func main() {
 				return
 			}
 
-			for {
-				logs := <-logsChannel
-				log.Printf("Received logs from Logs API: %v\n", logs)
-				if strings.Contains(logs, string(logsapi.RuntimeDone)) {
+			for logEvent := range logsChannel {
+				log.Printf("Received log event %v\n", logEvent)
+				if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
 					log.Println("Received runtimeDone event")
-					// Flush apm data
 					extension.ProcessAPMData(dataChannel, config)
-					log.Println("Breaking")
 					break
 				}
 			}
