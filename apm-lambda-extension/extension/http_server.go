@@ -73,7 +73,6 @@ func NewHttpServer(dataChannel chan []byte, config *extensionConfig) *http.Serve
 		WriteTimeout:   timeout,
 		MaxHeaderBytes: 1 << 20,
 	}
-
 	go s.ListenAndServe()
 	return s
 }
