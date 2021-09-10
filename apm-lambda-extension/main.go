@@ -90,19 +90,13 @@ func main() {
 				return
 			}
 
-		ListenForLogsAndData:
-			for {
-				select {
-				case logEvent := <-logsChannel:
-					log.Printf("Received log event %v\n", logEvent)
-					//check the logEvent for runtimeDone
-					if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
-						log.Println("Received runtimeDone event, flushing APM data")
-						extension.FlushAPMData(dataChannel, config)
-						break ListenForLogsAndData
-					}
-				case apmEvent := <-dataChannel:
-					extension.ProcessAPMData(apmEvent, config)
+			for logEvent := range logsChannel {
+				log.Printf("Received log event %v\n", logEvent)
+				//check the logEvent for runtimeDone
+				if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
+					log.Println("Received runtimeDone event, flushing APM data")
+					extension.FlushAPMData(dataChannel, config)
+					break
 				}
 			}
 		}
