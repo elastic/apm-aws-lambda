@@ -11,22 +11,16 @@ func ProcessShutdown() {
 	log.Println("Exiting")
 }
 
-func ProcessAPMData(dataChannel chan []byte, config *extensionConfig) {
-	log.Printf("Reading APM data")
-	// Wait for agent to send data to the channel
-	//
-	// to do: this will hang if the lambda times out or crashes or the agent
-	//        fails to send data to the pipe
+func ProcessAPMData(agentBytes []byte, config *extensionConfig) {
+	PostToApmServer(agentBytes, config)
+}
+
+func FlushAPMData(dataChannel chan []byte, config *extensionConfig) {
 	select {
 	case agentBytes := <-dataChannel:
-		log.Printf("received bytes from data channel %v", agentBytes)
-		PostToApmServer(
-			agentBytes,
-			config,
-		)
-		log.Println("done with post")
+		PostToApmServer(agentBytes, config)
 	case <-time.After(1 * time.Second):
-		log.Println("timed out waiting for APM data")
+		log.Println("Time expired waiting for agent bytes. No more bytes will be sent.")
 	}
 }
 
