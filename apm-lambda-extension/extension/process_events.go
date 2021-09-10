@@ -11,10 +11,6 @@ func ProcessShutdown() {
 	log.Println("Exiting")
 }
 
-func ProcessAPMData(agentBytes []byte, config *extensionConfig) {
-	PostToApmServer(agentBytes, config)
-}
-
 func FlushAPMData(dataChannel chan []byte, config *extensionConfig) {
 	select {
 	case agentBytes := <-dataChannel:
