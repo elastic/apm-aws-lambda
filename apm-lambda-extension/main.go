@@ -49,19 +49,17 @@ func main() {
 	dataChannel := make(chan []byte)
 	extension.NewHttpServer(dataChannel, config)
 
-	// Make channel for collecting logs coming in as HTTP requests
-	logsChannel := make(chan logsapi.LogEvent)
-
 	// Subscribe to the Logs API
 	logsapi.Subscribe(extensionClient.ExtensionID, []logsapi.EventType{logsapi.Platform})
 
-	// Create an http server to listen for log event requests
+	// Make channel for collecting logs and create a HTTP server to listen for them
+	logsChannel := make(chan logsapi.LogEvent)
 	logsApiListener, err := logsapi.NewLogsApiHttpListener(logsChannel)
 	if err != nil {
 		println("Error while creating Logs API listener: %v", err)
 	}
 
-	// Start the http server
+	// Start the logs HTTP server
 	_, err = logsApiListener.Start()
 	if err != nil {
 		println("Error while starting Logs API listener: %v", err)
