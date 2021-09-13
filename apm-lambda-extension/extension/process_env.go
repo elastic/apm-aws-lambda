@@ -9,6 +9,7 @@ import (
 type extensionConfig struct {
 	apmServerEndpoint          string
 	apmServerSecretToken       string
+	apmServerApiKey            string
 	dataReceiverServerPort     string
 	dataReceiverTimeoutSeconds int
 }
@@ -37,18 +38,19 @@ func ProcessEnv() *extensionConfig {
 	config := &extensionConfig{
 		apmServerEndpoint:          os.Getenv("ELASTIC_APM_SERVER_URL") + endpointUri,
 		apmServerSecretToken:       os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
+		apmServerApiKey:            os.Getenv("ELASTIC_APM_API_KEY"),
 		dataReceiverServerPort:     os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"),
 		dataReceiverTimeoutSeconds: dataReceiverTimeoutSeconds,
 	}
 
-	if "" == config.dataReceiverServerPort {
+	if config.dataReceiverServerPort == "" {
 		config.dataReceiverServerPort = ":8200"
 	}
 	if endpointUri == config.apmServerEndpoint {
 		log.Fatalln("please set ELASTIC_APM_SERVER_URL, exiting")
 	}
-	if "" == config.apmServerSecretToken {
-		log.Fatalln("please set ELASTIC_APM_SECRET_TOKEN, exiting")
+	if config.apmServerSecretToken == "" && config.apmServerApiKey == "" {
+		log.Fatalln("please set ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY exiting")
 	}
 
 	return config
