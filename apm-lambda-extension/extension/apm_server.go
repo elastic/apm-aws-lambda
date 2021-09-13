@@ -29,9 +29,7 @@ func PostToApmServer(postBody []byte, config *extensionConfig) {
 
 	if config.apmServerApiKey != "" {
 		req.Header.Add("Authorization", "ApiKey "+config.apmServerApiKey)
-	}
-
-	if config.apmServerSecretToken != "" {
+	} else if config.apmServerSecretToken != "" {
 		req.Header.Add("Authorization", "Bearer "+config.apmServerSecretToken)
 	}
 	resp, err := client.Do(req)
