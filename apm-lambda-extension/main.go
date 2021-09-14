@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/logsapi"
@@ -88,14 +89,29 @@ func main() {
 				return
 			}
 
-			for logEvent := range logsChannel {
-				log.Printf("Received log event %v\n", logEvent)
-				//check the logEvent for runtimeDone
-				if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
-					log.Println("Received runtimeDone event, flushing APM data")
-					extension.FlushAPMData(dataChannel, config)
-					break
+			// Receive Logs API events
+			// Send to the runtimeDone channel to signal when a runtimeDone event is received
+			// Todo: do we need to close the channel after the runtimeDone event is received?
+			runtimeDone := make(chan bool)
+			go func() {
+				for logEvent := range logsChannel {
+					log.Printf("Received log event %v\n", logEvent)
+					//check the logEvent for runtimeDone
+					if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
+						runtimeDone <- true
+						break
+					}
 				}
+			}()
+
+			select {
+			case <-runtimeDone:
+				log.Println("Received runtimeDone event, flushing APM data")
+				extension.FlushAPMData(dataChannel, config)
+			// Todo: How can we get the actual timeout of the lambda function?
+			case <-time.After(10 * time.Second):
+				log.Println("Time expired waiting for runtimeDone event. Attempting to read agent data.")
+				extension.FlushAPMData(dataChannel, config)
 			}
 		}
 	}
