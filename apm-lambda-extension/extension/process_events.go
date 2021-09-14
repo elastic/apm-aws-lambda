@@ -14,7 +14,7 @@ func ProcessShutdown() {
 func FlushAPMData(dataChannel chan []byte, config *extensionConfig) {
 	select {
 	case agentBytes := <-dataChannel:
-		log.Printf("received bytes from data channel %v", agentBytes)
+		log.Println("Received bytes from data channel")
 		PostToApmServer(agentBytes, config)
 	case <-time.After(1 * time.Second):
 		log.Println("Time expired waiting for agent bytes. No more bytes will be sent.")
