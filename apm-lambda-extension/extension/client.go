@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -104,7 +105,7 @@ func (e *Client) Register(ctx context.Context, filename string) (*RegisterRespon
 		return nil, err
 	}
 	e.ExtensionID = httpRes.Header.Get(extensionIdentiferHeader)
-	print(e.ExtensionID)
+	log.Println(e.ExtensionID)
 	return &res, nil
 }
 

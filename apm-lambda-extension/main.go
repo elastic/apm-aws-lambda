@@ -56,13 +56,13 @@ func main() {
 	logsChannel := make(chan logsapi.LogEvent)
 	logsApiListener, err := logsapi.NewLogsApiHttpListener(logsChannel)
 	if err != nil {
-		println("Error while creating Logs API listener: %v", err)
+		log.Printf("Error while creating Logs API listener: %v", err)
 	}
 
 	// Start the logs HTTP server
 	_, err = logsApiListener.Start()
 	if err != nil {
-		println("Error while starting Logs API listener: %v", err)
+		log.Printf("Error while starting Logs API listener: %v", err)
 	}
 
 	for {

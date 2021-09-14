@@ -55,7 +55,7 @@ func (s *LogsApiHttpListener) Start() (bool, error) {
 	s.httpServer = &http.Server{Addr: address}
 	http.HandleFunc("/", s.http_handler)
 	go func() {
-		println("Serving logs api requests on %s", address)
+		log.Printf("Serving logs api requests on %s", address)
 		err := s.httpServer.ListenAndServe()
 		if err != http.ErrServerClosed {
 			log.Printf("Unexpected stop on Http Server: %v", err)
@@ -75,7 +75,7 @@ func (s *LogsApiHttpListener) Start() (bool, error) {
 func (h *LogsApiHttpListener) http_handler(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		println("Error reading body: %+v", err)
+		log.Printf("Error reading body: %+v", err)
 		return
 	}
 
@@ -96,7 +96,7 @@ func (s *LogsApiHttpListener) Shutdown() {
 		defer cancel()
 		err := s.httpServer.Shutdown(ctx)
 		if err != nil {
-			println("Failed to shutdown http server gracefully %s", err)
+			log.Printf("Failed to shutdown http server gracefully %s", err)
 		} else {
 			s.httpServer = nil
 		}
