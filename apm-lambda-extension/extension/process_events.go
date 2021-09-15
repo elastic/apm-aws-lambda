@@ -3,7 +3,6 @@ package extension
 import (
 	"encoding/json"
 	"log"
-	"time"
 )
 
 func ProcessShutdown() {
@@ -12,12 +11,12 @@ func ProcessShutdown() {
 }
 
 func FlushAPMData(dataChannel chan []byte, config *extensionConfig) {
+	log.Println("Checking for agent data")
 	select {
 	case agentBytes := <-dataChannel:
 		log.Println("Received bytes from data channel")
 		PostToApmServer(agentBytes, config)
-	case <-time.After(1 * time.Second):
-		log.Println("Time expired waiting for agent bytes. No more data will be received/sent.")
+	default:
 	}
 }
 

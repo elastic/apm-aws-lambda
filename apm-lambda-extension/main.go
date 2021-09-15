@@ -82,6 +82,10 @@ func main() {
 			}
 			log.Printf("Received event: %v\n", extension.PrettyPrint(res))
 
+			// Check if there's APM data, in case waiting for the runtimeDone event timed out,
+			// the agent data wasn't available yet and we got to the next event
+			extension.FlushAPMData(dataChannel, config)
+
 			// A shutdown event indicates the execution enviornment is shutting down.
 			// This is usually due to inactivity.
 			if res.EventType == extension.Shutdown {
@@ -104,12 +108,17 @@ func main() {
 				}
 			}()
 
+			// Calculate how long to wait for a runtimeDone event
+			funcTimeout := time.Unix(0, res.DeadlineMs*int64(time.Millisecond))
+			msBeforeFuncTimeout := 100 * time.Millisecond
+			timeToWait := funcTimeout.Sub(time.Now()) - msBeforeFuncTimeout
+
 			select {
 			case <-runtimeDone:
 				log.Println("Received runtimeDone event, flushing APM data")
 				extension.FlushAPMData(dataChannel, config)
 			// Todo: How can we get the actual timeout of the lambda function?
-			case <-time.After(10 * time.Second):
+			case <-time.After(timeToWait):
 				log.Println("Time expired waiting for runtimeDone event. Attempting to read agent data.")
 				extension.FlushAPMData(dataChannel, config)
 			}
