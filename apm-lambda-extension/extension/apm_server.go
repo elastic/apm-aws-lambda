@@ -26,7 +26,12 @@ func PostToApmServer(postBody []byte, config *extensionConfig) {
 	}
 	req.Header.Add("Content-Type", "application/x-ndjson")
 	req.Header.Add("Content-Encoding", "gzip")
-	req.Header.Add("Authorization", "Bearer "+config.apmServerSecretToken)
+
+	if config.apmServerApiKey != "" {
+		req.Header.Add("Authorization", "ApiKey "+config.apmServerApiKey)
+	} else if config.apmServerSecretToken != "" {
+		req.Header.Add("Authorization", "Bearer "+config.apmServerSecretToken)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatalf("An Error Occured calling client.Do %v", err)
