@@ -1,15 +1,16 @@
 package extension
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 )
 
 func handleIntakeV2Events(handler *serverHandler, w http.ResponseWriter, r *http.Request) {
 	bodyBytes, err := getDecompressedBytesFromRequest(r)
 	if nil != err {
-		fmt.Println("could not get bytes from body")
+		log.Println("could not get bytes from body")
 	} else {
+		log.Println("Receiving bytes from request")
 		handler.data <- bodyBytes
 	}
 	w.WriteHeader(http.StatusOK)
