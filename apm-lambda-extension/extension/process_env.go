@@ -50,7 +50,7 @@ func ProcessEnv() *extensionConfig {
 		log.Fatalln("please set ELASTIC_APM_SERVER_URL, exiting")
 	}
 	if config.apmServerSecretToken == "" && config.apmServerApiKey == "" {
-		log.Fatalln("please set ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY exiting")
+		log.Fatalln("please set ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY, exiting")
 	}
 
 	return config
