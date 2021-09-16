@@ -117,7 +117,6 @@ func main() {
 			case <-runtimeDone:
 				log.Println("Received runtimeDone event, flushing APM data")
 				extension.FlushAPMData(dataChannel, config)
-			// Todo: How can we get the actual timeout of the lambda function?
 			case <-time.After(timeToWait):
 				log.Println("Time expired waiting for runtimeDone event. Attempting to read agent data.")
 				extension.FlushAPMData(dataChannel, config)
