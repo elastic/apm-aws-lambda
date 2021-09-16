@@ -56,7 +56,7 @@ func TestNewPersonPositiveAge(t *testing.T) {
 	os.Setenv("ELASTIC_APM_API_KEY", "foo")
 	config = ProcessEnv()
 	if config.apmServerApiKey != "foo" {
-		t.Log("API Key not test correctly")
+		t.Log("API Key not set correctly")
 		t.Fail()
 	}
 }
