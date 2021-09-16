@@ -13,6 +13,6 @@ func handleIntakeV2Events(handler *serverHandler, w http.ResponseWriter, r *http
 		log.Println("Receiving bytes from request")
 		handler.data <- bodyBytes
 	}
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusAccepted)
 	w.Write([]byte("ok"))
 }

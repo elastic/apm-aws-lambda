@@ -47,7 +47,7 @@ func main() {
 
 	// setup http server to receive data from agent
 	// and get a channel to listen for that data
-	dataChannel := make(chan []byte, 1)
+	dataChannel := make(chan []byte, 100)
 	extension.NewHttpServer(dataChannel, config)
 
 	// Subscribe to the Logs API
