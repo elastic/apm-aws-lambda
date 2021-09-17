@@ -21,6 +21,23 @@ endif
 	make build
 	cd bin && rm extension.zip || true && zip -r extension.zip extensions
 	aws lambda publish-layer-version --layer-name "${ELASTIC_LAYER_NAME}" --zip-file "fileb://./bin/extension.zip"
+update-function-layer:
+ifndef AWS_DEFAULT_REGION
+	$(error AWS_DEFAULT_REGION is undefined)
+endif
+ifndef AWS_ACCESS_KEY_ID
+	$(error AWS_ACCESS_KEY_ID is undefined)
+endif
+ifndef AWS_SECRET_ACCESS_KEY
+	$(error AWS_SECRET_ACCESS_KEY is undefined)
+endif
+ifndef ELASTIC_LAYER_ARN
+	$(error ELASTIC_LAYER_ARN is undefined)
+endif
+ifndef ELASTIC_FUNCTION_NAME
+	$(error ELASTIC_FUNCTION_NAME is undefined)
+endif
+	aws lambda update-function-configuration --function-name ${ELASTIC_FUNCTION_NAME} --layer ${ELASTIC_LAYER_ARN}
 run-GoExampleExtensionLayer:
 	go run apm-lambda-extension/main.go
 
