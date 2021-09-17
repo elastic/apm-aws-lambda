@@ -51,6 +51,16 @@ The out from the above command will include a `LayverVersionArn` field, which co
 
 This is the string you'll enter in the AWS Lambda Console to add this layer to your Lambda function.
 
+## One Step Build
+
+The `Makefile` also provides a `build-and-publish` command which will perform the above steps for use, using ENV variable for credentials and other information.
+
+    $ ELASTIC_LAYER_NAME=apm-lambda-extension \
+    AWS_DEFAULT_REGION=us-west-2 \
+    AWS_ACCESS_KEY_ID=A...X \
+    AWS_SECRET_ACCESS_KEY=h...E \
+    make build-and-publish
+
 ## Configure the Agent
 
     TODO: instructions on configuring the agent
