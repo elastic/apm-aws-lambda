@@ -66,6 +66,9 @@ func main() {
 		log.Printf("Error while starting Logs API listener: %v", err)
 	}
 
+	// Make a channel for signaling that a runtimeDone event has been received
+	runtimeDone := make(chan bool)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -96,7 +99,6 @@ func main() {
 			// Receive Logs API events
 			// Send to the runtimeDone channel to signal when a runtimeDone event is received
 			// Todo: do we need to close the channel after the runtimeDone event is received?
-			runtimeDone := make(chan bool)
 			go func() {
 				for logEvent := range logsChannel {
 					log.Printf("Received log event %v\n", logEvent)
