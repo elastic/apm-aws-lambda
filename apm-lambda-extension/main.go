@@ -96,6 +96,22 @@ func main() {
 				return
 			}
 
+			// Receive agent data as it comes in and post it to the APM server.
+			// The context is cancelled below after a runtimeDone event is received
+			// or if we time out waiting for a runtimeDone event.
+			agentDataCtx, agentDataCancel := context.WithCancel(ctx)
+			go func() {
+			SendAgentData:
+				for {
+					select {
+					case <-agentDataCtx.Done():
+						break SendAgentData
+					case agentData := <-dataChannel:
+						extension.PostToApmServer(agentData, config)
+					}
+				}
+			}()
+
 			// Receive Logs API events
 			// Send to the runtimeDone channel to signal when a runtimeDone event is received
 			// Todo: do we need to close the channel after the runtimeDone event is received?
@@ -123,6 +139,9 @@ func main() {
 				log.Println("Time expired waiting for runtimeDone event. Attempting to read agent data.")
 				extension.FlushAPMData(dataChannel, config)
 			}
+
+			// Cancel the context for sending agent data as it comes in
+			agentDataCancel()
 		}
 	}
 }
