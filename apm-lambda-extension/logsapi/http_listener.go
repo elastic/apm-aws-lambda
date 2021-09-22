@@ -46,16 +46,20 @@ func ListenOnAddress() string {
 		return ":" + DefaultHttpListenerPort
 	}
 
+	listenerAddress, ok := os.LookupEnv("ELASTIC_APM_DATA_RECEIVER_LOG_LISTENER_ADDRESS")
+	if ok && listenerAddress != "" {
+		return listenerAddress
+	}
 	return "sandbox:" + DefaultHttpListenerPort
 }
 
 // Start initiates the server in a goroutine where the logs will be sent
-func (s *LogsApiHttpListener) Start() (bool, error) {
-	address := ListenOnAddress()
+func (s *LogsApiHttpListener) Start(address string) (bool, error) {
+	// address := ListenOnAddress()
 	s.httpServer = &http.Server{Addr: address}
 	http.HandleFunc("/", s.http_handler)
 	go func() {
-		log.Printf("Serving logs api requests on %s", address)
+		log.Printf("Server listening for logs data from AWS Logs API on %s", address)
 		err := s.httpServer.ListenAndServe()
 		if err != http.ErrServerClosed {
 			log.Printf("Unexpected stop on Http Server: %v", err)
