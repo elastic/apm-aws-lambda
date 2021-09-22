@@ -55,7 +55,6 @@ func ListenOnAddress() string {
 
 // Start initiates the server in a goroutine where the logs will be sent
 func (s *LogsApiHttpListener) Start(address string) (bool, error) {
-	// address := ListenOnAddress()
 	s.httpServer = &http.Server{Addr: address}
 	http.HandleFunc("/", s.http_handler)
 	go func() {
