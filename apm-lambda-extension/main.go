@@ -101,6 +101,8 @@ func main() {
 			funcInvokeCtx, funcInvokeCancel := context.WithCancel(ctx)
 
 			// Receive agent data as it comes in and post it to the APM server.
+			// Stop checking for and sending agent data when the function invocation
+			// context is cancelled.
 			go func() {
 			SendAgentData:
 				for {
