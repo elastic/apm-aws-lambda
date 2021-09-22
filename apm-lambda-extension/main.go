@@ -85,7 +85,7 @@ func main() {
 			}
 			log.Printf("Received event: %v\n", extension.PrettyPrint(res))
 
-			// FLush any APM data, in case waiting for the runtimeDone event timed out,
+			// Flush any APM data, in case waiting for the runtimeDone event timed out,
 			// the agent data wasn't available yet, and we got to the next event
 			extension.FlushAPMData(dataChannel, config)
 
