@@ -66,32 +66,26 @@ func main() {
 		log.Printf("Error while starting Logs API listener: %v", err)
 	}
 
+	// Get a channel that next events will be sent on
+	nextEvent := extension.PollNextEvent(extensionClient, ctx)
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		default:
-			// call Next method of extension API.  This long polling HTTP method
-			// will block until there's an invocation of the function
-			log.Println("Waiting for event...")
-			res, err := extensionClient.NextEvent(ctx)
-			if err != nil {
-				log.Printf("Error: %v\n", err)
-				log.Println("Exiting")
+		case event := <-nextEvent:
+			log.Printf("Received event: %v\n", extension.PrettyPrint(res))
+
+			// A shutdown event indicates the execution environment is shutting down.
+			// This is usually due to inactivity.
+			if event.EventType == extension.Shutdown {
+				extension.ProcessShutdown()
 				return
 			}
-			log.Printf("Received event: %v\n", extension.PrettyPrint(res))
 
 			// Flush any APM data, in case waiting for the runtimeDone event timed out,
 			// the agent data wasn't available yet, and we got to the next event
 			extension.FlushAPMData(dataChannel, config)
-
-			// A shutdown event indicates the execution environment is shutting down.
-			// This is usually due to inactivity.
-			if res.EventType == extension.Shutdown {
-				extension.ProcessShutdown()
-				return
-			}
 
 			// Make a channel for signaling that a runtimeDone event has been received
 			runtimeDone := make(chan struct{})
@@ -125,7 +119,7 @@ func main() {
 						// Check the logEvent for runtimeDone and compare the RequestID
 						// to the id that came in via the Next API
 						if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
-							if logEvent.Record.RequestId == res.RequestID {
+							if logEvent.Record.RequestId == event.RequestID {
 								runtimeDone <- struct{}{}
 								return
 							}
@@ -135,7 +129,7 @@ func main() {
 			}()
 
 			// Calculate how long to wait for a runtimeDone event
-			funcTimeout := time.Unix(0, res.DeadlineMs*int64(time.Millisecond))
+			funcTimeout := time.Unix(0, event.DeadlineMs*int64(time.Millisecond))
 			msBeforeFuncTimeout := 100 * time.Millisecond
 			timeToWait := funcTimeout.Sub(time.Now()) - msBeforeFuncTimeout
 
