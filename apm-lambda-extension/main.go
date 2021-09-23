@@ -66,12 +66,6 @@ func main() {
 		log.Printf("Error while starting Logs API listener: %v", err)
 	}
 
-	// Make a channel for signaling that a runtimeDone event has been received
-	runtimeDone := make(chan struct{})
-
-	// Make a channel for signaling that that function invocation has completed
-	funcInvocDone := make(chan struct{})
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -99,6 +93,12 @@ func main() {
 				return
 			}
 
+			// Make a channel for signaling that a runtimeDone event has been received
+			runtimeDone := make(chan struct{})
+
+			// Make a channel for signaling that that function invocation has completed
+			funcInvocDone := make(chan struct{})
+
 			// Receive agent data as it comes in and post it to the APM server.
 			// Stop checking for, and sending agent data when the function invocation
 			// has completed, signaled via a channel.
@@ -122,10 +122,13 @@ func main() {
 						return
 					case logEvent := <-logsChannel:
 						log.Printf("Received log event %v\n", logEvent)
-						//check the logEvent for runtimeDone
+						// Check the logEvent for runtimeDone and compare the RequestID
+						// to the id that came in via the Next API
 						if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
-							runtimeDone <- struct{}{}
-							return
+							if logEvent.Record.RequestId == res.RequestID {
+								runtimeDone <- struct{}{}
+								return
+							}
 						}
 					}
 				}
@@ -147,9 +150,10 @@ func main() {
 				log.Println("Time expired waiting for runtimeDone event.")
 			}
 
+			// Flush APM data now that the function invocation has completed
 			extension.FlushAPMData(dataChannel, config)
 
-			// Cancel the context for sending agent data as it comes in
+			// Signal that the function invocation has completed
 			funcInvocDone <- struct{}{}
 		}
 	}
