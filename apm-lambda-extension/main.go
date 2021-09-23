@@ -51,7 +51,9 @@ func main() {
 	extension.NewHttpServer(dataChannel, config)
 
 	// Subscribe to the Logs API
-	logsapi.Subscribe(extensionClient.ExtensionID, []logsapi.EventType{logsapi.Platform})
+	logsapi.Subscribe(
+		extensionClient.ExtensionID,
+		[]logsapi.EventType{logsapi.Platform})
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	logsChannel := make(chan logsapi.LogEvent)
@@ -61,7 +63,7 @@ func main() {
 	}
 
 	// Start the logs HTTP server
-	_, err = logsApiListener.Start()
+	_, err = logsApiListener.Start(logsapi.ListenOnAddress())
 	if err != nil {
 		log.Printf("Error while starting Logs API listener: %v", err)
 	}

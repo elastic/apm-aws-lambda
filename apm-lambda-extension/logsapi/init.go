@@ -34,9 +34,10 @@ func Subscribe(extensionID string, eventTypes []EventType) error {
 	if err != nil {
 		return err
 	}
+	address := ListenOnAddress()
 	destination := Destination{
 		Protocol:   HttpProto,
-		URI:        URI(fmt.Sprintf("http://sandbox:%s", DefaultHttpListenerPort)),
+		URI:        URI(address),
 		HttpMethod: HttpPost,
 		Encoding:   JSON,
 	}
