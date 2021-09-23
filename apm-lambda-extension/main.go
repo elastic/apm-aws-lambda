@@ -67,7 +67,10 @@ func main() {
 	}
 
 	// Make a channel for signaling that a runtimeDone event has been received
-	runtimeDone := make(chan bool)
+	runtimeDone := make(chan struct{})
+
+	// Make a channel for signaling that that function invocation has completed
+	funcInvocDone := make(chan struct{})
 
 	for {
 		select {
@@ -89,26 +92,21 @@ func main() {
 			// the agent data wasn't available yet, and we got to the next event
 			extension.FlushAPMData(dataChannel, config)
 
-			// A shutdown event indicates the execution enviornment is shutting down.
+			// A shutdown event indicates the execution environment is shutting down.
 			// This is usually due to inactivity.
 			if res.EventType == extension.Shutdown {
 				extension.ProcessShutdown()
 				return
 			}
 
-			// The function invocation context is cancelled below after a runtimeDone
-			// event is received or if we time out waiting for a runtimeDone event.
-			funcInvokeCtx, funcInvokeCancel := context.WithCancel(ctx)
-
 			// Receive agent data as it comes in and post it to the APM server.
-			// Stop checking for and sending agent data when the function invocation
-			// context is cancelled.
+			// Stop checking for, and sending agent data when the function invocation
+			// has completed, signaled via a channel.
 			go func() {
-			SendAgentData:
 				for {
 					select {
-					case <-funcInvokeCtx.Done():
-						break SendAgentData
+					case <-funcInvocDone:
+						return
 					case agentData := <-dataChannel:
 						extension.PostToApmServer(agentData, config)
 					}
@@ -118,12 +116,17 @@ func main() {
 			// Receive Logs API events
 			// Send to the runtimeDone channel to signal when a runtimeDone event is received
 			go func() {
-				for logEvent := range logsChannel {
-					log.Printf("Received log event %v\n", logEvent)
-					//check the logEvent for runtimeDone
-					if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
-						runtimeDone <- true
-						break
+				for {
+					select {
+					case <-funcInvocDone:
+						return
+					case logEvent := <-logsChannel:
+						log.Printf("Received log event %v\n", logEvent)
+						//check the logEvent for runtimeDone
+						if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
+							runtimeDone <- struct{}{}
+							return
+						}
 					}
 				}
 			}()
@@ -133,17 +136,21 @@ func main() {
 			msBeforeFuncTimeout := 100 * time.Millisecond
 			timeToWait := funcTimeout.Sub(time.Now()) - msBeforeFuncTimeout
 
+			// Create a timer that expires after timeToWait
+			timer := time.NewTimer(timeToWait)
+			defer timer.Stop()
+
 			select {
 			case <-runtimeDone:
-				log.Println("Received runtimeDone event, flushing APM data")
-				extension.FlushAPMData(dataChannel, config)
-			case <-time.After(timeToWait):
-				log.Println("Time expired waiting for runtimeDone event. Attempting to read agent data.")
-				extension.FlushAPMData(dataChannel, config)
+				log.Println("Received runtimeDone event.")
+			case <-timer.C:
+				log.Println("Time expired waiting for runtimeDone event.")
 			}
 
+			extension.FlushAPMData(dataChannel, config)
+
 			// Cancel the context for sending agent data as it comes in
-			funcInvokeCancel()
+			funcInvocDone <- struct{}{}
 		}
 	}
 }
