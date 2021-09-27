@@ -1,7 +1,6 @@
 package extension
 
 import (
-	"context"
 	"encoding/json"
 	"log"
 )
@@ -31,28 +30,4 @@ func PrettyPrint(v interface{}) string {
 		return ""
 	}
 	return string(data)
-}
-
-func PollNextEvent(extensionClient *Client, ctx context.Context) chan *NextEventResponse {
-	eventChan := make(chan *NextEventResponse)
-
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				log.Println("Waiting for event...")
-				res, err := extensionClient.NextEvent(ctx)
-				if err != nil {
-					log.Printf("Error polling for next event: %v\n", err)
-					// ToDo stop polling here?
-				} else {
-					eventChan <- res
-				}
-			}
-		}
-	}()
-
-	return eventChan
 }

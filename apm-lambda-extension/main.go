@@ -66,14 +66,20 @@ func main() {
 		log.Printf("Error while starting Logs API listener: %v", err)
 	}
 
-	// Get a channel that next events will be sent on
-	nextEvent := extension.PollNextEvent(extensionClient, ctx)
-
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case event := <-nextEvent:
+		default:
+			// call Next method of extension API.  This long polling HTTP method
+			// will block until there's an invocation of the function
+			log.Println("Waiting for event...")
+			event, err := extensionClient.NextEvent(ctx)
+			if err != nil {
+				log.Printf("Error: %v\n", err)
+				log.Println("Exiting")
+				return
+			}
 			log.Printf("Received event: %v\n", extension.PrettyPrint(res))
 
 			// A shutdown event indicates the execution environment is shutting down.
@@ -100,6 +106,7 @@ func main() {
 				for {
 					select {
 					case <-funcInvocDone:
+						log.Println("Function invocation is complete, not receiving any more agent data.")
 						return
 					case agentData := <-dataChannel:
 						extension.PostToApmServer(agentData, config)
@@ -113,6 +120,7 @@ func main() {
 				for {
 					select {
 					case <-funcInvocDone:
+						log.Println("Function invocation is complete, not receiving any more log events.")
 						return
 					case logEvent := <-logsChannel:
 						log.Printf("Received log event %v\n", logEvent)
@@ -120,8 +128,11 @@ func main() {
 						// to the id that came in via the Next API
 						if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
 							if logEvent.Record.RequestId == event.RequestID {
+								log.Printf("Received runtimeDone event %v", logEvent)
 								runtimeDone <- struct{}{}
 								return
+							} else {
+								log.Println("Log API runtimeDone event request id didn't match. Waiting for more log events.")
 							}
 						}
 					}
@@ -139,7 +150,7 @@ func main() {
 
 			select {
 			case <-runtimeDone:
-				log.Println("Received runtimeDone event.")
+				log.Println("Receive runtimeDone event signal.")
 			case <-timer.C:
 				log.Println("Time expired waiting for runtimeDone event.")
 			}
@@ -148,7 +159,7 @@ func main() {
 			extension.FlushAPMData(dataChannel, config)
 
 			// Signal that the function invocation has completed
-			funcInvocDone <- struct{}{}
+			close(funcInvocDone)
 		}
 	}
 }
