@@ -47,7 +47,7 @@ func main() {
 
 	// setup http server to receive data from agent
 	// and get a channel to listen for that data
-	dataChannel := make(chan []byte, 1)
+	dataChannel := make(chan []byte, 100)
 	extension.NewHttpServer(dataChannel, config)
 
 	// Subscribe to the Logs API
@@ -76,7 +76,7 @@ func main() {
 			// call Next method of extension API.  This long polling HTTP method
 			// will block until there's an invocation of the function
 			log.Println("Waiting for event...")
-			res, err := extensionClient.NextEvent(ctx)
+			event, err := extensionClient.NextEvent(ctx)
 			if err != nil {
 				log.Printf("Error: %v\n", err)
 				log.Println("Exiting")
@@ -84,45 +84,84 @@ func main() {
 			}
 			log.Printf("Received event: %v\n", extension.PrettyPrint(res))
 
-			// Check if there's APM data, in case waiting for the runtimeDone event timed out,
-			// the agent data wasn't available yet and we got to the next event
-			extension.FlushAPMData(dataChannel, config)
-
-			// A shutdown event indicates the execution enviornment is shutting down.
+			// A shutdown event indicates the execution environment is shutting down.
 			// This is usually due to inactivity.
-			if res.EventType == extension.Shutdown {
+			if event.EventType == extension.Shutdown {
 				extension.ProcessShutdown()
 				return
 			}
 
+			// Flush any APM data, in case waiting for the runtimeDone event timed out,
+			// the agent data wasn't available yet, and we got to the next event
+			extension.FlushAPMData(dataChannel, config)
+
+			// Make a channel for signaling that a runtimeDone event has been received
+			runtimeDone := make(chan struct{})
+
+			// Make a channel for signaling that that function invocation has completed
+			funcInvocDone := make(chan struct{})
+
+			// Receive agent data as it comes in and post it to the APM server.
+			// Stop checking for, and sending agent data when the function invocation
+			// has completed, signaled via a channel.
+			go func() {
+				for {
+					select {
+					case <-funcInvocDone:
+						log.Println("Function invocation is complete, not receiving any more agent data")
+						return
+					case agentData := <-dataChannel:
+						extension.PostToApmServer(agentData, config)
+					}
+				}
+			}()
+
 			// Receive Logs API events
 			// Send to the runtimeDone channel to signal when a runtimeDone event is received
-			// Todo: do we need to close the channel after the runtimeDone event is received?
-			runtimeDone := make(chan bool)
 			go func() {
-				for logEvent := range logsChannel {
-					log.Printf("Received log event %v\n", logEvent)
-					//check the logEvent for runtimeDone
-					if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
-						runtimeDone <- true
-						break
+				for {
+					select {
+					case <-funcInvocDone:
+						log.Println("Function invocation is complete, not receiving any more log events")
+						return
+					case logEvent := <-logsChannel:
+						log.Printf("Received log event %v\n", logEvent)
+						// Check the logEvent for runtimeDone and compare the RequestID
+						// to the id that came in via the Next API
+						if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
+							if logEvent.Record.RequestId == event.RequestID {
+								log.Printf("Received runtimeDone event %v", logEvent)
+								runtimeDone <- struct{}{}
+								return
+							} else {
+								log.Println("Log API runtimeDone event request id didn't match")
+							}
+						}
 					}
 				}
 			}()
 
 			// Calculate how long to wait for a runtimeDone event
-			funcTimeout := time.Unix(0, res.DeadlineMs*int64(time.Millisecond))
+			funcTimeout := time.Unix(0, event.DeadlineMs*int64(time.Millisecond))
 			msBeforeFuncTimeout := 100 * time.Millisecond
 			timeToWait := funcTimeout.Sub(time.Now()) - msBeforeFuncTimeout
 
+			// Create a timer that expires after timeToWait
+			timer := time.NewTimer(timeToWait)
+			defer timer.Stop()
+
 			select {
 			case <-runtimeDone:
-				log.Println("Received runtimeDone event, flushing APM data")
-				extension.FlushAPMData(dataChannel, config)
-			case <-time.After(timeToWait):
-				log.Println("Time expired waiting for runtimeDone event. Attempting to read agent data.")
-				extension.FlushAPMData(dataChannel, config)
+				log.Println("Receive runtimeDone event signal")
+			case <-timer.C:
+				log.Println("Time expired waiting for runtimeDone event")
 			}
+
+			// Flush APM data now that the function invocation has completed
+			extension.FlushAPMData(dataChannel, config)
+
+			// Signal that the function invocation has completed
+			close(funcInvocDone)
 		}
 	}
 }
