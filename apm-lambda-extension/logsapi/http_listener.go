@@ -24,17 +24,17 @@ type LogEventRecord struct {
 	Status    string `json:"status"`
 }
 
-// LogsApiHttpListener is used to listen to the Logs API using HTTP
-type LogsApiHttpListener struct {
+// LogsAPIHttpListener is used to listen to the Logs API using HTTP
+type LogsAPIHttpListener struct {
 	httpServer *http.Server
 
 	logChannel chan LogEvent
 }
 
-// NewLogsApiHttpListener returns a LogsApiHttpListener with the given log queue
-func NewLogsApiHttpListener(lc chan LogEvent) (*LogsApiHttpListener, error) {
+// NewLogsAPIHttpListener returns a LogsAPIHttpListener with the given log queue
+func NewLogsAPIHttpListener(lc chan LogEvent) (*LogsAPIHttpListener, error) {
 
-	return &LogsApiHttpListener{
+	return &LogsAPIHttpListener{
 		httpServer: nil,
 		logChannel: lc,
 	}, nil
@@ -54,7 +54,7 @@ func ListenOnAddress() string {
 }
 
 // Start initiates the server in a goroutine where the logs will be sent
-func (s *LogsApiHttpListener) Start(address string) (bool, error) {
+func (s *LogsAPIHttpListener) Start(address string) (bool, error) {
 	s.httpServer = &http.Server{Addr: address}
 	http.HandleFunc("/", s.http_handler)
 	go func() {
@@ -75,7 +75,7 @@ func (s *LogsApiHttpListener) Start(address string) (bool, error) {
 // and put them into a synchronous queue to be read by the main goroutine.
 // Logging or printing besides the error cases below is not recommended if you have subscribed to receive extension logs.
 // Otherwise, logging here will cause Logs API to send new logs for the printed lines which will create an infinite loop.
-func (h *LogsApiHttpListener) http_handler(w http.ResponseWriter, r *http.Request) {
+func (h *LogsAPIHttpListener) http_handler(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Error reading body: %+v", err)
@@ -93,7 +93,7 @@ func (h *LogsApiHttpListener) http_handler(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (s *LogsApiHttpListener) Shutdown() {
+func (s *LogsAPIHttpListener) Shutdown() {
 	if s.httpServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
