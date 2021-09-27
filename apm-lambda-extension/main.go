@@ -132,7 +132,7 @@ func main() {
 								runtimeDone <- struct{}{}
 								return
 							} else {
-								log.Println("Log API runtimeDone event request id didn't match. Waiting for more log events.")
+								log.Println("Log API runtimeDone event request id didn't match.")
 							}
 						}
 					}
