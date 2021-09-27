@@ -82,7 +82,7 @@ func main() {
 				log.Println("Exiting")
 				return
 			}
-			log.Printf("Received event: %v\n", extension.PrettyPrint(res))
+			log.Printf("Received event: %v\n", extension.PrettyPrint(event))
 
 			// A shutdown event indicates the execution environment is shutting down.
 			// This is usually due to inactivity.
@@ -111,7 +111,10 @@ func main() {
 						log.Println("Function invocation is complete, not receiving any more agent data")
 						return
 					case agentData := <-dataChannel:
-						extension.PostToApmServer(agentData, config)
+						err := extension.PostToApmServer(agentData, config)
+						if err != nil {
+							log.Printf("Error sending to APM server: %v", err)
+						}
 					}
 				}
 			}()
