@@ -106,7 +106,7 @@ func main() {
 				for {
 					select {
 					case <-funcInvocDone:
-						log.Println("Function invocation is complete, not receiving any more agent data.")
+						log.Println("Function invocation is complete, not receiving any more agent data")
 						return
 					case agentData := <-dataChannel:
 						extension.PostToApmServer(agentData, config)
@@ -120,7 +120,7 @@ func main() {
 				for {
 					select {
 					case <-funcInvocDone:
-						log.Println("Function invocation is complete, not receiving any more log events.")
+						log.Println("Function invocation is complete, not receiving any more log events")
 						return
 					case logEvent := <-logsChannel:
 						log.Printf("Received log event %v\n", logEvent)
@@ -132,7 +132,7 @@ func main() {
 								runtimeDone <- struct{}{}
 								return
 							} else {
-								log.Println("Log API runtimeDone event request id didn't match.")
+								log.Println("Log API runtimeDone event request id didn't match")
 							}
 						}
 					}
@@ -150,9 +150,9 @@ func main() {
 
 			select {
 			case <-runtimeDone:
-				log.Println("Receive runtimeDone event signal.")
+				log.Println("Receive runtimeDone event signal")
 			case <-timer.C:
-				log.Println("Time expired waiting for runtimeDone event.")
+				log.Println("Time expired waiting for runtimeDone event")
 			}
 
 			// Flush APM data now that the function invocation has completed
