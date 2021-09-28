@@ -52,7 +52,7 @@ func ListenOnAddress() string {
 
 	if ok && listenerAddress != "" {
 		u, err := url.Parse(listenerAddress)
-		if err != nil {
+		if err == nil {
 			return fmt.Sprintf("%s:%s", u.Host, u.Port())
 		}
 	}
