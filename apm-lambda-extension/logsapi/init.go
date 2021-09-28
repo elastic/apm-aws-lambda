@@ -6,7 +6,6 @@ package logsapi
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -36,12 +35,9 @@ func Subscribe(extensionID string, eventTypes []EventType) error {
 		return err
 	}
 	address := ListenOnAddress()
-	if !strings.HasPrefix(address, "http://") {
-		address = "http://" + address
-	}
 	destination := Destination{
 		Protocol:   HttpProto,
-		URI:        URI(address),
+		URI:        URI("http://" + address),
 		HttpMethod: HttpPost,
 		Encoding:   JSON,
 	}
