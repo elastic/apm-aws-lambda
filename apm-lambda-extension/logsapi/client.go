@@ -18,14 +18,14 @@ const lambdaAgentIdentifierHeaderKey string = "Lambda-Extension-Identifier"
 // Client is the client used to subscribe to the Logs API
 type Client struct {
 	httpClient     *http.Client
-	logsApiBaseUrl string
+	logsAPIBaseUrl string
 }
 
 // NewClient returns a new Client with the given URL
-func NewClient(logsApiBaseUrl string) (*Client, error) {
+func NewClient(logsAPIBaseUrl string) (*Client, error) {
 	return &Client{
 		httpClient:     &http.Client{},
-		logsApiBaseUrl: logsApiBaseUrl,
+		logsAPIBaseUrl: logsAPIBaseUrl,
 	}, nil
 }
 
@@ -129,7 +129,7 @@ func (c *Client) Subscribe(types []EventType, bufferingCfg BufferingCfg, destina
 
 	headers := make(map[string]string)
 	headers[lambdaAgentIdentifierHeaderKey] = extensionId
-	url := fmt.Sprintf("%s/2020-08-15/logs", c.logsApiBaseUrl)
+	url := fmt.Sprintf("%s/2020-08-15/logs", c.logsAPIBaseUrl)
 	resp, err := httpPutWithHeaders(c.httpClient, url, data, &headers)
 	if err != nil {
 		return nil, err
