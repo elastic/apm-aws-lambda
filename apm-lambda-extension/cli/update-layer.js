@@ -18,7 +18,7 @@ function getUnversionedArn(arn) {
  * @param {string} arn The new layer arn to add or update
  * @param {array} layers An array of the currently configured layers from getFunction
  */
-function getNewLayersArray(arn, layers) {
+function getNewLayersArray(arn, layers=[]) {
   const layerNames = layers.map(function(item){
     return item.Arn
   })

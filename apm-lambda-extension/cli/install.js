@@ -85,12 +85,9 @@ async function cmd(argv) {
       ['update-layer', config.function_name, arn],
       'updating function layers configuration to use new layer'
     )
-    const matches = output.match(/Published Layer as: (.*$)/m)
-    if(matches) {
-      arn = matches[1]
-    }
     // console.log(output)
   } catch(error) {
+    console.log(error)
     console.log('encountered error, exiting')
     process.exit(1)
   }
