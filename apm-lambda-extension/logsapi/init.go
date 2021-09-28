@@ -37,7 +37,7 @@ func Subscribe(extensionID string, eventTypes []EventType) error {
 	address := ListenOnAddress()
 	destination := Destination{
 		Protocol:   HttpProto,
-		URI:        URI(address),
+		URI:        URI("http://" + address),
 		HttpMethod: HttpPost,
 		Encoding:   JSON,
 	}
