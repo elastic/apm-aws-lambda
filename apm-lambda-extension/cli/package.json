@@ -10,6 +10,8 @@
   "license": "BSD-2-Clause",
   "dependencies": {
     "aws-sdk": "^2.995.0",
+    "js-yaml": "^4.1.0",
+    "shell-escape": "^0.2.0",
     "tap": "^15.0.10",
     "yargs": "^17.2.1"
   }

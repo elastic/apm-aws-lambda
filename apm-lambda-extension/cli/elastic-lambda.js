@@ -11,17 +11,17 @@ function checkAwsRegion() {
 }
 
 const argv = yargs(hideBin(process.argv)).command(
-  'update-layers [function_name] [layer_arn]',
-  'updates or adds a layer ARN to a lambda\'s layers',
+  'update-layer [function_name] [layer_arn]',
+  "updates or adds a layer ARN to a lambda's layers\n",
   function(yargs) {
   },
   async function(argv) {
-    const {cmd} = require('./update-layers.js')
+    const {cmd} = require('./update-layer.js')
     cmd(argv)
   }
   ).command(
     'build-and-publish',
-    'runs build-and-publish make command in ..',
+    "runs build-and-publish make command in ..\n",
     function(yargs) {
     },
     function(argv) {
@@ -30,12 +30,21 @@ const argv = yargs(hideBin(process.argv)).command(
     }
   ).command(
     'update-function-env [function_name] [env_as_json]',
-    'adds env configuration to named lambda function',
+    "adds env configuration to named lambda function\n",
     function(yargs) {
     },
     function(argv){
       checkAwsRegion()
       const {cmd} = require('./update-function-env')
+      cmd(argv)
+    }
+  ).command(
+    'install',
+    'reads in install.yaml and run commands needed to install lambda product',
+    function(yargs) {
+    },
+    function(argv) {
+      const {cmd} = require('./install')
       cmd(argv)
     }
   ).demandCommand().recommendCommands().strict().parse()

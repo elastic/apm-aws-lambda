@@ -1,5 +1,5 @@
 const tap = require('tap');
-const {getNewLayersArray} = require('../update-layers')
+const {getNewLayersArray} = require('../update-layer')
 
 tap.test('all', function(t){
   const fixtures = [
