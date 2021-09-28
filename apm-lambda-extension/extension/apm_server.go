@@ -11,7 +11,7 @@ import (
 // todo: can this be a streaming or streaming style call that keeps the
 //       connection open across invocations?
 // func PostToApmServer(postBody []byte, apmServerEndpoint string, apmServerSecretToken string) {
-func PostToApmServer(postBody []byte, config *extensionConfig) {
+func PostToApmServer(postBody []byte, config *extensionConfig) error {
 	var compressedBytes bytes.Buffer
 	w := gzip.NewWriter(&compressedBytes)
 	w.Write(postBody)
@@ -34,7 +34,7 @@ func PostToApmServer(postBody []byte, config *extensionConfig) {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("An Error Occured calling client.Do %v", err)
+		return err
 	}
 
 	//Read the response body
@@ -49,4 +49,6 @@ func PostToApmServer(postBody []byte, config *extensionConfig) {
 	sb := string(body)
 	log.Printf("Response Headers: %v\n", resp.Header)
 	log.Printf("Response Body: %v\n", sb)
+
+	return nil
 }
