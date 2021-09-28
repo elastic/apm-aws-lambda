@@ -6,7 +6,7 @@ import (
 )
 
 func TestNewPersonPositiveAge(t *testing.T) {
-	os.Setenv("ELASTIC_APM_SERVER_URL", "foo.example.com")
+	os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "foo.example.com")
 	os.Setenv("ELASTIC_APM_SECRET_TOKEN", "bar")
 
 	config := ProcessEnv()
