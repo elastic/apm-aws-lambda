@@ -10,9 +10,9 @@ func handleIntakeV2Events(handler *serverHandler, w http.ResponseWriter, r *http
 	if nil != err {
 		log.Println("could not get bytes from body")
 	} else {
-		log.Println("Receiving bytes from request")
+		log.Println("Receiving bytes from agent request")
 		handler.data <- bodyBytes
 	}
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusAccepted)
 	w.Write([]byte("ok"))
 }

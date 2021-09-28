@@ -12,11 +12,18 @@ func ProcessShutdown() {
 
 func FlushAPMData(dataChannel chan []byte, config *extensionConfig) {
 	log.Println("Checking for agent data")
-	select {
-	case agentBytes := <-dataChannel:
-		log.Println("Received bytes from data channel")
-		PostToApmServer(agentBytes, config)
-	default:
+	for {
+		select {
+		case agentData := <-dataChannel:
+			log.Println("Received bytes from data channel")
+			err := PostToApmServer(agentData, config)
+			if err != nil {
+				log.Printf("Error sending to APM server: %v", err)
+			}
+		default:
+			log.Println("No more agent data")
+			return
+		}
 	}
 }
 

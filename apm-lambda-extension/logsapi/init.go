@@ -19,9 +19,9 @@ func Subscribe(extensionID string, eventTypes []EventType) error {
 		return errors.New("AWS_LAMBDA_RUNTIME_API is not set")
 	}
 
-	logsApiBaseUrl := fmt.Sprintf("http://%s", extensions_api_address)
+	logsAPIBaseUrl := fmt.Sprintf("http://%s", extensions_api_address)
 
-	logsApiClient, err := NewClient(logsApiBaseUrl)
+	logsAPIClient, err := NewClient(logsAPIBaseUrl)
 	if err != nil {
 		return err
 	}
@@ -42,6 +42,6 @@ func Subscribe(extensionID string, eventTypes []EventType) error {
 		Encoding:   JSON,
 	}
 
-	_, err = logsApiClient.Subscribe(eventTypes, bufferingCfg, destination, extensionID)
+	_, err = logsAPIClient.Subscribe(eventTypes, bufferingCfg, destination, extensionID)
 	return err
 }
