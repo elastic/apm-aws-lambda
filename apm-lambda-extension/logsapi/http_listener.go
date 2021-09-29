@@ -6,11 +6,9 @@ package logsapi
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"time"
 )
@@ -48,13 +46,9 @@ func ListenOnAddress() string {
 		return ":" + DefaultHttpListenerPort
 	}
 
-	listenerAddress, ok := os.LookupEnv("ELASTIC_APM_DATA_RECEIVER_LOG_LISTENER_ADDRESS")
-
+	listenerAddress, ok := os.LookupEnv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS")
 	if ok && listenerAddress != "" {
-		u, err := url.Parse(listenerAddress)
-		if err == nil {
-			return fmt.Sprintf("%s:%s", u.Host, u.Port())
-		}
+		return listenerAddress
 	}
 	return "sandbox:" + DefaultHttpListenerPort
 }
