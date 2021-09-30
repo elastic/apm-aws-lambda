@@ -23,12 +23,12 @@ func Test_getDecompressedBytesFromRequestUncompressed(t *testing.T) {
 	// Decompress the request's body
 	got, err1 := getDecompressedBytesFromRequest(req)
 	if err1 != nil {
-		t.Errorf("Error decompressing request: %v", err1)
+		t.Errorf("Error decompressing request body: %v", err1)
 		t.Fail()
 	}
 
 	if s != string(got) {
-		t.Errorf("Orignal string and decompressed data do not match")
+		t.Errorf("Original string and decompressed data do not match")
 		t.Fail()
 	}
 }
@@ -58,12 +58,12 @@ func Test_getDecompressedBytesFromRequestGzip(t *testing.T) {
 	// Decompress the request's body
 	got, err1 := getDecompressedBytesFromRequest(req)
 	if err1 != nil {
-		t.Errorf("Error decompressing request: %v", err1)
+		t.Errorf("Error decompressing request body: %v", err1)
 		t.Fail()
 	}
 
 	if s != string(got) {
-		t.Errorf("Orignal string and decompressed data do not match")
+		t.Errorf("Original string and decompressed data do not match")
 		t.Fail()
 	}
 }
@@ -93,12 +93,12 @@ func Test_getDecompressedBytesFromRequestDeflate(t *testing.T) {
 	// Decompress the request's body
 	got, err1 := getDecompressedBytesFromRequest(req)
 	if err1 != nil {
-		t.Errorf("Error decompressing request: %v", err1)
+		t.Errorf("Error decompressing request body: %v", err1)
 		t.Fail()
 	}
 
 	if s != string(got) {
-		t.Errorf("Orignal string and decompressed data do not match")
+		t.Errorf("Original string and decompressed data do not match")
 		t.Fail()
 	}
 }
@@ -112,7 +112,7 @@ func Test_getDecompressedBytesFromRequestEmptyBody(t *testing.T) {
 
 	got, err := getDecompressedBytesFromRequest(req)
 	if err != nil {
-		t.Errorf("Error decompressing request: %v", err)
+		t.Errorf("Error decompressing request body: %v", err)
 	}
 
 	if len(got) != 0 {
