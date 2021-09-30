@@ -3,8 +3,10 @@ package extension
 import (
 	"bytes"
 	"compress/gzip"
+	"compress/zlib"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"time"
 )
@@ -22,33 +24,42 @@ func contains(haystack []string, needle string) bool {
 	return false
 }
 
-func getDecompressedBytesFromRequest(r *http.Request) ([]byte, error) {
+func getDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 	var rawBytes []byte
-	if r.Body != nil {
-		rawBytes, _ = ioutil.ReadAll(r.Body)
+	if req.Body != nil {
+		rawBytes, _ = ioutil.ReadAll(req.Body)
 	}
 
-	// decompress
-	var bodyBytes []byte
-	var err2 error
-	if contains(r.Header["Content-Encoding"], "gzip") {
+	switch req.Header.Get("Content-Encoding") {
+	case "deflate":
 		reader := bytes.NewReader([]byte(rawBytes))
-		gzreader, err1 := gzip.NewReader(reader)
-		if err1 != nil {
-			fmt.Println("could not create gzip.NewReader")
-			return nil, err1
+		zlibreader, err := zlib.NewReader(reader)
+		if err != nil {
+			log.Printf("Error: could not create zlib.NewReader. %v", err)
+			return nil, err
 		}
-
-		bodyBytes, err2 = ioutil.ReadAll(gzreader)
-		if err2 != nil {
-			fmt.Println("could not create ioutil.ReadAll")
-			return nil, err2
+		bodyBytes, err := ioutil.ReadAll(zlibreader)
+		if err != nil {
+			fmt.Println("Could not read from zlib reader using ioutil.ReadAll")
+			return nil, err
 		}
-		// end decompress
-	} else {
-		bodyBytes = rawBytes
+		return bodyBytes, nil
+	case "gzip":
+		reader := bytes.NewReader([]byte(rawBytes))
+		zlibreader, err := gzip.NewReader(reader)
+		if err != nil {
+			log.Printf("Error: could not create gzip.NewReader. %v", err)
+			return nil, err
+		}
+		bodyBytes, err := ioutil.ReadAll(zlibreader)
+		if err != nil {
+			fmt.Println("Could not read from gzip reader using ioutil.ReadAll")
+			return nil, err
+		}
+		return bodyBytes, nil
+	default:
+		return rawBytes, nil
 	}
-	return bodyBytes, nil
 }
 
 func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
