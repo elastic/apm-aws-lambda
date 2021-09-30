@@ -10,7 +10,7 @@ func handleIntakeV2Events(handler *serverHandler, w http.ResponseWriter, r *http
 	if nil != err {
 		log.Println("could not get bytes from body")
 	} else {
-		log.Println("Receiving bytes from agent request")
+		log.Println("Adding agent data to buffer to be sent to apm server")
 		handler.data <- bodyBytes
 	}
 	w.WriteHeader(http.StatusAccepted)
