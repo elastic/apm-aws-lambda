@@ -40,7 +40,7 @@ func getDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 		}
 		bodyBytes, err := ioutil.ReadAll(zlibreader)
 		if err != nil {
-			fmt.Println("Could not read from zlib reader using ioutil.ReadAll")
+			fmt.Printf("Could not read from zlib reader using ioutil.ReadAll: %v", err)
 			return nil, err
 		}
 		return bodyBytes, nil
@@ -53,7 +53,7 @@ func getDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 		}
 		bodyBytes, err := ioutil.ReadAll(zlibreader)
 		if err != nil {
-			fmt.Println("Could not read from gzip reader using ioutil.ReadAll")
+			fmt.Printf("Could not read from gzip reader using ioutil.ReadAll: %v", err)
 			return nil, err
 		}
 		return bodyBytes, nil
