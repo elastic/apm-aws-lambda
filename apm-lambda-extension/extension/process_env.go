@@ -24,9 +24,6 @@ func getIntFromEnv(name string) (int, error) {
 }
 
 // pull env into globals
-// new lambda only ENV variables
-// ELASTIC_APM_DATA_RECEIVER_SERVER_PORT
-// ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS
 func ProcessEnv() *extensionConfig {
 	endpointUri := "/intake/v2/events"
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")

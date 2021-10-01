@@ -92,7 +92,7 @@ func (e *Client) Register(ctx context.Context, filename string) (*RegisterRespon
 		return nil, err
 	}
 	if httpRes.StatusCode != 200 {
-		return nil, fmt.Errorf("request failed with status %s", httpRes.Status)
+		return nil, fmt.Errorf("extension register request failed with status %s", httpRes.Status)
 	}
 	defer httpRes.Body.Close()
 	body, err := ioutil.ReadAll(httpRes.Body)
@@ -124,7 +124,7 @@ func (e *Client) NextEvent(ctx context.Context) (*NextEventResponse, error) {
 		return nil, err
 	}
 	if httpRes.StatusCode != 200 {
-		return nil, fmt.Errorf("request failed with status %s", httpRes.Status)
+		return nil, fmt.Errorf("next event request failed with status %s", httpRes.Status)
 	}
 	defer httpRes.Body.Close()
 	body, err := ioutil.ReadAll(httpRes.Body)
@@ -155,7 +155,7 @@ func (e *Client) InitError(ctx context.Context, errorType string) (*StatusRespon
 		return nil, err
 	}
 	if httpRes.StatusCode != 200 {
-		return nil, fmt.Errorf("request failed with status %s", httpRes.Status)
+		return nil, fmt.Errorf("initialization error request failed with status %s", httpRes.Status)
 	}
 	defer httpRes.Body.Close()
 	body, err := ioutil.ReadAll(httpRes.Body)
@@ -186,7 +186,7 @@ func (e *Client) ExitError(ctx context.Context, errorType string) (*StatusRespon
 		return nil, err
 	}
 	if httpRes.StatusCode != 200 {
-		return nil, fmt.Errorf("request failed with status %s", httpRes.Status)
+		return nil, fmt.Errorf("exit error request failed with status %s", httpRes.Status)
 	}
 	defer httpRes.Body.Close()
 	body, err := ioutil.ReadAll(httpRes.Body)

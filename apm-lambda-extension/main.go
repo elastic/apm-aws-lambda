@@ -75,7 +75,7 @@ func main() {
 		default:
 			// call Next method of extension API.  This long polling HTTP method
 			// will block until there's an invocation of the function
-			log.Println("Waiting for event...")
+			log.Println("Waiting for next event...")
 			event, err := extensionClient.NextEvent(ctx)
 			if err != nil {
 				log.Printf("Error: %v\n", err)
@@ -113,7 +113,7 @@ func main() {
 					case agentData := <-dataChannel:
 						err := extension.PostToApmServer(agentData, config)
 						if err != nil {
-							log.Printf("Error sending to APM server: %v", err)
+							log.Printf("Error sending to APM server, skipping: %v", err)
 						}
 					}
 				}
