@@ -47,8 +47,9 @@ func PostToApmServer(postBody []byte, config *extensionConfig) error {
 	}
 
 	sb := string(body)
-	log.Printf("Response Headers: %v\n", resp.Header)
-	log.Printf("Response Body: %v\n", sb)
+	log.Printf("APM server response headers: %v\n", resp.Header)
+	log.Printf("APM server response body: %v\n", sb)
+	log.Printf("APM server response status code: %v\n", resp.StatusCode)
 
 	return nil
 }
