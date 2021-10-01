@@ -4,10 +4,10 @@ const {getLastJsonFromShellOutput} = require('../build-and-publish')
 
 
 tap.test('all', function(t){
-  const fixture = `AKX AWS_SECRET_ACCESS_KEY=hmE7n1gfiyXzgwOQu2bxOA92HrVVWh8WG/1O4TJE ELASTIC_LAYER_NAME=apm-lambda-extension make build-and-publish
+  const fixture = `... AWS_SECRET_ACCESS_KEY=h...E ELASTIC_LAYER_NAME=apm-lambda-extension make build-and-publish
   make build
   GOOS=linux GOARCH=amd64 go build -o bin/extensions/apm-lambda-extension main.go
-  cd bin && rm extension.zip || true && zip -r extension.zip extensions
+  cd bin && rm -f extension.zip || true && zip -r extension.zip extensions
     adding: extensions/ (stored 0%)
     adding: extensions/apm-lambda-extension (deflated 47%)
   aws lambda publish-layer-version --layer-name "apm-lambda-extension" --zip-file "fileb://./bin/extension.zip"
