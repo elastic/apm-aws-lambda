@@ -4,7 +4,7 @@
   "description": "cli for configuring lambda",
   "main": "cli.js",
   "scripts": {
-    "test": "tap tests/*.test.js"
+    "test": "tap --no-coverage tests/*.test.js"
   },
   "author": "",
   "license": "BSD-2-Clause",
