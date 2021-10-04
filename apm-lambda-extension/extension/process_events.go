@@ -15,13 +15,13 @@ func FlushAPMData(dataChannel chan []byte, config *extensionConfig) {
 	for {
 		select {
 		case agentData := <-dataChannel:
-			log.Println("Received bytes from data channel")
+			log.Println("Processing agent data")
 			err := PostToApmServer(agentData, config)
 			if err != nil {
-				log.Printf("Error sending to APM server: %v", err)
+				log.Printf("Error sending to APM server, skipping: %v", err)
 			}
 		default:
-			log.Println("No more agent data")
+			log.Println("No agent data on buffer")
 			return
 		}
 	}

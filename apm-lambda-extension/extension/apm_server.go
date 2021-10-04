@@ -3,6 +3,7 @@ package extension
 import (
 	"bytes"
 	"compress/gzip"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -22,7 +23,7 @@ func PostToApmServer(postBody []byte, config *extensionConfig) error {
 
 	req, err := http.NewRequest("POST", config.apmServerEndpoint, bytes.NewReader(compressedBytes.Bytes()))
 	if err != nil {
-		log.Fatalf("An Error Occured calling NewRequest %v", err)
+		return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
 	}
 	req.Header.Add("Content-Type", "application/x-ndjson")
 	req.Header.Add("Content-Encoding", "gzip")
@@ -34,22 +35,17 @@ func PostToApmServer(postBody []byte, config *extensionConfig) error {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to post to APM server: %v", err)
 	}
 
 	//Read the response body
 	defer resp.Body.Close()
-	log.Println("reading response body")
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("there was an error reading the resp body")
-		log.Fatalln(err)
+		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
-	sb := string(body)
-	log.Printf("APM server response headers: %v\n", resp.Header)
-	log.Printf("APM server response body: %v\n", sb)
+	log.Printf("APM server response body: %v\n", string(body))
 	log.Printf("APM server response status code: %v\n", resp.StatusCode)
-
 	return nil
 }

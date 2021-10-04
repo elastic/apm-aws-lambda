@@ -42,7 +42,7 @@ func NewLogsAPIHttpListener(lc chan LogEvent) (*LogsAPIHttpListener, error) {
 
 func ListenOnAddress() string {
 	env_aws_local, ok := os.LookupEnv("AWS_SAM_LOCAL")
-	if ok && "true" == env_aws_local {
+	if ok && env_aws_local == "true" {
 		return ":" + DefaultHttpListenerPort
 	}
 
@@ -61,10 +61,10 @@ func (s *LogsAPIHttpListener) Start(address string) (bool, error) {
 		log.Printf("Server listening for logs data from AWS Logs API on %s", address)
 		err := s.httpServer.ListenAndServe()
 		if err != http.ErrServerClosed {
-			log.Printf("Unexpected stop on Http Server: %v", err)
+			log.Printf("Unexpected stop on Logs API Http Server: %v", err)
 			s.Shutdown()
 		} else {
-			log.Printf("Http Server closed %v", err)
+			log.Printf("Logs API Http Server closed %v", err)
 		}
 	}()
 	return true, nil
@@ -78,7 +78,7 @@ func (s *LogsAPIHttpListener) Start(address string) (bool, error) {
 func (h *LogsAPIHttpListener) http_handler(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("Error reading body: %+v", err)
+		log.Printf("Error reading body of Logs API request: %+v", err)
 		return
 	}
 
@@ -99,7 +99,7 @@ func (s *LogsAPIHttpListener) Shutdown() {
 		defer cancel()
 		err := s.httpServer.Shutdown(ctx)
 		if err != nil {
-			log.Printf("Failed to shutdown http server gracefully %s", err)
+			log.Printf("Failed to shutdown Logs API http server gracefully %s", err)
 		} else {
 			s.httpServer = nil
 		}

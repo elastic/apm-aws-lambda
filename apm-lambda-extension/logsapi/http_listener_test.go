@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestListenOnAddressWithENVVariable(t *testing.T) {
+func TestListenOnAddressWithEnvVariable(t *testing.T) {
 	os.Setenv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS", "example:3456")
 
 	address := ListenOnAddress()
