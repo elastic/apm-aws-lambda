@@ -1,18 +1,22 @@
 # Elastic Lambda APM CLI
 
-This folder contains a Node.js based CLI application that can be used to install or update aspects of the Elastic Lambda APM product.  This is currently an experimental CLI. 
+This folder contains a Node.js based CLI application that users can use to install or update aspects of the Elastic Lambda APM product.  This is currently an experimental CLI. 
 
 To use this command line application, you'll need 
 
 - A version of Node.js and NPM installed your system (to run the command itself)
 - A version of go installed on your system (to build the Lambda extension)
-- A version of the aws cli tool (to publish your layer (TODO: replace `aws` cli dependency with a call to an aws-sdk API)
+- A version of the aws cli tool (to publish your layer)
+
+## Using the CLI
+
+To install the application, use NPM install its dependencies
 
 ```
     % npm install
 ```
     
-from this folder.  After running NPM install, you can see a list of available commands by running     
+After running `npm install`, you can see a list of available commands by running     
 
     % ./elastic-lambda.js 
     elastic-lambda.js <command>
@@ -53,13 +57,13 @@ and then edit the new `install.yaml` file such that it contains your function na
           ELASTIC_APM_SERVER_URL: "http://elastic.example.com:8200"
           ELASTIC_APM_SERVICE_NAME: "service name here"
           
-Once editing, run the `install` sub-command
+Once you're done editing this file you'll run the `install` sub-command
 
     $ ./elastic-lambda.js install          
     //...
     
-and it will automatically 
+The `install` sub-command will automatically
 
-1. Update your Lambda environmental variables.     
+1. Update your Lambda environmental variables     
 2. Build the Lambda Extension Layer and Publish it to AWS
 3. Add the just published layer to your Lambda function's configuration
