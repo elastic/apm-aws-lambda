@@ -19,7 +19,7 @@ ifndef ELASTIC_LAYER_NAME
 	$(error ELASTIC_LAYER_NAME is undefined)
 endif
 	make build
-	cd bin && rm extension.zip || true && zip -r extension.zip extensions
+	cd bin && rm -f extension.zip || true && zip -r extension.zip extensions
 	aws lambda publish-layer-version --layer-name "${ELASTIC_LAYER_NAME}" --zip-file "fileb://./bin/extension.zip"
 run-GoExampleExtensionLayer:
 	go run apm-lambda-extension/main.go
