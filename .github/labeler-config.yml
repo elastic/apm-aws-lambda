@@ -1,0 +1,3 @@
+# add 'aws-λ-extension' label to all new issues
+aws-λ-extension:
+  - '.*'
