@@ -67,12 +67,12 @@ func TestProxy(t *testing.T) {
 		apmServerUrl:               "http://localhost:" + apmServerPort,
 		apmServerSecretToken:       "foo",
 		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     "8081",
+		dataReceiverServerPort:     ":8081",
 		dataReceiverTimeoutSeconds: 15,
 	})
 
 	body := getUrl(
-		"http://localhost:8080",
+		"http://localhost:8081",
 		map[string]string{"Authorization": "test-value"},
 	)
 
