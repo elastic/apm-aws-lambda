@@ -22,11 +22,14 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 func Test_getDecompressedBytesFromRequestUncompressed(t *testing.T) {
@@ -172,13 +175,18 @@ func startMockApmServer(response map[string]string, port string) {
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
-func getUrl(url string, headers map[string]string) string {
+func getUrl(url string, headers map[string]string, t *testing.T) string {
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", url, nil)
 	for name, value := range headers {
 		req.Header.Add(name, value)
 	}
-	resp, _ := client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Logf("Error fetching %s, [%v]", url, err)
+		return "{}"
+	}
+
 	defer resp.Body.Close()
 	body, _ := ioutil.ReadAll(resp.Body)
 	return string(body)
@@ -189,24 +197,44 @@ func startExtension(config *extensionConfig) {
 	NewHttpServer(dataChannel, config)
 }
 
+func getRandomNetworkPort(notwanted []int) int {
+	rand.Seed(time.Now().UnixNano())
+	min := 1
+	max := 5
+	var value = rand.Intn(max-min+1) + min
+	// if we've got a value that's not wanted,
+	// recall outself recursivly
+	for _, v := range notwanted {
+		if value == v {
+			return getRandomNetworkPort(notwanted)
+		}
+	}
+	return value
+}
+
 func TestProxy(t *testing.T) {
-	var apmServerPort = "8080"
+	var iApmServerPort = getRandomNetworkPort([]int{})
+	apmServerPort := fmt.Sprint(iApmServerPort)
 
 	go startMockApmServer(
 		map[string]string{"foo": "bar"},
 		apmServerPort,
 	)
+
+	var extensionPort = fmt.Sprint(getRandomNetworkPort([]int{iApmServerPort}))
+
 	go startExtension(&extensionConfig{
 		apmServerUrl:               "http://localhost:" + apmServerPort,
 		apmServerSecretToken:       "foo",
 		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     ":8081",
+		dataReceiverServerPort:     ":" + extensionPort,
 		dataReceiverTimeoutSeconds: 15,
 	})
 
 	body := getUrl(
-		"http://localhost:8081",
+		"http://localhost:"+extensionPort,
 		map[string]string{"Authorization": "test-value"},
+		t,
 	)
 
 	var result map[string]map[string]string
