@@ -28,12 +28,18 @@ import (
 )
 
 type serverHandler struct {
-	data chan []byte
+	data   chan []byte
+	config *extensionConfig
 }
 
 func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/intake/v2/events" {
 		handleIntakeV2Events(handler, w, r)
+		return
+	}
+
+	if r.URL.Path == "/" {
+		handleInfoRequest(handler, w, r)
 		return
 	}
 
@@ -44,7 +50,7 @@ func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 }
 
 func NewHttpServer(dataChannel chan []byte, config *extensionConfig) *http.Server {
-	var handler = serverHandler{data: dataChannel}
+	var handler = serverHandler{data: dataChannel, config: config}
 	timeout := time.Duration(config.dataReceiverTimeoutSeconds) * time.Second
 	s := &http.Server{
 		Addr:           config.dataReceiverServerPort,

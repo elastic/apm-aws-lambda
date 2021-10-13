@@ -23,14 +23,25 @@ import (
 )
 
 func TestProcessEnv(t *testing.T) {
-	os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "foo.example.com")
-	os.Setenv("ELASTIC_APM_SECRET_TOKEN", "bar")
-
+	os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "bar.example.com/")
+	os.Setenv("ELASTIC_APM_SECRET_TOKEN", "foo")
 	config := ProcessEnv()
 	t.Logf("%v", config)
 
-	if config.apmServerEndpoint != "foo.example.com/intake/v2/events" {
-		t.Log("Endpoint not set correctly")
+	if config.apmServerUrl != "bar.example.com/" {
+		t.Logf("Endpoint not set correctly: %s", config.apmServerUrl)
+		t.Fail()
+	}
+
+	os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "foo.example.com")
+	os.Setenv("ELASTIC_APM_SECRET_TOKEN", "bar")
+
+	config = ProcessEnv()
+	t.Logf("%v", config)
+
+	// config normalizes string to ensure it ends in a `/`
+	if config.apmServerUrl != "foo.example.com/" {
+		t.Logf("Endpoint not set correctly: %s", config.apmServerUrl)
 		t.Fail()
 	}
 

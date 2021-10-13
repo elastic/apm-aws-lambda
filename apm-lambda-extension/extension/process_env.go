@@ -24,7 +24,7 @@ import (
 )
 
 type extensionConfig struct {
-	apmServerEndpoint          string
+	apmServerUrl               string
 	apmServerSecretToken       string
 	apmServerApiKey            string
 	dataReceiverServerPort     string
@@ -42,15 +42,20 @@ func getIntFromEnv(name string) (int, error) {
 
 // pull env into globals
 func ProcessEnv() *extensionConfig {
-	endpointUri := "/intake/v2/events"
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
 		log.Printf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to 15: %v\n", err)
 		dataReceiverTimeoutSeconds = 15
 	}
 
+	// add trailing slash to server name if missing
+	normalizedApmLambdaServer := os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")
+	if normalizedApmLambdaServer[len(normalizedApmLambdaServer)-1:] != "/" {
+		normalizedApmLambdaServer = normalizedApmLambdaServer + "/"
+	}
+
 	config := &extensionConfig{
-		apmServerEndpoint:          os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER") + endpointUri,
+		apmServerUrl:               normalizedApmLambdaServer,
 		apmServerSecretToken:       os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
 		apmServerApiKey:            os.Getenv("ELASTIC_APM_API_KEY"),
 		dataReceiverServerPort:     os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"),
@@ -60,7 +65,7 @@ func ProcessEnv() *extensionConfig {
 	if config.dataReceiverServerPort == "" {
 		config.dataReceiverServerPort = ":8200"
 	}
-	if endpointUri == config.apmServerEndpoint {
+	if config.apmServerUrl == "" {
 		log.Fatalln("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
 	}
 	if config.apmServerSecretToken == "" && config.apmServerApiKey == "" {
