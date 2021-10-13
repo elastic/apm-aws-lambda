@@ -23,7 +23,7 @@ import (
 	"net/http"
 )
 
-// URL: http://.../
+// URL: http://server/
 func handleInfoRequest(handler *serverHandler, w http.ResponseWriter, r *http.Request) {
 	client := &http.Client{}
 
@@ -66,7 +66,7 @@ func handleInfoRequest(handler *serverHandler, w http.ResponseWriter, r *http.Re
 	w.Write([]byte(body))
 }
 
-// URL: /intake/v2/events
+// URL: http://server/intake/v2/events
 func handleIntakeV2Events(handler *serverHandler, w http.ResponseWriter, r *http.Request) {
 	bodyBytes, err := getDecompressedBytesFromRequest(r)
 	if nil != err {
