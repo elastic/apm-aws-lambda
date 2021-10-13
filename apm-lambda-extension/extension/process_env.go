@@ -50,7 +50,7 @@ func ProcessEnv() *extensionConfig {
 
 	// add trailing slash to server name if missing
 	normalizedApmLambdaServer := os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")
-	if normalizedApmLambdaServer[len(normalizedApmLambdaServer)-1:] != "/" {
+	if normalizedApmLambdaServer != "" && normalizedApmLambdaServer[len(normalizedApmLambdaServer)-1:] != "/" {
 		normalizedApmLambdaServer = normalizedApmLambdaServer + "/"
 	}
 

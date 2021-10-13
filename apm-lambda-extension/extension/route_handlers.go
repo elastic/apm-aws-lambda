@@ -28,31 +28,40 @@ func handleInfoRequest(handler *serverHandler, w http.ResponseWriter, r *http.Re
 	client := &http.Client{}
 
 	req, err := http.NewRequest(r.Method, handler.config.apmServerUrl, nil)
+	//forward every header received
+	for name, values := range r.Header {
+		// Loop over all values for the name.
+		for _, value := range values {
+			req.Header.Set(name, value)
+		}
+	}
 	if err != nil {
-		log.Printf("could create request object for `/` request to APM Server: %v", err)
+		log.Printf("could not create request object for %s:%s: %v", r.Method, handler.config.apmServerUrl, err)
 		return
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("err forwarding `/` request to APM Server: %v", err)
+		log.Printf("error forwarding info request (`/`) to APM Server: %v", err)
 		return
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("got response to `/` request to APM Server, but could not read: %v", err)
+		log.Printf("could not read info request response to APM Server: %v", err)
 		return
 	}
-	log.Printf("%v", handler.config.apmServerUrl)
-
-	// w.Header().Set("Content-Type", "application/json")
 
 	// send status code
 	w.WriteHeader(resp.StatusCode)
 
 	// send every header received
-
+	for name, values := range resp.Header {
+		// Loop over all values for the name.
+		for _, value := range values {
+			w.Header().Add(name, value)
+		}
+	}
 	// send body
 	w.Write([]byte(body))
 }
