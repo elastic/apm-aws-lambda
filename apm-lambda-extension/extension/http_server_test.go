@@ -199,8 +199,8 @@ func startExtension(config *extensionConfig) {
 
 func getRandomNetworkPort(notwanted []int) int {
 	rand.Seed(time.Now().UnixNano())
-	min := 1
-	max := 5
+	min := 50000
+	max := 65534
 	var value = rand.Intn(max-min+1) + min
 	// if we've got a value that's not wanted,
 	// recall outself recursivly
