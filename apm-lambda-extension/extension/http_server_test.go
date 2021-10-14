@@ -216,13 +216,10 @@ func TestProxy(t *testing.T) {
 	var iApmServerPort = getRandomNetworkPort([]int{})
 	apmServerPort := fmt.Sprint(iApmServerPort)
 
-	mockApmStarted := make(chan struct{})
 	go startMockApmServer(
 		map[string]string{"foo": "bar"},
 		apmServerPort,
-		mockApmStarted
 	)
-	<-mockApmStarted
 
 	var extensionPort = fmt.Sprint(getRandomNetworkPort([]int{iApmServerPort}))
 
