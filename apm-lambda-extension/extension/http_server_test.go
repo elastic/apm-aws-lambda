@@ -213,9 +213,8 @@ func getUrl(url string, headers map[string]string, t *testing.T) string {
 func startExtension(config *extensionConfig, wg *sync.WaitGroup) {
 	// NewHttpServer does not block, so we can defer
 	// the wg.Done call
-	defer wg.Done()
 	dataChannel := make(chan []byte, 100)
-	NewHttpServer(dataChannel, config)
+	NewHttpServer(dataChannel, config, wg)
 }
 
 func getRandomNetworkPort(notwanted []int) int {
@@ -241,7 +240,7 @@ func TestProxy(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go startExtension(&extensionConfig{
+	startExtension(&extensionConfig{
 		apmServerUrl:               "http://localhost:" + apmServerPort,
 		apmServerSecretToken:       "foo",
 		apmServerApiKey:            "bar",

@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
@@ -62,7 +63,12 @@ func main() {
 	// setup http server to receive data from agent
 	// and get a channel to listen for that data
 	dataChannel := make(chan []byte, 100)
-	extension.NewHttpServer(dataChannel, config)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	extension.NewHttpServer(dataChannel, config, &wg)
+
+	wg.Wait()
 
 	// Subscribe to the Logs API
 	logsapi.Subscribe(

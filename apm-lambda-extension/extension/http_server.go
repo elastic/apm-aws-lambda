@@ -23,7 +23,9 @@ import (
 	"compress/zlib"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -49,7 +51,8 @@ func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 }
 
-func NewHttpServer(dataChannel chan []byte, config *extensionConfig) *http.Server {
+func NewHttpServer(dataChannel chan []byte, config *extensionConfig, wg *sync.WaitGroup) *http.Server {
+	defer wg.Done()
 	var handler = serverHandler{data: dataChannel, config: config}
 	timeout := time.Duration(config.dataReceiverTimeoutSeconds) * time.Second
 	s := &http.Server{
@@ -59,7 +62,14 @@ func NewHttpServer(dataChannel chan []byte, config *extensionConfig) *http.Serve
 		WriteTimeout:   timeout,
 		MaxHeaderBytes: 1 << 20,
 	}
-	go s.ListenAndServe()
+
+	addr := s.Addr
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return s
+	}
+	go s.Serve(ln)
+
 	return s
 }
 
