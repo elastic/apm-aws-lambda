@@ -29,6 +29,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -157,13 +158,13 @@ func Test_getDecompressedBytesFromRequestEmptyBody(t *testing.T) {
  * The intended use is to start the extension's HTTP server
  * and confirm that it proxies info requests to this server
  */
-func startMockApmServer(response map[string]string, port string) {
+func startMockApmServer(response map[string]string, port string, wg *sync.WaitGroup) {
 	handler := &mockServerHandler{response: response}
 	listener, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		log.Fatalf("could not setup mock apm server listener: %v", err)
 	}
-
+	wg.Done()
 	if err := http.Serve(listener, handler); err != nil {
 		log.Fatalf("could not server mock apm server: %v", err)
 	}
@@ -206,9 +207,10 @@ func getUrl(url string, headers map[string]string, t *testing.T) string {
 	return string(body)
 }
 
-func startExtension(config *extensionConfig) {
+func startExtension(config *extensionConfig, wg *sync.WaitGroup) {
 	dataChannel := make(chan []byte, 100)
 	NewHttpServer(dataChannel, config)
+	wg.Done()
 }
 
 func getRandomNetworkPort(notwanted []int) int {
@@ -231,18 +233,25 @@ func TestProxy(t *testing.T) {
 	apmServerPort := fmt.Sprint(iApmServerPort)
 	var extensionPort = fmt.Sprint(getRandomNetworkPort([]int{iApmServerPort}))
 
-	startExtension(&extensionConfig{
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	go startExtension(&extensionConfig{
 		apmServerUrl:               "http://localhost:" + apmServerPort,
 		apmServerSecretToken:       "foo",
 		apmServerApiKey:            "bar",
 		dataReceiverServerPort:     ":" + extensionPort,
 		dataReceiverTimeoutSeconds: 15,
-	})
+	}, &wg)
 
+	wg.Add(1)
 	go startMockApmServer(
 		map[string]string{"foo": "bar"},
 		apmServerPort,
+		&wg,
 	)
+
+	wg.Wait()
 
 	body := getUrl(
 		"http://localhost:"+extensionPort,
