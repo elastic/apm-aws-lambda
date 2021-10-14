@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -157,22 +158,35 @@ func Test_getDecompressedBytesFromRequestEmptyBody(t *testing.T) {
  * and confirm that it proxies info requests to this server
  */
 func startMockApmServer(response map[string]string, port string) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		seenHeaders := make(map[string]string)
-		for name, values := range r.Header {
-			for _, value := range values {
-				seenHeaders[name] = value
-			}
-		}
+	handler := &mockServerHandler{response: response}
+	listener, err := net.Listen("tcp", ":"+port)
+	if err != nil {
+		log.Fatalf("could not setup mock apm server listener: %v", err)
+	}
 
-		data := map[string]map[string]string{
-			"data":         response,
-			"seen_headers": seenHeaders,
+	if err := http.Serve(listener, handler); err != nil {
+		log.Fatalf("could not server mock apm server: %v", err)
+	}
+}
+
+type mockServerHandler struct {
+	response map[string]string
+}
+
+func (handler *mockServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	seenHeaders := make(map[string]string)
+	for name, values := range r.Header {
+		for _, value := range values {
+			seenHeaders[name] = value
 		}
-		responseString, _ := json.Marshal(data)
-		w.Write([]byte(responseString))
-	})
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	}
+
+	data := map[string]map[string]string{
+		"data":         handler.response,
+		"seen_headers": seenHeaders,
+	}
+	responseString, _ := json.Marshal(data)
+	w.Write([]byte(responseString))
 }
 
 func getUrl(url string, headers map[string]string, t *testing.T) string {
@@ -215,21 +229,20 @@ func getRandomNetworkPort(notwanted []int) int {
 func TestProxy(t *testing.T) {
 	var iApmServerPort = getRandomNetworkPort([]int{})
 	apmServerPort := fmt.Sprint(iApmServerPort)
-
-	go startMockApmServer(
-		map[string]string{"foo": "bar"},
-		apmServerPort,
-	)
-
 	var extensionPort = fmt.Sprint(getRandomNetworkPort([]int{iApmServerPort}))
 
-	go startExtension(&extensionConfig{
+	startExtension(&extensionConfig{
 		apmServerUrl:               "http://localhost:" + apmServerPort,
 		apmServerSecretToken:       "foo",
 		apmServerApiKey:            "bar",
 		dataReceiverServerPort:     ":" + extensionPort,
 		dataReceiverTimeoutSeconds: 15,
 	})
+
+	go startMockApmServer(
+		map[string]string{"foo": "bar"},
+		apmServerPort,
+	)
 
 	// sleep seem neccesary in our test env
 	// to give the above go-routines-servers
