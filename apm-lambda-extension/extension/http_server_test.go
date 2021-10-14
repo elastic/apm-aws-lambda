@@ -231,6 +231,11 @@ func TestProxy(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	})
 
+	// sleep seem neccesary in our test env
+	// to give the above go routines time to
+	// complete their startup
+	time.Sleep(5 * time.Second)
+
 	body := getUrl(
 		"http://localhost:"+extensionPort,
 		map[string]string{"Authorization": "test-value"},
