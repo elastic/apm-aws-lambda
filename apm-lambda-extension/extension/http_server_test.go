@@ -216,10 +216,13 @@ func TestProxy(t *testing.T) {
 	var iApmServerPort = getRandomNetworkPort([]int{})
 	apmServerPort := fmt.Sprint(iApmServerPort)
 
+	mockApmStarted := make(chan struct{})
 	go startMockApmServer(
 		map[string]string{"foo": "bar"},
 		apmServerPort,
+		mockApmStarted
 	)
+	<-mockApmStarted
 
 	var extensionPort = fmt.Sprint(getRandomNetworkPort([]int{iApmServerPort}))
 
@@ -232,9 +235,9 @@ func TestProxy(t *testing.T) {
 	})
 
 	// sleep seem neccesary in our test env
-	// to give the above go routines time to
-	// complete their startup
-	time.Sleep(5 * time.Second)
+	// to give the above go-routines-servers
+	// time to complete their startup
+	time.Sleep(1 * time.Second)
 
 	body := getUrl(
 		"http://localhost:"+extensionPort,
