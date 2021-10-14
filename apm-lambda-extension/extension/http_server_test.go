@@ -164,6 +164,9 @@ func startMockApmServer(response map[string]string, port string, wg *sync.WaitGr
 	if err != nil {
 		log.Fatalf("could not setup mock apm server listener: %v", err)
 	}
+	// http.Serve blocks, so we can't defer the wg.Done call
+	// but the tcp listener should be accepting connections
+	// at this point, so we can call wg.Done here
 	wg.Done()
 	if err := http.Serve(listener, handler); err != nil {
 		log.Fatalf("could not server mock apm server: %v", err)
@@ -208,9 +211,11 @@ func getUrl(url string, headers map[string]string, t *testing.T) string {
 }
 
 func startExtension(config *extensionConfig, wg *sync.WaitGroup) {
+	// NewHttpServer does not block, so we can defer
+	// the wg.Done call
+	defer wg.Done()
 	dataChannel := make(chan []byte, 100)
 	NewHttpServer(dataChannel, config)
-	wg.Done()
 }
 
 func getRandomNetworkPort(notwanted []int) int {
