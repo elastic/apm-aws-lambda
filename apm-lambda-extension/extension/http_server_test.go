@@ -244,11 +244,6 @@ func TestProxy(t *testing.T) {
 		apmServerPort,
 	)
 
-	// sleep seem neccesary in our test env
-	// to give the above go-routines-servers
-	// time to complete their startup
-	time.Sleep(1 * time.Second)
-
 	body := getUrl(
 		"http://localhost:"+extensionPort,
 		map[string]string{"Authorization": "test-value"},
