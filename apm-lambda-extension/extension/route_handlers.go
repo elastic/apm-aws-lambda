@@ -18,10 +18,55 @@
 package extension
 
 import (
+	"io/ioutil"
 	"log"
 	"net/http"
 )
 
+// URL: http://server/
+func handleInfoRequest(handler *serverHandler, w http.ResponseWriter, r *http.Request) {
+	client := &http.Client{}
+
+	req, err := http.NewRequest(r.Method, handler.config.apmServerUrl, nil)
+	//forward every header received
+	for name, values := range r.Header {
+		// Loop over all values for the name.
+		for _, value := range values {
+			req.Header.Set(name, value)
+		}
+	}
+	if err != nil {
+		log.Printf("could not create request object for %s:%s: %v", r.Method, handler.config.apmServerUrl, err)
+		return
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("error forwarding info request (`/`) to APM Server: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("could not read info request response to APM Server: %v", err)
+		return
+	}
+
+	// send status code
+	w.WriteHeader(resp.StatusCode)
+
+	// send every header received
+	for name, values := range resp.Header {
+		// Loop over all values for the name.
+		for _, value := range values {
+			w.Header().Add(name, value)
+		}
+	}
+	// send body
+	w.Write([]byte(body))
+}
+
+// URL: http://server/intake/v2/events
 func handleIntakeV2Events(handler *serverHandler, w http.ResponseWriter, r *http.Request) {
 	bodyBytes, err := getDecompressedBytesFromRequest(r)
 	if nil != err {

@@ -21,9 +21,13 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
+	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"gotest.tools/assert"
 )
 
 func Test_getDecompressedBytesFromRequestUncompressed(t *testing.T) {
@@ -135,5 +139,54 @@ func Test_getDecompressedBytesFromRequestEmptyBody(t *testing.T) {
 	if len(got) != 0 {
 		t.Errorf("A non-empty byte slice was returned")
 		t.Fail()
+	}
+}
+
+func TestInfoProxy(t *testing.T) {
+	headers := map[string]string{"Authorization": "test-value"}
+	wantResp := "{\"foo\": \"bar\"}"
+
+	// Create apm server and handler
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for key := range headers {
+			assert.Equal(t, 1, len(r.Header[key]))
+			assert.Equal(t, headers[key], r.Header[key][0])
+		}
+		w.Write([]byte(`{"foo": "bar"}`))
+	}))
+	defer apmServer.Close()
+
+	// Create extension config and start the server
+	dataChannel := make(chan []byte, 100)
+	config := extensionConfig{
+		apmServerUrl:               apmServer.URL,
+		apmServerSecretToken:       "foo",
+		apmServerApiKey:            "bar",
+		dataReceiverServerPort:     "127.0.0.1:1234",
+		dataReceiverTimeoutSeconds: 15,
+	}
+	extensionServer := NewHttpServer(dataChannel, &config)
+	defer extensionServer.Close()
+
+	// Create a request to send to the extension
+	client := &http.Client{}
+	url := "http://" + extensionServer.Addr
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		t.Logf("Could not create request")
+	}
+	for name, value := range headers {
+		req.Header.Add(name, value)
+	}
+
+	// Send the request to the extension
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Logf("Error fetching %s, [%v]", extensionServer.Addr, err)
+		t.Fail()
+	} else {
+		body, _ := ioutil.ReadAll(resp.Body)
+		assert.Equal(t, string(body), wantResp)
+		resp.Body.Close()
 	}
 }

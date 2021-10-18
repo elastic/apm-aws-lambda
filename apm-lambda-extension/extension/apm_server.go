@@ -28,8 +28,8 @@ import (
 
 // todo: can this be a streaming or streaming style call that keeps the
 //       connection open across invocations?
-// func PostToApmServer(postBody []byte, apmServerEndpoint string, apmServerSecretToken string) {
 func PostToApmServer(postBody []byte, config *extensionConfig) error {
+	endpointUri := "/intake/v2/events"
 	var compressedBytes bytes.Buffer
 	w := gzip.NewWriter(&compressedBytes)
 	w.Write(postBody)
@@ -38,7 +38,7 @@ func PostToApmServer(postBody []byte, config *extensionConfig) error {
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", config.apmServerEndpoint, bytes.NewReader(compressedBytes.Bytes()))
+	req, err := http.NewRequest("POST", config.apmServerUrl+endpointUri, bytes.NewReader(compressedBytes.Bytes()))
 	if err != nil {
 		return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
 	}
