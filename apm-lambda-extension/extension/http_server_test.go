@@ -21,17 +21,13 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
-	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"log"
-	"math/rand"
-	"net"
 	"net/http"
+	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
-	"time"
+
+	"gotest.tools/assert"
 )
 
 func Test_getDecompressedBytesFromRequestUncompressed(t *testing.T) {
@@ -146,134 +142,51 @@ func Test_getDecompressedBytesFromRequestEmptyBody(t *testing.T) {
 	}
 }
 
-/**
- * Starts a mock HTTP server
- *
- * Exposes a single / endpoint.  This endpoint returns
- * a JSON string with two properties
- *
- * data: the value passed via `response`, as JSON
- * seen_headers: the headers seen by the request to /
- *
- * The intended use is to start the extension's HTTP server
- * and confirm that it proxies info requests to this server
- */
-func startMockApmServer(response map[string]string, port string, wg *sync.WaitGroup) {
-	handler := &mockServerHandler{response: response}
-	listener, err := net.Listen("tcp", ":"+port)
-	if err != nil {
-		log.Fatalf("could not setup mock apm server listener: %v", err)
-	}
-	// http.Serve blocks, so we can't defer the wg.Done call
-	// but the tcp listener should be accepting connections
-	// at this point, so we can call wg.Done here
-	wg.Done()
-	if err := http.Serve(listener, handler); err != nil {
-		log.Fatalf("could not server mock apm server: %v", err)
-	}
-}
+func TestInfoProxy(t *testing.T) {
+	headers := map[string]string{"Authorization": "test-value"}
+	wantResp := "{\"foo\": \"bar\"}"
 
-type mockServerHandler struct {
-	response map[string]string
-}
-
-func (handler *mockServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	seenHeaders := make(map[string]string)
-	for name, values := range r.Header {
-		for _, value := range values {
-			seenHeaders[name] = value
+	// Create apm server and handler
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for key := range headers {
+			assert.Equal(t, 1, len(r.Header[key]))
+			assert.Equal(t, headers[key], r.Header[key][0])
 		}
-	}
+		w.Write([]byte(`{"foo": "bar"}`))
+	}))
+	defer apmServer.Close()
 
-	data := map[string]map[string]string{
-		"data":         handler.response,
-		"seen_headers": seenHeaders,
+	// Create extension config and start the server
+	dataChannel := make(chan []byte, 100)
+	config := extensionConfig{
+		apmServerUrl:               apmServer.URL,
+		apmServerSecretToken:       "foo",
+		apmServerApiKey:            "bar",
+		dataReceiverServerPort:     "127.0.0.1:1234",
+		dataReceiverTimeoutSeconds: 15,
 	}
-	responseString, _ := json.Marshal(data)
-	w.Write([]byte(responseString))
-}
+	extensionServer := NewHttpServer(dataChannel, &config)
+	defer extensionServer.Close()
 
-func getUrl(url string, headers map[string]string, t *testing.T) string {
+	// Create a request to send to the extension
 	client := &http.Client{}
-	req, _ := http.NewRequest("GET", url, nil)
+	url := "http://" + extensionServer.Addr
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		t.Logf("Could not create request")
+	}
 	for name, value := range headers {
 		req.Header.Add(name, value)
 	}
+
+	// Send the request to the extension
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Logf("Error fetching %s, [%v]", url, err)
-		return "{}"
-	}
-
-	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	return string(body)
-}
-
-func startExtension(config *extensionConfig, wg *sync.WaitGroup) {
-	// NewHttpServer does not block, so we can defer
-	// the wg.Done call
-	dataChannel := make(chan []byte, 100)
-	NewHttpServer(dataChannel, config, wg)
-}
-
-func getRandomNetworkPort(notwanted []int) int {
-	rand.Seed(time.Now().UnixNano())
-	min := 50000
-	max := 65534
-	var value = rand.Intn(max-min+1) + min
-	// if we've got a value that's not wanted,
-	// recall outself recursivly
-	for _, v := range notwanted {
-		if value == v {
-			return getRandomNetworkPort(notwanted)
-		}
-	}
-	return value
-}
-
-func TestProxy(t *testing.T) {
-	var iApmServerPort = getRandomNetworkPort([]int{})
-	apmServerPort := fmt.Sprint(iApmServerPort)
-	var extensionPort = fmt.Sprint(getRandomNetworkPort([]int{iApmServerPort}))
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	startExtension(&extensionConfig{
-		apmServerUrl:               "http://localhost:" + apmServerPort,
-		apmServerSecretToken:       "foo",
-		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     ":" + extensionPort,
-		dataReceiverTimeoutSeconds: 15,
-	}, &wg)
-
-	wg.Add(1)
-	go startMockApmServer(
-		map[string]string{"foo": "bar"},
-		apmServerPort,
-		&wg,
-	)
-
-	wg.Wait()
-
-	body := getUrl(
-		"http://localhost:"+extensionPort,
-		map[string]string{"Authorization": "test-value"},
-		t,
-	)
-
-	var result map[string]map[string]string
-	json.Unmarshal([]byte(body), &result)
-	var data map[string]string
-
-	if result["data"]["foo"] != "bar" {
-		t.Logf("unexpected value returned: %s", data)
+		t.Logf("Error fetching %s, [%v]", extensionServer.Addr, err)
 		t.Fail()
-	}
-
-	if result["seen_headers"]["Authorization"] != "test-value" {
-		t.Logf("did not see Authorization header %s", data)
-		t.Fail()
+	} else {
+		body, _ := ioutil.ReadAll(resp.Body)
+		assert.Equal(t, string(body), wantResp)
+		resp.Body.Close()
 	}
 }

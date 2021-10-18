@@ -25,7 +25,6 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"sync"
 	"time"
 )
 
@@ -51,8 +50,7 @@ func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 }
 
-func NewHttpServer(dataChannel chan []byte, config *extensionConfig, wg *sync.WaitGroup) *http.Server {
-	defer wg.Done()
+func NewHttpServer(dataChannel chan []byte, config *extensionConfig) *http.Server {
 	var handler = serverHandler{data: dataChannel, config: config}
 	timeout := time.Duration(config.dataReceiverTimeoutSeconds) * time.Second
 	s := &http.Server{

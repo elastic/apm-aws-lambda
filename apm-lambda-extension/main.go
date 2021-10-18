@@ -66,7 +66,7 @@ func main() {
 
 	var wg sync.WaitGroup
 	wg.Add(1)
-	extension.NewHttpServer(dataChannel, config, &wg)
+	extension.NewHttpServer(dataChannel, config)
 
 	wg.Wait()
 
