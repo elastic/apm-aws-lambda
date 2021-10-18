@@ -43,7 +43,7 @@ func Subscribe(extensionID string, eventTypes []EventType) error {
 	bufferingCfg := BufferingCfg{
 		MaxItems:  10000,
 		MaxBytes:  262144,
-		TimeoutMS: 1000,
+		TimeoutMS: 25,
 	}
 	if err != nil {
 		return err
