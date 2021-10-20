@@ -37,7 +37,7 @@ The installer is distributed via GitHub as a Node.js project.  Once you've downl
     $ ./elastic-lambda.js install
 ----
 
-The `elastic-lambda.js` command assumes you have a `install.yaml` file configured.  There's a sample of this file distributed with the repository.  To use it, just cope the file and edit its contents.
+The `elastic-lambda.js` command assumes you have a `install.yaml` file configured.  There's a sample of this file distributed with the repository.  To use it, just copy the file and edit its contents.
 
 [source,shell]
 ----
