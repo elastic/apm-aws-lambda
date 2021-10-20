@@ -20,7 +20,7 @@ By using a custom built AWS Lambda Extension, Elastic APM Agents can send data t
 [[aws-lambda-install]]
 == Installing the Lambda Extension
 
-Elastic offers an installer for adding the Lambda Extension to your Lambda functions.  This installer will
+Elastic offers an installer for adding the Lambda Extension to your Lambda functions.  This installer will:
 
 1. Compile the Lambda Extension from source (written in go)
 2. Publish the Lambda Extension as a layer
