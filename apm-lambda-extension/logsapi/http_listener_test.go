@@ -96,3 +96,22 @@ func Test_unmarshalFaultRecordString(t *testing.T) {
 
 	assert.Equal(t, "\"Unknown application error occurred\"", string(le.RawRecord))
 }
+
+func Test_unmarshalRecordError(t *testing.T) {
+	jsonBytes := []byte(`
+	{
+		"time": "2021-10-20T08:13:03.278Z",
+		"type": "platform.runtimeDone",
+		"record": "Unknown application error occurred"
+	}
+	`)
+
+	var le LogEvent
+	err := json.Unmarshal(jsonBytes, &le)
+	if err != nil {
+		t.Fail()
+	}
+
+	err = le.unmarshalRecord()
+	assert.Error(t, err)
+}
