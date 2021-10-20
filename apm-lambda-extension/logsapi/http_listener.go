@@ -25,6 +25,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type LogEvent struct {
@@ -90,10 +92,9 @@ func (le *LogEvent) unmarshalRecord() error {
 		record := LogEventRecord{}
 		err := json.Unmarshal([]byte(le.RawRecord), &record)
 		if err != nil {
-			log.Println("Error unmarshalling raw record into record")
-		} else {
-			le.Record = record
+			return errors.New("Could not unmarshal log event raw record into record")
 		}
+		le.Record = record
 	}
 	return nil
 }
@@ -117,7 +118,10 @@ func (h *LogsAPIHttpListener) http_handler(w http.ResponseWriter, r *http.Reques
 	}
 
 	for idx := range logEvents {
-		logEvents[idx].unmarshalRecord()
+		err = logEvents[idx].unmarshalRecord()
+		if err != nil {
+			log.Printf("Error unmarshalling log event: %+v", err)
+		}
 		h.logChannel <- logEvents[idx]
 	}
 }
