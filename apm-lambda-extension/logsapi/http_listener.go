@@ -28,9 +28,10 @@ import (
 )
 
 type LogEvent struct {
-	Time   time.Time      `json:"time"`
-	Type   string         `json:"type"`
-	Record LogEventRecord `json:"record"`
+	Time      time.Time       `json:"time"`
+	Type      string          `json:"type"`
+	RawRecord json.RawMessage `json:"record"`
+	Record    LogEventRecord
 }
 
 type LogEventRecord struct {
@@ -84,6 +85,19 @@ func (s *LogsAPIHttpListener) Start(address string) (bool, error) {
 	return true, nil
 }
 
+func (le *LogEvent) unmarshalRecord() error {
+	if SubEventType(le.Type) != Fault {
+		record := LogEventRecord{}
+		err := json.Unmarshal([]byte(le.RawRecord), &record)
+		if err != nil {
+			log.Println("Error unmarshalling raw record into record")
+		} else {
+			le.Record = record
+		}
+	}
+	return nil
+}
+
 // http_handler handles the requests coming from the Logs API.
 // Everytime Logs API sends logs, this function will read the logs from the response body
 // and put them into a synchronous queue to be read by the main goroutine.
@@ -101,8 +115,9 @@ func (h *LogsAPIHttpListener) http_handler(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		log.Println("error unmarshaling log event:", err)
 	}
-	// Send the log events to the channel
+
 	for _, logEvent := range logEvents {
+		logEvent.unmarshalRecord()
 		h.logChannel <- logEvent
 	}
 }
