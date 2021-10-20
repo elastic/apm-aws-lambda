@@ -48,33 +48,7 @@ func TestListenOnAddressDefault(t *testing.T) {
 	}
 }
 
-func TestLogEventUnmarshalRecordObjectNotRuntimeDone(t *testing.T) {
-	jsonBytes := []byte(`
-	{
-		"time": "2021-10-20T08:13:03.278Z",
-		"type": "platform.end",
-		"record": {
-			"requestId": "61c0fdeb-f013-4f2a-b627-56278f5666b8"
-		}
-	}
-	`)
-
-	var le LogEvent
-	err := json.Unmarshal(jsonBytes, &le)
-	if err != nil {
-		t.Fail()
-	}
-
-	err = le.unmarshalRecord()
-	if err != nil {
-		t.Fail()
-	}
-
-	record := LogEventRecord{RequestId: "61c0fdeb-f013-4f2a-b627-56278f5666b8"}
-	assert.Equal(t, record, le.Record)
-}
-
-func TestLogEventUnmarshalRecordObjectRuntimeDone(t *testing.T) {
+func Test_unmarshalRecordRuntimeDoneWithObject(t *testing.T) {
 	jsonBytes := []byte(`
 	{
 		"time": "2021-10-20T08:13:03.278Z",
@@ -100,7 +74,7 @@ func TestLogEventUnmarshalRecordObjectRuntimeDone(t *testing.T) {
 	assert.Equal(t, record, le.Record)
 }
 
-func TestLogEventUnmarshalRecordString(t *testing.T) {
+func Test_unmarshalRecordFaultWithString(t *testing.T) {
 	jsonBytes := []byte(`
 	{
 		"time": "2021-10-20T08:13:03.278Z",
