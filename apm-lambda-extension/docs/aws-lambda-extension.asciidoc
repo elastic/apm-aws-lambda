@@ -29,7 +29,7 @@ Elastic offers an installer for adding the Lambda Extension to your Lambda funct
 
 If you'd rather manually install and configuration the Lambda Extension, see the Manually Installing section below.
 
-The installer is distributed avia GitHub as a Node.js project.  Once you've downloaded the project and installed a version of Node.js run the following two commands.
+The installer is distributed via GitHub as a Node.js project.  Once you've downloaded the project and installed a version of Node.js run the following two commands.
 
 [source,shell]
 ----
