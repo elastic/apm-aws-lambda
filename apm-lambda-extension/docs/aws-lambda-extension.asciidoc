@@ -25,7 +25,7 @@ Elastic offers an installer for adding the Lambda Extension to your Lambda funct
 1. Compile the Lambda Extension from source (written in go)
 2. Publish the Lambda Extension as a layer
 3. Configure a named Lambda Function with the just published layer
-4. Configure the required environmental variables.
+4. Configure the required environmental variables
 
 If you'd rather manually install and configuration the Lambda Extension, see the Manually Installing section below.
 
