@@ -87,6 +87,7 @@ Your APM Server URL.  This is the final destination for your data.
 ==== `ELASTIC_APM_SERVICE_NAME`
 
 The configured name of your application or service.  The APM Agent will use this value when reporting data to APM Server.
+If unset, the APM Agent will automatically set the value based on `AWS_LAMBDA_FUNCTION_NAME` or `context.functionName`.
 
 ==== `ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS`
 
