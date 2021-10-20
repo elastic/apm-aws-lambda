@@ -116,9 +116,9 @@ func (h *LogsAPIHttpListener) http_handler(w http.ResponseWriter, r *http.Reques
 		log.Println("error unmarshaling log event:", err)
 	}
 
-	for _, logEvent := range logEvents {
-		logEvent.unmarshalRecord()
-		h.logChannel <- logEvent
+	for idx := range logEvents {
+		logEvents[idx].unmarshalRecord()
+		h.logChannel <- logEvents[idx]
 	}
 }
 
