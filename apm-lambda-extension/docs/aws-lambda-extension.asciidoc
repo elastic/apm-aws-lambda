@@ -58,7 +58,7 @@ The meaning of each `install.yaml` configuration field is as follows.
 
 === `layer_name`
 
-The is the name the compiler will use for your AWS Layer.  The default, `apm-lambda-extension`, should work for most scenarios.
+This is the name the compiler will use for your AWS Layer.  The default, `apm-lambda-extension`, should work for most scenarios.
 
 === `function_name`
 
