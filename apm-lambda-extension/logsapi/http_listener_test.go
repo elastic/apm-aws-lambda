@@ -48,7 +48,7 @@ func TestListenOnAddressDefault(t *testing.T) {
 	}
 }
 
-func Test_unmarshalRecordRuntimeDoneWithObject(t *testing.T) {
+func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
 	jsonBytes := []byte(`
 	{
 		"time": "2021-10-20T08:13:03.278Z",
@@ -74,7 +74,7 @@ func Test_unmarshalRecordRuntimeDoneWithObject(t *testing.T) {
 	assert.Equal(t, record, le.Record)
 }
 
-func Test_unmarshalRecordFaultWithString(t *testing.T) {
+func Test_unmarshalFaultRecordString(t *testing.T) {
 	jsonBytes := []byte(`
 	{
 		"time": "2021-10-20T08:13:03.278Z",
