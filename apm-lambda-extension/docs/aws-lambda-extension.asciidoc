@@ -1,7 +1,7 @@
 [[aws-lambda-extension]]
 = AWS Lambda Extension (Experimental)
 
-Elastic's APM Language Agents are able to instrument AWS Lambda functions via an AWS Lambda Extension.
+Elastic's APM Agents instrument AWS Lambda functions via an AWS Lambda Extension.
 
 [[aws-lambda-arch]]
 == Extension Architecture
