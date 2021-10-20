@@ -66,7 +66,7 @@ The name of your Lambda Function.  The installer will use this to configure the 
 
 === `lambda_env`
 
-The installet will use the key/value pairs in this section of the configuration file to add an environmental variable configuration to your Lambda function.  The provided variable are those required to make the extension function correctly.
+The installer will use the key/value pairs in this section of the configuration file to add environment variables to your Lambda function.  The provided variables are those required to make the extension work correctly.
 
 ==== `ELASTIC_APM_LOG_LEVEL`
 
