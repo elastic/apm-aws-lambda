@@ -6,7 +6,7 @@ Elastic's APM Agents instrument AWS Lambda functions via an AWS Lambda Extension
 [[aws-lambda-arch]]
 == Extension Architecture
 
-Normally, during the execution of a Lambda function, there's only a single language process running in the AWS Lambda execution environment.  However, with an AWS Lambda Extension, Lambda users can run a _second_ process along side their main service/application process.
+Normally, during the execution of a Lambda function, there's only a single language process running in the AWS Lambda execution environment.  However, with an AWS Lambda Extension, Lambda users can run a _second_ process alongside their main service/application process.
 
 // TODO: replace below with a diagram diagram
 
