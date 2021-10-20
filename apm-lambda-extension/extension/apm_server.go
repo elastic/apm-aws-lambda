@@ -50,7 +50,6 @@ func PostToApmServer(postBody []byte, config *extensionConfig) error {
 	} else if config.apmServerSecretToken != "" {
 		req.Header.Add("Authorization", "Bearer "+config.apmServerSecretToken)
 	}
-
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to post to APM server: %v", err)
