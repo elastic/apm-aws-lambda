@@ -87,18 +87,6 @@ func (s *LogsAPIHttpListener) Start(address string) (bool, error) {
 	return true, nil
 }
 
-func (le *LogEvent) unmarshalRecord() error {
-	if SubEventType(le.Type) != Fault {
-		record := LogEventRecord{}
-		err := json.Unmarshal([]byte(le.RawRecord), &record)
-		if err != nil {
-			return errors.New("Could not unmarshal log event raw record into record")
-		}
-		le.Record = record
-	}
-	return nil
-}
-
 // http_handler handles the requests coming from the Logs API.
 // Everytime Logs API sends logs, this function will read the logs from the response body
 // and put them into a synchronous queue to be read by the main goroutine.
@@ -125,6 +113,18 @@ func (h *LogsAPIHttpListener) http_handler(w http.ResponseWriter, r *http.Reques
 		}
 		h.logChannel <- logEvents[idx]
 	}
+}
+
+func (le *LogEvent) unmarshalRecord() error {
+	if SubEventType(le.Type) != Fault {
+		record := LogEventRecord{}
+		err := json.Unmarshal([]byte(le.RawRecord), &record)
+		if err != nil {
+			return errors.New("Could not unmarshal log event raw record into record")
+		}
+		le.Record = record
+	}
+	return nil
 }
 
 func (s *LogsAPIHttpListener) Shutdown() {
