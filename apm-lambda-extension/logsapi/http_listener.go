@@ -121,6 +121,7 @@ func (h *LogsAPIHttpListener) http_handler(w http.ResponseWriter, r *http.Reques
 		err = logEvents[idx].unmarshalRecord()
 		if err != nil {
 			log.Printf("Error unmarshalling log event: %+v", err)
+			continue
 		}
 		h.logChannel <- logEvents[idx]
 	}
