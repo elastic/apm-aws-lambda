@@ -143,7 +143,7 @@ func main() {
 						log.Println("Function invocation is complete, not receiving any more log events")
 						return
 					case logEvent := <-logsChannel:
-						log.Printf("Received log event %v\n", logEvent)
+						log.Printf("Received log event %v\n", logEvent.Type)
 						// Check the logEvent for runtimeDone and compare the RequestID
 						// to the id that came in via the Next API
 						if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
