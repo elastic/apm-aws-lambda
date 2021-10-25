@@ -153,6 +153,7 @@ func (c *Client) Subscribe(types []EventType, bufferingCfg BufferingCfg, destina
 
 	if resp.StatusCode == http.StatusAccepted {
 		log.Println("Logs API is not supported. Is this extension running in a local sandbox?")
+		return nil, errors.Errorf("Logs API is not supported in this environment")
 	} else if resp.StatusCode != http.StatusOK {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
