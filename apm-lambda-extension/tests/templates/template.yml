@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-testing
+
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+  TestFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: ../functions/ruby
+      Handler: ruby_function_error.lambda_handler
+      Runtime: ruby2.7
+      PackageType: Zip
+      Layers:
+        - ${LAYER_ARN}
+      Architectures:
+        - x86_64
+      Events:
+        Test:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /
+            Method: get
+      Environment:
+        Variables:
+          ELASTIC_APM_LAMBDA_APM_SERVER: ${ELASTIC_APM_LAMBDA_APM_SERVER}
+          ELASTIC_APM_SECRET_TOKEN: ${ELASTIC_APM_SECRET_TOKEN}
+          GEM_PATH: vendor/bundle/ruby/2.7.0
