@@ -143,16 +143,6 @@ def handler(event, context):
     return {"statusCode": r.status_code, "body": "Success!"}
 ----
 
-[[aws-lambda-java]]
-=== Java
-
-In Java, you wrap a Lambda function handler using the following syntax.
-
-[source,java]
-----
-// TODO
-----
-
 == Manual Installation
 
 It's possible to install and configure the extension manually.  In order to do so, you'll need to
