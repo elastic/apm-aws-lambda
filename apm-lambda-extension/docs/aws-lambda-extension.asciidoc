@@ -57,6 +57,8 @@ The `elastic-lambda.js` command assumes you have a `install.yaml` file configure
       ./elastic-lambda.js install
 ----
 
+== Configuring the Installer
+
 The meaning of each `install.yaml` configuration field is as follows.
 
 === `layer_name`
