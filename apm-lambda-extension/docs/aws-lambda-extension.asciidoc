@@ -33,6 +33,7 @@ The installer is distributed via GitHub as a Node.js project.  Once you've clone
 
 [source,shell]
 ----
+    $ cd cli
     $ npm install   # installs the dependencies for the cli
     $ ./elastic-lambda.js install
 ----
