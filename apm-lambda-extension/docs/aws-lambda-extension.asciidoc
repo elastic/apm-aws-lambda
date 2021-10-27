@@ -169,13 +169,13 @@ It's possible to install and configure the extension manually.  In order to do s
 
 === Download a Released Extension
 
-The extension is released as a ZIP archive via [the GitHub releases page](https://github.com/elastic/apm-aws-lambda/releases).  To download an archive, simply navigate to the latest version, and choose either the AMD64 or ARM64 release, depending on which architecture your Lambda function uses.
+The extension is released as a ZIP archive via https://github.com/elastic/apm-aws-lambda/releases[the GitHub releases page].  To download an archive, simply navigate to the latest version, and choose either the AMD64 or ARM64 release, depending on which architecture your Lambda function uses.
 
 `[IMAGE]`
 
 === Publish that extension as a Lambda layer
 
-Next, you'll want to take that release archive and publish it [as a Lambda layer](https://docs.aws.amazon.com/lambda/latest/dg/invocation-layers.html?icmpid=docs_lambda_help).  A Lambda layer is a zip file archive that contains additional code or files for your Lambda function.
+Next, you'll want to take that release archive and publish it https://docs.aws.amazon.com/lambda/latest/dg/invocation-layers.html?icmpid=docs_lambda_help[as a Lambda layer].  A Lambda layer is a zip file archive that contains additional code or files for your Lambda function.
 
 To do this, navigate the the Layers section of the AWS console, click the _Create layer_ button, and follow the prompts to upload the ZIP archive as a layer.
 
