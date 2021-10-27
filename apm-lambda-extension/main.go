@@ -168,7 +168,7 @@ func main() {
 			durationUntilFlushDeadline := time.Until(time.Unix(flushDeadlineMs/1000, 0))
 
 			// Create a timer that expires after durationUntilFlushDeadline
-			timer := time.NewTimer(durationUntilFlushDeadline * time.Millisecond)
+			timer := time.NewTimer(durationUntilFlushDeadline)
 			defer timer.Stop()
 
 			select {
