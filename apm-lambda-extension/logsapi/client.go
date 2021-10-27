@@ -61,6 +61,7 @@ type SubEventType string
 const (
 	// RuntimeDone event is sent when lambda function is finished it's execution
 	RuntimeDone SubEventType = "platform.runtimeDone"
+	Fault       SubEventType = "platform.fault"
 )
 
 // BufferingCfg is the configuration set for receiving logs from Logs API. Whichever of the conditions below is met first, the logs will be sent
@@ -153,6 +154,7 @@ func (c *Client) Subscribe(types []EventType, bufferingCfg BufferingCfg, destina
 
 	if resp.StatusCode == http.StatusAccepted {
 		log.Println("Logs API is not supported. Is this extension running in a local sandbox?")
+		return nil, errors.Errorf("Logs API is not supported in this environment")
 	} else if resp.StatusCode != http.StatusOK {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {

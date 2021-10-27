@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"sync"
 	"syscall"
 	"time"
 
@@ -64,28 +63,28 @@ func main() {
 	// and get a channel to listen for that data
 	dataChannel := make(chan []byte, 100)
 
-	var wg sync.WaitGroup
-	wg.Add(1)
 	extension.NewHttpServer(dataChannel, config)
-
-	wg.Wait()
-
-	// Subscribe to the Logs API
-	logsapi.Subscribe(
-		extensionClient.ExtensionID,
-		[]logsapi.EventType{logsapi.Platform})
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	logsChannel := make(chan logsapi.LogEvent)
-	logsAPIListener, err := logsapi.NewLogsAPIHttpListener(logsChannel)
-	if err != nil {
-		log.Printf("Error while creating Logs API listener: %v", err)
-	}
 
-	// Start the logs HTTP server
-	_, err = logsAPIListener.Start(logsapi.ListenOnAddress())
+	// Subscribe to the Logs API
+	err = logsapi.Subscribe(
+		extensionClient.ExtensionID,
+		[]logsapi.EventType{logsapi.Platform})
 	if err != nil {
-		log.Printf("Error while starting Logs API listener: %v", err)
+		log.Printf("Could not subscribe to the logs API. Will instead flush APM data 100ms before the function deadline.")
+	} else {
+		logsAPIListener, err := logsapi.NewLogsAPIHttpListener(logsChannel)
+		if err != nil {
+			log.Printf("Error while creating Logs API listener: %v", err)
+		}
+
+		// Start the logs HTTP server
+		_, err = logsAPIListener.Start(logsapi.ListenOnAddress())
+		if err != nil {
+			log.Printf("Error while starting Logs API listener: %v", err)
+		}
 	}
 
 	for {
@@ -148,7 +147,7 @@ func main() {
 						log.Println("Function invocation is complete, not receiving any more log events")
 						return
 					case logEvent := <-logsChannel:
-						log.Printf("Received log event %v\n", logEvent)
+						log.Printf("Received log event %v\n", logEvent.Type)
 						// Check the logEvent for runtimeDone and compare the RequestID
 						// to the id that came in via the Next API
 						if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
@@ -175,7 +174,7 @@ func main() {
 
 			select {
 			case <-runtimeDone:
-				log.Println("Receive runtimeDone event signal")
+				log.Println("Received runtimeDone event signal")
 			case <-timer.C:
 				log.Println("Time expired waiting for runtimeDone event")
 			}

@@ -25,12 +25,15 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 type LogEvent struct {
-	Time   time.Time      `json:"time"`
-	Type   string         `json:"type"`
-	Record LogEventRecord `json:"record"`
+	Time      time.Time       `json:"time"`
+	Type      string          `json:"type"`
+	RawRecord json.RawMessage `json:"record"`
+	Record    LogEventRecord
 }
 
 type LogEventRecord struct {
@@ -101,10 +104,27 @@ func (h *LogsAPIHttpListener) http_handler(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		log.Println("error unmarshaling log event:", err)
 	}
-	// Send the log events to the channel
-	for _, logEvent := range logEvents {
-		h.logChannel <- logEvent
+
+	for idx := range logEvents {
+		err = logEvents[idx].unmarshalRecord()
+		if err != nil {
+			log.Printf("Error unmarshalling log event: %+v", err)
+			continue
+		}
+		h.logChannel <- logEvents[idx]
 	}
+}
+
+func (le *LogEvent) unmarshalRecord() error {
+	if SubEventType(le.Type) != Fault {
+		record := LogEventRecord{}
+		err := json.Unmarshal([]byte(le.RawRecord), &record)
+		if err != nil {
+			return errors.New("Could not unmarshal log event raw record into record")
+		}
+		le.Record = record
+	}
+	return nil
 }
 
 func (s *LogsAPIHttpListener) Shutdown() {
