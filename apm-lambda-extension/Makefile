@@ -1,10 +1,9 @@
 build:
-	GOOS=linux GOARCH=amd64 go build -o bin/extensions/apm-lambda-extension main.go
-
-build-GoExampleExtensionLayer:
-	GOOS=linux GOARCH=amd64 go build -o $(ARTIFACTS_DIR)/extensions/apm-lambda-extension main.go
-	chmod +x $(ARTIFACTS_DIR)/extensions/apm-lambda-extension
-
+ifndef GOARCH
+	GOARCH=amd64
+endif
+	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
+	chmod +x bin/extensions/apm-lambda-extension
 build-and-publish:
 ifndef AWS_DEFAULT_REGION
 	$(error AWS_DEFAULT_REGION is undefined)
@@ -18,11 +17,15 @@ endif
 ifndef ELASTIC_LAYER_NAME
 	$(error ELASTIC_LAYER_NAME is undefined)
 endif
-	make build
-	cd bin && rm -f extension.zip || true && zip -r extension.zip extensions
+	GOARCH=${GOARCH} make build
+	GOARCH=${GOARCH} make zip
 	aws lambda publish-layer-version --layer-name "${ELASTIC_LAYER_NAME}" --zip-file "fileb://./bin/extension.zip"
-run-GoExampleExtensionLayer:
-	go run apm-lambda-extension/main.go
-
+zip:
+	cd bin && rm -f extension.zip || true && zip -r extension.zip extensions && cp extension.zip ${GOARCH}.zip
 test:
 	go test extension/*.go -v
+env:
+ifndef GOARCH
+	export GOARCH=amd64
+endif
+	env

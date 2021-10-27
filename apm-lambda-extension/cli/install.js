@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+const AWS = require('aws-sdk')
+AWS.config.update({region: process.env.AWS_DEFAULT_REGION});
 const fs = require('fs')
 const yaml = require('js-yaml')
 const { exec, /*execFile*/ } = require("child_process")
@@ -58,16 +60,33 @@ async function cmd(argv) {
   config.lambda_env.ELASTIC_APM_LAMBDA_APM_SERVER = config.lambda_env.ELASTIC_APM_SERVER_URL
   config.lambda_env.ELASTIC_APM_SERVER_URL = 'http://localhost:8200'
 
+  const lambda = new AWS.Lambda({apiVersion:'2015-03-31'})
+  const configuration = await lambda.getFunction({
+    FunctionName: config.function_name
+  }).promise();
+  console.log(configuration.Configuration.Architectures.length)
+  if( !Array.isArray(configuration.Configuration.Architectures) ||
+      configuration.Configuration.Architectures.length !== 1) {
+        console.log("Unexpected configuration.Configuration.Architectures type from function, exiting.")
+        process.exit(1)
+  }
+
+  const arch = configuration.Configuration.Architectures.pop()
+  if(arch !== 'arm64' && arch != 'amd64') {
+    console.log("Unexpected configuration.Configuration.Architectures value, exiting.")
+    process.exit(1)
+  }
 
   // run command to set env variables
   try {
+    process.env['GOARCH'] = arch
     const output = await runShellCommand(
       __dirname + '/elastic-lambda.js',
       ['update-function-env',config.function_name, JSON.stringify(config.lambda_env)],
       'updating lambda function\'s env variables'
     )
-    console.log(output)
   } catch(error) {
+    console.log(error)
     console.log('encountered error, exiting')
     process.exit(1)
   }
