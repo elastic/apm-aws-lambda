@@ -15,7 +15,7 @@ Normally, during the execution of a Lambda function, there's only a single langu
     [Lamnda Function/Service] -> [Lambda Extension] -> [APM Server]
 ----
 
-By using a custom built AWS Lambda Extension, Elastic APM Agents can send data to a locally running Lambda Extension process, and that process will forward data on to APM Server.  The Lambda Extension ensures that any latency between the Lambda Function and the AWS Server instance will not cause latency in the Lambda Function/Service itself.
+By using a custom built AWS Lambda Extension, Elastic APM Agents can send data to a locally running Lambda Extension process, and that process will forward data on to APM Server.  The Lambda Extension ensures that any latency between the Lambda function and the AWS Server instance will not cause latency in the Lambda function/Service itself.
 
 [[aws-lambda-install]]
 == Installing the Lambda Extension
@@ -24,7 +24,7 @@ Elastic offers an installer for adding the Lambda Extension to your Lambda funct
 
 1. Compile the Lambda Extension from source (written in go)
 2. Publish the Lambda Extension as a layer
-3. Configure a named Lambda Function with the just published layer
+3. Configure a named Lambda function with the just published layer
 4. Configure the required environmental variables
 
 If you'd rather manually install and configuration the Lambda Extension, see the Manually Installing section below.
@@ -62,7 +62,7 @@ This is the name the compiler will use for your AWS Layer.  The default, `apm-la
 
 === `function_name`
 
-The name of your Lambda Function.  The installer will use this to configure the correct lambda function.  This must be the name of a function that already exists.
+The name of your Lambda function.  The installer will use this to configure the correct Lambda function.  This must be the name of a function that already exists.
 
 === `lambda_env`
 
@@ -95,12 +95,12 @@ The timeout value, in seconds, for the Lambda Extension's server.
 
 == Configuring the Agent and Lambda Function handler
 
-Once you've installed the extension, there's one last step to take. You'll need to wrap the Lambda Function handler.
+Once you've installed the extension, there's one last step to take. You'll need to wrap the Lambda function handler.
 
 [[aws-lambda-nodejs]]
 === Node.js
 
-In Node.js, you wrap a Lambda Function handler using the following syntax.
+In Node.js, you wrap a Lambda function handler using the following syntax.
 
 [source,js]
 ----
@@ -117,7 +117,7 @@ exports.handler = apm.lambda(async function handler (event, context) {
 [[aws-lambda-python]]
 === Python
 
-In Python, you wrap a Lambda Function handler using the following syntax.
+In Python, you wrap a Lambda function handler using the following syntax.
 
 [source,python]
 ----
@@ -130,7 +130,7 @@ def handler(event, context):
 [[aws-lambda-java]]
 === Java
 
-In Java, you wrap a Lambda Function handler using the following syntax.
+In Java, you wrap a Lambda function handler using the following syntax.
 
 [source,java]
 ----
@@ -148,7 +148,7 @@ It's possible to install and configure the extension manually.  In order to do s
 
 === Download a Released Extension
 
-The extension is released as a ZIP archive via [the GitHub releases page](https://github.com/elastic/apm-aws-lambda/releases).  To download an archive, simply navigate to the latest version, and choose either the AMD64 or ARM64 release, depending on which architecture your lambda function uses.
+The extension is released as a ZIP archive via [the GitHub releases page](https://github.com/elastic/apm-aws-lambda/releases).  To download an archive, simply navigate to the latest version, and choose either the AMD64 or ARM64 release, depending on which architecture your Lambda function uses.
 
 `[IMAGE]`
 
