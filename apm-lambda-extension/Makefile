@@ -19,7 +19,7 @@ ifndef ELASTIC_LAYER_NAME
 endif
 	GOARCH=${GOARCH} make build
 	GOARCH=${GOARCH} make zip
-
+	aws lambda publish-layer-version --layer-name "${ELASTIC_LAYER_NAME}" --zip-file "fileb://./bin/extension.zip"
 zip:
 	cd bin && rm -f extension.zip || true && zip -r extension.zip extensions && cp extension.zip ${GOARCH}.zip
 test:
