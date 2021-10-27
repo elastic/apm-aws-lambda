@@ -15,7 +15,7 @@ Normally, during the execution of a Lambda function, there's only a single langu
     [Lamnda Function/Service] -> [Lambda Extension] -> [APM Server]
 ----
 
-By using a custom built AWS Lambda Extension, Elastic APM Agents can send data to a locally running Lambda Extension process, and that process will forward data on to APM Server.  The Lambda Extension ensures that any latency between the Lambda Function and the AWS Server instance will not cause latency in the Lambda Function/Service itself.
+By using a custom-built AWS Lambda Extension, Elastic APM Agents can send data to a locally running Lambda Extension process, and that process will forward data on to APM Server.  The Lambda Extension ensures that any latency between the Lambda Function and the AWS Server instance will not cause latency in the Lambda Function/Service itself.
 
 [[aws-lambda-install]]
 == Installing the Lambda Extension
