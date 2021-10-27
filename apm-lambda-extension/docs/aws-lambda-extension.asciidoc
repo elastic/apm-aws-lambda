@@ -47,7 +47,7 @@ The `elastic-lambda.js` command assumes you have a `install.yaml` file configure
     $ cp install.yaml install.yaml.dist
 ----
 
-**Important**: The installer assumes your local environment is configured to authenticate against the AWS using Amazon's standard environment variables.  Depending on your authentication method, this may look something like the following
+**Important**: The installer assumes your local environment is configured to authenticate against the AWS APIs using Amazon's standard environment variables.  Depending on your authentication method, this may look something like the following
 
 [source,shell]
 ----
