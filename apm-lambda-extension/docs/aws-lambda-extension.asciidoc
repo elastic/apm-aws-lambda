@@ -59,6 +59,22 @@ The `elastic-lambda.js` command assumes you have a `install.yaml` file configure
 
 == Configuring the Installer
 
+A fully configured `install.yaml` might look like the following
+
+[source,yaml]
+----
+install:
+  config:
+    layer_name: "apm-lambda-extension"
+    function_name: "your-function-name"
+    lambda_env:
+      ELASTIC_APM_LOG_LEVEL: "info"
+      ELASTIC_APM_SECRET_TOKEN: "D...a"
+      ELASTIC_APM_SERVER_URL: "https://apm-server.example.com:443"
+      ELASTIC_APM_SERVICE_NAME: "Your Service Name"
+      ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS: "15"
+----
+
 The meaning of each `install.yaml` configuration field is as follows.
 
 === `layer_name`
