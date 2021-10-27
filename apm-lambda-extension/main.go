@@ -165,7 +165,7 @@ func main() {
 
 			// Calculate how long to wait for a runtimeDone event
 			flushDeadlineMs := event.DeadlineMs - 100
-			durationUntilFlushDeadline := time.Until(time.UnixMilli(flushDeadlineMs))
+			durationUntilFlushDeadline := time.Until(time.Unix(flushDeadlineMs/1000, 0))
 
 			// Create a timer that expires after durationUntilFlushDeadline
 			timer := time.NewTimer(durationUntilFlushDeadline * time.Millisecond)
