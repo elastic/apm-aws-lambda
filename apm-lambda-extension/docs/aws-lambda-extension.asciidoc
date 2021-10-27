@@ -27,7 +27,7 @@ Elastic offers an installer for adding the Lambda Extension to your Lambda funct
 3. Configure a named Lambda function with the just published layer
 4. Configure the required environmental variables
 
-If you'd rather manually install and configuration the Lambda Extension, see the Manually Installing section below.
+If you'd rather manually install and configuration the Lambda Extension, see the Manual Installation section below.
 
 The installer is distributed via GitHub as a Node.js project.  Once you've downloaded the project and installed a version of Node.js run the following two commands.
 
