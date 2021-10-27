@@ -30,6 +30,7 @@ function getLastJsonFromShellOutput(output) {
       jsonLines.push(line)
     }
   }
+
   const string = jsonLines.join('')
   const object = JSON.parse(string)
   return object
