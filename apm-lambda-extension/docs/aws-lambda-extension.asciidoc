@@ -91,7 +91,7 @@ The installer will use the key/value pairs in this section of the configuration 
 
 ==== `ELASTIC_APM_LOG_LEVEL`
 
-The log level for the APM Agent.  Consult your [APM Agent's documentation](https://www.elastic.co/guide/en/apm/agent/index.html) for more information.
+The log level for the APM Agent.  Consult your https://www.elastic.co/guide/en/apm/agent/index.html[APM Agent's documentation] for more information.
 
 ==== `ELASTIC_APM_SECRET_TOKEN`
 
