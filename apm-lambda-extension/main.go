@@ -164,12 +164,11 @@ func main() {
 			}()
 
 			// Calculate how long to wait for a runtimeDone event
-			funcTimeout := time.Unix(0, event.DeadlineMs*int64(time.Millisecond))
-			msBeforeFuncTimeout := 100 * time.Millisecond
-			timeToWait := funcTimeout.Sub(time.Now()) - msBeforeFuncTimeout
+			flushDeadlineMs := event.DeadlineMs - 100
+			durationUntilFlushDeadline := time.Until(time.Unix(flushDeadlineMs/1000, 0))
 
-			// Create a timer that expires after timeToWait
-			timer := time.NewTimer(timeToWait)
+			// Create a timer that expires after durationUntilFlushDeadline
+			timer := time.NewTimer(durationUntilFlushDeadline)
 			defer timer.Stop()
 
 			select {
