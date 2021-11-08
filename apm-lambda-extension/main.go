@@ -61,9 +61,9 @@ func main() {
 
 	// setup http server to receive data from agent
 	// and get a channel to listen for that data
-	dataChannel := make(chan []byte, 100)
+	agentDataChannel := make(chan extension.AgentData, 100)
 
-	extension.NewHttpServer(dataChannel, config)
+	extension.NewHttpServer(agentDataChannel, config)
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	logsChannel := make(chan logsapi.LogEvent)
@@ -112,7 +112,7 @@ func main() {
 
 			// Flush any APM data, in case waiting for the runtimeDone event timed out,
 			// the agent data wasn't available yet, and we got to the next event
-			extension.FlushAPMData(dataChannel, config)
+			extension.FlushAPMData(agentDataChannel, config)
 
 			// Make a channel for signaling that a runtimeDone event has been received
 			runtimeDone := make(chan struct{})
@@ -129,7 +129,7 @@ func main() {
 					case <-funcInvocDone:
 						log.Println("Function invocation is complete, not receiving any more agent data")
 						return
-					case agentData := <-dataChannel:
+					case agentData := <-agentDataChannel:
 						err := extension.PostToApmServer(agentData, config)
 						if err != nil {
 							log.Printf("Error sending to APM server, skipping: %v", err)
@@ -179,7 +179,7 @@ func main() {
 			}
 
 			// Flush APM data now that the function invocation has completed
-			extension.FlushAPMData(dataChannel, config)
+			extension.FlushAPMData(agentDataChannel, config)
 
 			// Signal that the function invocation has completed
 			close(funcInvocDone)
