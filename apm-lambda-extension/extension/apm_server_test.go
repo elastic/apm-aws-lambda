@@ -65,7 +65,7 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 	// the apm server receives
 	var b bytes.Buffer
 	w := gzip.NewWriter(&b)
-	w.Write([]byte(s))
+	w.Write(body)
 	w.Close()
 
 	// Create apm server and handler
