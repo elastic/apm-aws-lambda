@@ -27,7 +27,7 @@ func ProcessShutdown() {
 	log.Println("Exiting")
 }
 
-func FlushAPMData(dataChannel chan []byte, config *extensionConfig) {
+func FlushAPMData(dataChannel chan AgentData, config *extensionConfig) {
 	log.Println("Checking for agent data")
 	for {
 		select {

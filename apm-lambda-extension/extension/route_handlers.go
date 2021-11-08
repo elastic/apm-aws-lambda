@@ -23,6 +23,11 @@ import (
 	"net/http"
 )
 
+type AgentData struct {
+	Data            []byte
+	ContentEncoding string
+}
+
 // URL: http://server/
 func handleInfoRequest(handler *serverHandler, w http.ResponseWriter, r *http.Request) {
 	client := &http.Client{}
@@ -68,13 +73,18 @@ func handleInfoRequest(handler *serverHandler, w http.ResponseWriter, r *http.Re
 
 // URL: http://server/intake/v2/events
 func handleIntakeV2Events(handler *serverHandler, w http.ResponseWriter, r *http.Request) {
-	bodyBytes, err := getDecompressedBytesFromRequest(r)
-	if nil != err {
-		log.Printf("could not get decompressed bytes from request body: %v", err)
+	if r.Body == nil {
+		log.Println("Could not get bytes from agent request body")
 	} else {
+		rawBytes, _ := ioutil.ReadAll(r.Body)
+		agentData := AgentData{
+			Data:            rawBytes,
+			ContentEncoding: r.Header.Get("Content-Encoding"),
+		}
 		log.Println("Adding agent data to buffer to be sent to apm server")
-		handler.data <- bodyBytes
+		handler.data <- agentData
 	}
+
 	w.WriteHeader(http.StatusAccepted)
 	w.Write([]byte("ok"))
 }

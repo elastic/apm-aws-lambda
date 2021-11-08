@@ -18,18 +18,13 @@
 package extension
 
 import (
-	"bytes"
-	"compress/gzip"
-	"compress/zlib"
-	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"time"
 )
 
 type serverHandler struct {
-	data   chan []byte
+	data   chan AgentData
 	config *extensionConfig
 }
 
@@ -50,7 +45,7 @@ func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 }
 
-func NewHttpServer(dataChannel chan []byte, config *extensionConfig) *http.Server {
+func NewHttpServer(dataChannel chan AgentData, config *extensionConfig) *http.Server {
 	var handler = serverHandler{data: dataChannel, config: config}
 	timeout := time.Duration(config.dataReceiverTimeoutSeconds) * time.Second
 	s := &http.Server{
@@ -69,38 +64,4 @@ func NewHttpServer(dataChannel chan []byte, config *extensionConfig) *http.Serve
 	go s.Serve(ln)
 
 	return s
-}
-
-func getDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
-	var rawBytes []byte
-	if req.Body != nil {
-		rawBytes, _ = ioutil.ReadAll(req.Body)
-	}
-
-	switch req.Header.Get("Content-Encoding") {
-	case "deflate":
-		reader := bytes.NewReader([]byte(rawBytes))
-		zlibreader, err := zlib.NewReader(reader)
-		if err != nil {
-			return nil, fmt.Errorf("could not create zlib.NewReader: %v", err)
-		}
-		bodyBytes, err := ioutil.ReadAll(zlibreader)
-		if err != nil {
-			return nil, fmt.Errorf("could not read from zlib reader using ioutil.ReadAll: %v", err)
-		}
-		return bodyBytes, nil
-	case "gzip":
-		reader := bytes.NewReader([]byte(rawBytes))
-		zlibreader, err := gzip.NewReader(reader)
-		if err != nil {
-			return nil, fmt.Errorf("could not create gzip.NewReader: %v", err)
-		}
-		bodyBytes, err := ioutil.ReadAll(zlibreader)
-		if err != nil {
-			return nil, fmt.Errorf("could not read from gzip reader using ioutil.ReadAll: %v", err)
-		}
-		return bodyBytes, nil
-	default:
-		return rawBytes, nil
-	}
 }
