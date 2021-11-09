@@ -72,14 +72,14 @@ async function cmd(argv) {
   }
 
   const arch = configuration.Configuration.Architectures.pop()
-  if(arch !== 'arm64' && arch != 'amd64') {
-    console.log("Unexpected configuration.Configuration.Architectures value, exiting.")
+  if(arch !== 'arm64' && arch != 'x86_64') {
+    console.log("Unexpected configuration.Configuration.Architectures value ("+arch+"), exiting.")
     process.exit(1)
   }
 
   // run command to set env variables
   try {
-    process.env['GOARCH'] = arch
+    process.env['GOARCH'] = (arch === 'arm64') ? 'arm64' : 'amd64'
     const output = await runShellCommand(
       __dirname + '/elastic-lambda.js',
       ['update-function-env',config.function_name, JSON.stringify(config.lambda_env)],
