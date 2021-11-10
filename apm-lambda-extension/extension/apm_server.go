@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -34,11 +35,19 @@ func PostToApmServer(agentData AgentData, config *extensionConfig) error {
 	var err error
 
 	if agentData.ContentEncoding == "" {
-		var compressedBytes bytes.Buffer
-		w, _ := gzip.NewWriterLevel(&compressedBytes, gzip.BestSpeed)
-		w.Write(agentData.Data)
-		w.Close()
-		req, err = http.NewRequest("POST", config.apmServerUrl+endpointUri, bytes.NewReader(compressedBytes.Bytes()))
+		pr, pw := io.Pipe()
+		gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
+		var err error
+
+		go func() {
+			_, err = io.Copy(gw, bytes.NewReader(agentData.Data))
+			gw.Close()
+			pw.Close()
+		}()
+
+		// Todo: Handle the err (failure to compress the data)
+
+		req, err = http.NewRequest("POST", config.apmServerUrl+endpointUri, pr)
 		if err != nil {
 			return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
 		}

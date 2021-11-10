@@ -18,9 +18,8 @@
 package extension
 
 import (
-	"bytes"
 	"compress/gzip"
-	"compress/zlib"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -31,18 +30,24 @@ import (
 
 func TestPostToApmServerDataCompressed(t *testing.T) {
 	s := "A long time ago in a galaxy far, far away..."
-	var b bytes.Buffer
 
 	// Compress the data
-	w := zlib.NewWriter(&b)
-	w.Write([]byte(s))
-	w.Close()
+	pr, pw := io.Pipe()
+	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
+	go func() {
+		gw.Write([]byte(s))
+		gw.Close()
+		pw.Close()
+	}()
 
-	agentData := AgentData{Data: b.Bytes(), ContentEncoding: "gzip"}
+	// Create AgentData struct with compressed data
+	data, _ := io.ReadAll(pr)
+	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
+
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes, _ := ioutil.ReadAll(r.Body)
-		assert.Equal(t, b.String(), string(bytes))
+		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		w.Write([]byte(`{"foo": "bar"}`))
 	}))
@@ -63,15 +68,19 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 
 	// Compress the data, so it can be compared with what
 	// the apm server receives
-	var b bytes.Buffer
-	w := gzip.NewWriter(&b)
-	w.Write(body)
-	w.Close()
+	pr, pw := io.Pipe()
+	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
+	go func() {
+		gw.Write(body)
+		gw.Close()
+		pw.Close()
+	}()
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes, _ := ioutil.ReadAll(r.Body)
-		assert.Equal(t, b.String(), string(bytes))
+		request_bytes, _ := ioutil.ReadAll(r.Body)
+		compressed_bytes, _ := io.ReadAll(pr)
+		assert.Equal(t, string(compressed_bytes), string(request_bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		w.Write([]byte(`{"foo": "bar"}`))
 	}))
