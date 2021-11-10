@@ -35,7 +35,7 @@ func PostToApmServer(agentData AgentData, config *extensionConfig) error {
 
 	if agentData.ContentEncoding == "" {
 		var compressedBytes bytes.Buffer
-		w := gzip.NewWriter(&compressedBytes)
+		w, _ := gzip.NewWriterLevel(&compressedBytes, gzip.BestSpeed)
 		w.Write(agentData.Data)
 		w.Close()
 		req, err = http.NewRequest("POST", config.apmServerUrl+endpointUri, bytes.NewReader(compressedBytes.Bytes()))
