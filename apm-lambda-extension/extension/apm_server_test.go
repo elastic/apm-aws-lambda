@@ -41,7 +41,7 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 	}()
 
 	// Create AgentData struct with compressed data
-	data, _ := io.ReadAll(pr)
+	data, _ := ioutil.ReadAll(pr)
 	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
@@ -79,7 +79,7 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		request_bytes, _ := ioutil.ReadAll(r.Body)
-		compressed_bytes, _ := io.ReadAll(pr)
+		compressed_bytes, _ := ioutil.ReadAll(pr)
 		assert.Equal(t, string(compressed_bytes), string(request_bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		w.Write([]byte(`{"foo": "bar"}`))
