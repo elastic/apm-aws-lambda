@@ -32,13 +32,14 @@ import (
 func PostToApmServer(agentData AgentData, config *extensionConfig) error {
 	endpointUri := "intake/v2/events"
 	var req *http.Request
+	var err error
 
 	if agentData.ContentEncoding == "" {
 		pr, pw := io.Pipe()
 		gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 
 		go func() {
-			_, err := io.Copy(gw, bytes.NewReader(agentData.Data))
+			_, err = io.Copy(gw, bytes.NewReader(agentData.Data))
 			gw.Close()
 			pw.Close()
 			if err != nil {
@@ -46,13 +47,13 @@ func PostToApmServer(agentData AgentData, config *extensionConfig) error {
 			}
 		}()
 
-		req, err := http.NewRequest("POST", config.apmServerUrl+endpointUri, pr)
+		req, err = http.NewRequest("POST", config.apmServerUrl+endpointUri, pr)
 		if err != nil {
 			return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
 		}
 		req.Header.Add("Content-Encoding", "gzip")
 	} else {
-		req, err := http.NewRequest("POST", config.apmServerUrl+endpointUri, bytes.NewReader(agentData.Data))
+		req, err = http.NewRequest("POST", config.apmServerUrl+endpointUri, bytes.NewReader(agentData.Data))
 		if err != nil {
 			return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
 		}
