@@ -46,8 +46,6 @@ func PostToApmServer(agentData AgentData, config *extensionConfig) error {
 			}
 		}()
 
-		// Todo: Handle the err (failure to compress the data)
-
 		req, err := http.NewRequest("POST", config.apmServerUrl+endpointUri, pr)
 		if err != nil {
 			return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
