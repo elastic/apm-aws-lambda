@@ -24,7 +24,7 @@ We'll start with installing the Lambda extension.
 [[aws-lambda-install]]
 == Installing the Lambda Extension
 
-Elastic offers an installer for adding the Lambda Extension to your Lambda functions. (If you'd prefer to skip the installer and manually install the extension, see the <<aws-lambda-install,Manual Installation>> section below)
+Elastic offers an installer for adding the Lambda Extension to your Lambda functions. (If you'd prefer to skip the installer and manually install the extension, see the <<aws-lambda-install,Manual Installation>> section below.)
 
 This installer will:
 
