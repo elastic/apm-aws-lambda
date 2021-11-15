@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -28,28 +29,45 @@ import (
 
 // todo: can this be a streaming or streaming style call that keeps the
 //       connection open across invocations?
-func PostToApmServer(postBody []byte, config *extensionConfig) error {
+func PostToApmServer(agentData AgentData, config *extensionConfig) error {
 	endpointUri := "intake/v2/events"
-	var compressedBytes bytes.Buffer
-	w := gzip.NewWriter(&compressedBytes)
-	w.Write(postBody)
-	w.Write([]byte{10})
-	w.Close()
+	var req *http.Request
+	var err error
 
-	client := &http.Client{}
+	if agentData.ContentEncoding == "" {
+		pr, pw := io.Pipe()
+		gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 
-	req, err := http.NewRequest("POST", config.apmServerUrl+endpointUri, bytes.NewReader(compressedBytes.Bytes()))
-	if err != nil {
-		return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
+		go func() {
+			_, err = io.Copy(gw, bytes.NewReader(agentData.Data))
+			gw.Close()
+			pw.Close()
+			if err != nil {
+				log.Printf("Failed to compress data: %v", err)
+			}
+		}()
+
+		req, err = http.NewRequest("POST", config.apmServerUrl+endpointUri, pr)
+		if err != nil {
+			return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
+		}
+		req.Header.Add("Content-Encoding", "gzip")
+	} else {
+		req, err = http.NewRequest("POST", config.apmServerUrl+endpointUri, bytes.NewReader(agentData.Data))
+		if err != nil {
+			return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
+		}
+		req.Header.Add("Content-Encoding", agentData.ContentEncoding)
 	}
-	req.Header.Add("Content-Type", "application/x-ndjson")
-	req.Header.Add("Content-Encoding", "gzip")
 
+	req.Header.Add("Content-Type", "application/x-ndjson")
 	if config.apmServerApiKey != "" {
 		req.Header.Add("Authorization", "ApiKey "+config.apmServerApiKey)
 	} else if config.apmServerSecretToken != "" {
 		req.Header.Add("Authorization", "Bearer "+config.apmServerSecretToken)
 	}
+
+	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to post to APM server: %v", err)
