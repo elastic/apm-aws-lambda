@@ -12,10 +12,21 @@ image:images/data-flow.png[image showing data flow from lambda function, to exte
 
 By using a custom-built AWS Lambda Extension, Elastic APM Agents can send data to a locally running Lambda Extension process, and that process will forward data on to APM Server.  The Lambda Extension ensures that any latency between the Lambda function and the AWS Server instance will not cause latency in the Lambda function/Service itself.
 
+== Instrumenting a Lambda Function
+
+The rest of this guide contains instructions for instrumenting a Lambda function. There are two high level steps to instrumenting an AWS Lambda function.
+
+1. Install the Lambda extension
+2. Configure the Agent and Lambda function handler
+
+We'll start with installing the Lambda extension.
+
 [[aws-lambda-install]]
 == Installing the Lambda Extension
 
-Elastic offers an installer for adding the Lambda Extension to your Lambda functions.  This installer will:
+Elastic offers an installer for adding the Lambda Extension to your Lambda functions. (If you'd prefer to skip the installer and manually install the extension, see the <<aws-lambda-install,Manual Installation>> section below)
+
+This installer will:
 
 1. Compile the Lambda Extension from source (written in go)
 2. Publish the Lambda Extension as a layer
