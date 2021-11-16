@@ -18,50 +18,25 @@
 package extension
 
 import (
-	"net"
+	"log"
 	"net/http"
-	"time"
 )
 
-type serverHandler struct {
-	data   chan AgentData
-	config *extensionConfig
-}
+var extensionServer *http.Server
 
-func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/intake/v2/events" {
-		handleIntakeV2Events(handler, w, r)
-		return
-	}
+func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handleInfoRequest(config.apmServerUrl))
+	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(agentDataChan))
+	extensionServer = &http.Server{Addr: config.dataReceiverServerPort, Handler: mux}
 
-	if r.URL.Path == "/" {
-		handleInfoRequest(handler, w, r)
-		return
-	}
-
-	// if we have not yet returned, 404
-	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte("404"))
-
-}
-
-func NewHttpServer(dataChannel chan AgentData, config *extensionConfig) *http.Server {
-	var handler = serverHandler{data: dataChannel, config: config}
-	timeout := time.Duration(config.dataReceiverTimeoutSeconds) * time.Second
-	s := &http.Server{
-		Addr:           config.dataReceiverServerPort,
-		Handler:        &handler,
-		ReadTimeout:    timeout,
-		WriteTimeout:   timeout,
-		MaxHeaderBytes: 1 << 20,
-	}
-
-	addr := s.Addr
-	ln, err := net.Listen("tcp", addr)
-	if err != nil {
-		return s
-	}
-	go s.Serve(ln)
-
-	return s
+	go func() {
+		log.Printf("Extension liistening for apm data on %s", extensionServer.Addr)
+		err := extensionServer.ListenAndServe()
+		if err != http.ErrServerClosed {
+			log.Printf("Unexpected stop on Extension Server: %v", err)
+		} else {
+			log.Printf("Extension Server closed %v", err)
+		}
+	}()
 }

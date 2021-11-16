@@ -29,68 +29,73 @@ type AgentData struct {
 }
 
 // URL: http://server/
-func handleInfoRequest(handler *serverHandler, w http.ResponseWriter, r *http.Request) {
-	client := &http.Client{}
+func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		client := &http.Client{}
 
-	req, err := http.NewRequest(r.Method, handler.config.apmServerUrl, nil)
-	//forward every header received
-	for name, values := range r.Header {
-		// Loop over all values for the name.
-		for _, value := range values {
-			req.Header.Set(name, value)
+		req, err := http.NewRequest(r.Method, apmServerUrl, nil)
+		//forward every header received
+		for name, values := range r.Header {
+			// Loop over all values for the name.
+			for _, value := range values {
+				req.Header.Set(name, value)
+			}
 		}
-	}
-	if err != nil {
-		log.Printf("could not create request object for %s:%s: %v", r.Method, handler.config.apmServerUrl, err)
-		return
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("error forwarding info request (`/`) to APM Server: %v", err)
-		return
-	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("could not read info request response to APM Server: %v", err)
-		return
-	}
-
-	// send status code
-	w.WriteHeader(resp.StatusCode)
-
-	// send every header received
-	for name, values := range resp.Header {
-		// Loop over all values for the name.
-		for _, value := range values {
-			w.Header().Add(name, value)
+		if err != nil {
+			log.Printf("could not create request object for %s:%s: %v", r.Method, apmServerUrl, err)
+			return
 		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Printf("error forwarding info request (`/`) to APM Server: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("could not read info request response to APM Server: %v", err)
+			return
+		}
+
+		// send status code
+		w.WriteHeader(resp.StatusCode)
+
+		// send every header received
+		for name, values := range resp.Header {
+			// Loop over all values for the name.
+			for _, value := range values {
+				w.Header().Add(name, value)
+			}
+		}
+		// send body
+		w.Write([]byte(body))
 	}
-	// send body
-	w.Write([]byte(body))
 }
 
 // URL: http://server/intake/v2/events
-func handleIntakeV2Events(handler *serverHandler, w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusAccepted)
-	w.Write([]byte("ok"))
+func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWriter, r *http.Request) {
 
-	if r.Body == nil {
-		log.Println("Could not get bytes from agent request body")
-		return
-	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusAccepted)
+		w.Write([]byte("ok"))
 
-	rawBytes, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Println("Could not read bytes from agent request body")
-		return
-	}
+		if r.Body == nil {
+			log.Println("No body in agent request")
+			return
+		}
 
-	agentData := AgentData{
-		Data:            rawBytes,
-		ContentEncoding: r.Header.Get("Content-Encoding"),
+		rawBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Println("Could not read bytes from agent request body")
+			return
+		}
+
+		agentData := AgentData{
+			Data:            rawBytes,
+			ContentEncoding: r.Header.Get("Content-Encoding"),
+		}
+		log.Println("Adding agent data to buffer to be sent to apm server")
+		agentDataChan <- agentData
 	}
-	log.Println("Adding agent data to buffer to be sent to apm server")
-	handler.data <- agentData
 }

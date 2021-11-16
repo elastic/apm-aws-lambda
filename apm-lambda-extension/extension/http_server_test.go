@@ -49,7 +49,8 @@ func TestInfoProxy(t *testing.T) {
 		dataReceiverServerPort:     "127.0.0.1:1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
-	extensionServer := NewHttpServer(dataChannel, &config)
+
+	StartHttpServer(dataChannel, &config)
 	defer extensionServer.Close()
 
 	// Create a request to send to the extension
