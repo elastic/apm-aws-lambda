@@ -46,7 +46,7 @@ func TestInfoProxy(t *testing.T) {
 		apmServerUrl:               apmServer.URL,
 		apmServerSecretToken:       "foo",
 		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     "127.0.0.1:1234",
+		dataReceiverServerPort:     "localhost:1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
 
