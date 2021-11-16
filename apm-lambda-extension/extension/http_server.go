@@ -22,17 +22,17 @@ import (
 	"net/http"
 )
 
-var extensionServer *http.Server
+var agentDataServer *http.Server
 
 func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleInfoRequest(config.apmServerUrl))
 	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(agentDataChan))
-	extensionServer = &http.Server{Addr: config.dataReceiverServerPort, Handler: mux}
+	agentDataServer = &http.Server{Addr: config.dataReceiverServerPort, Handler: mux}
 
 	go func() {
-		log.Printf("Extension liistening for apm data on %s", extensionServer.Addr)
-		err := extensionServer.ListenAndServe()
+		log.Printf("Extension listening for apm data on %s", agentDataServer.Addr)
+		err := agentDataServer.ListenAndServe()
 		if err != http.ErrServerClosed {
 			log.Printf("Unexpected stop on Extension Server: %v", err)
 		} else {

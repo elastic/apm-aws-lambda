@@ -51,11 +51,11 @@ func TestInfoProxy(t *testing.T) {
 	}
 
 	StartHttpServer(dataChannel, &config)
-	defer extensionServer.Close()
+	defer agentDataServer.Close()
 
 	// Create a request to send to the extension
 	client := &http.Client{}
-	url := "http://" + extensionServer.Addr
+	url := "http://" + agentDataServer.Addr
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		t.Logf("Could not create request")
@@ -67,7 +67,7 @@ func TestInfoProxy(t *testing.T) {
 	// Send the request to the extension
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Logf("Error fetching %s, [%v]", extensionServer.Addr, err)
+		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
 		t.Fail()
 	} else {
 		body, _ := ioutil.ReadAll(resp.Body)
