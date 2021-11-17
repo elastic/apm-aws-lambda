@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"gotest.tools/assert"
 )
@@ -30,7 +31,6 @@ import (
 func TestInfoProxy(t *testing.T) {
 	headers := map[string]string{"Authorization": "test-value"}
 	wantResp := "{\"foo\": \"bar\"}"
-	var url string
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -56,11 +56,7 @@ func TestInfoProxy(t *testing.T) {
 	defer agentDataServer.Close()
 
 	hosts, _ := net.LookupHost("localhost")
-	if hosts[0] == "::1" {
-		url = "http://" + "[::1]" + ":1234"
-	} else {
-		url = "http://" + hosts[0] + ":1234"
-	}
+	url := "http://" + hosts[0] + ":1234"
 
 	// Create a request to send to the extension
 	req, err := http.NewRequest("GET", url, nil)
@@ -71,6 +67,7 @@ func TestInfoProxy(t *testing.T) {
 		req.Header.Add(name, value)
 	}
 
+	time.Sleep(2 * time.Second)
 	// Send the request to the extension
 	client := &http.Client{}
 	resp, err := client.Do(req)
