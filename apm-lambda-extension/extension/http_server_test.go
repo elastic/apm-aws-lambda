@@ -19,6 +19,7 @@ package extension
 
 import (
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -29,6 +30,7 @@ import (
 func TestInfoProxy(t *testing.T) {
 	headers := map[string]string{"Authorization": "test-value"}
 	wantResp := "{\"foo\": \"bar\"}"
+	var url string
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -53,9 +55,15 @@ func TestInfoProxy(t *testing.T) {
 	StartHttpServer(dataChannel, &config)
 	defer agentDataServer.Close()
 
+	hosts, _ := net.LookupHost("localhost")
+	if hosts[0] == "::1" {
+		url = "http://" + "[::1]" + ":1234"
+	} else {
+		url = "http://" + hosts[0] + ":1234"
+	}
+
 	// Create a request to send to the extension
-	client := &http.Client{}
-	req, err := http.NewRequest("GET", "http://localhost:1234", nil)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		t.Logf("Could not create request")
 	}
@@ -64,6 +72,7 @@ func TestInfoProxy(t *testing.T) {
 	}
 
 	// Send the request to the extension
+	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
