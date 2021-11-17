@@ -46,7 +46,7 @@ func TestInfoProxy(t *testing.T) {
 		apmServerUrl:               apmServer.URL,
 		apmServerSecretToken:       "foo",
 		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     ":4567",
+		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
 
@@ -55,8 +55,7 @@ func TestInfoProxy(t *testing.T) {
 
 	// Create a request to send to the extension
 	client := &http.Client{}
-	url := "http://localhost" + agentDataServer.Addr
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", "http://localhost:1234", nil)
 	if err != nil {
 		t.Logf("Could not create request")
 	}
