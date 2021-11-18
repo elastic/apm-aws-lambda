@@ -107,7 +107,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.Copy(io.Discard, r.Body)
+		io.Copy(ioutil.Discard, r.Body)
 		r.Body.Close()
 		w.WriteHeader(202)
 		w.Write([]byte(`{}`))
