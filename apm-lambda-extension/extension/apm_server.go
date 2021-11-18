@@ -33,7 +33,7 @@ var bufferPool = sync.Pool{New: func() interface{} {
 
 // todo: can this be a streaming or streaming style call that keeps the
 //       connection open across invocations?
-func PostToApmServer(agentData AgentData, config *extensionConfig) error {
+func PostToApmServer(client *http.Client, agentData AgentData, config *extensionConfig) error {
 	endpointURI := "intake/v2/events"
 	encoding := agentData.ContentEncoding
 	buf := bufferPool.Get().(*bytes.Buffer)
@@ -70,7 +70,6 @@ func PostToApmServer(agentData AgentData, config *extensionConfig) error {
 		req.Header.Add("Authorization", "Bearer "+config.apmServerSecretToken)
 	}
 
-	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to post to APM server: %v", err)
