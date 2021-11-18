@@ -21,45 +21,48 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sync"
 )
+
+var bufferPool = sync.Pool{New: func() interface{} {
+	return &bytes.Buffer{}
+}}
 
 // todo: can this be a streaming or streaming style call that keeps the
 //       connection open across invocations?
-func PostToApmServer(agentData AgentData, config *extensionConfig) error {
-	endpointUri := "intake/v2/events"
-	var req *http.Request
-	var err error
+func PostToApmServer(client *http.Client, agentData AgentData, config *extensionConfig) error {
+	endpointURI := "intake/v2/events"
+	encoding := agentData.ContentEncoding
+	buf := bufferPool.Get().(*bytes.Buffer)
+	defer func() {
+		buf.Reset()
+		bufferPool.Put(buf)
+	}()
 
 	if agentData.ContentEncoding == "" {
-		pr, pw := io.Pipe()
-		gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
-
-		go func() {
-			_, err = io.Copy(gw, bytes.NewReader(agentData.Data))
-			gw.Close()
-			pw.Close()
-			if err != nil {
-				log.Printf("Failed to compress data: %v", err)
-			}
-		}()
-
-		req, err = http.NewRequest("POST", config.apmServerUrl+endpointUri, pr)
+		encoding = "gzip"
+		gw, err := gzip.NewWriterLevel(buf, gzip.BestSpeed)
 		if err != nil {
-			return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
+			return err
 		}
-		req.Header.Add("Content-Encoding", "gzip")
+		if _, err := gw.Write(agentData.Data); err != nil {
+			log.Printf("Failed to compress data: %v", err)
+		}
+		if err := gw.Close(); err != nil {
+			log.Printf("Failed write compressed data to buffer: %v", err)
+		}
 	} else {
-		req, err = http.NewRequest("POST", config.apmServerUrl+endpointUri, bytes.NewReader(agentData.Data))
-		if err != nil {
-			return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
-		}
-		req.Header.Add("Content-Encoding", agentData.ContentEncoding)
+		buf.Write(agentData.Data)
 	}
 
+	req, err := http.NewRequest("POST", config.apmServerUrl+endpointURI, buf)
+	if err != nil {
+		return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
+	}
+	req.Header.Add("Content-Encoding", encoding)
 	req.Header.Add("Content-Type", "application/x-ndjson")
 	if config.apmServerApiKey != "" {
 		req.Header.Add("Authorization", "ApiKey "+config.apmServerApiKey)
@@ -67,7 +70,6 @@ func PostToApmServer(agentData AgentData, config *extensionConfig) error {
 		req.Header.Add("Authorization", "Bearer "+config.apmServerSecretToken)
 	}
 
-	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to post to APM server: %v", err)

@@ -20,6 +20,7 @@ package extension
 import (
 	"encoding/json"
 	"log"
+	"net/http"
 )
 
 func ProcessShutdown() {
@@ -27,13 +28,13 @@ func ProcessShutdown() {
 	log.Println("Exiting")
 }
 
-func FlushAPMData(dataChannel chan AgentData, config *extensionConfig) {
+func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *extensionConfig) {
 	log.Println("Checking for agent data")
 	for {
 		select {
 		case agentData := <-dataChannel:
 			log.Println("Processing agent data")
-			err := PostToApmServer(agentData, config)
+			err := PostToApmServer(client, agentData, config)
 			if err != nil {
 				log.Printf("Error sending to APM server, skipping: %v", err)
 			}

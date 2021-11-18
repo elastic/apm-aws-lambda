@@ -20,6 +20,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -87,6 +88,9 @@ func main() {
 		}
 	}
 
+	client := &http.Client{
+		Transport: http.DefaultTransport.(*http.Transport).Clone(),
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -112,7 +116,7 @@ func main() {
 
 			// Flush any APM data, in case waiting for the runtimeDone event timed out,
 			// the agent data wasn't available yet, and we got to the next event
-			extension.FlushAPMData(agentDataChannel, config)
+			extension.FlushAPMData(client, agentDataChannel, config)
 
 			// Make a channel for signaling that a runtimeDone event has been received
 			runtimeDone := make(chan struct{})
@@ -130,7 +134,7 @@ func main() {
 						log.Println("Function invocation is complete, not receiving any more agent data")
 						return
 					case agentData := <-agentDataChannel:
-						err := extension.PostToApmServer(agentData, config)
+						err := extension.PostToApmServer(client, agentData, config)
 						if err != nil {
 							log.Printf("Error sending to APM server, skipping: %v", err)
 						}
@@ -179,7 +183,7 @@ func main() {
 			}
 
 			// Flush APM data now that the function invocation has completed
-			extension.FlushAPMData(agentDataChannel, config)
+			extension.FlushAPMData(client, agentDataChannel, config)
 
 			// Signal that the function invocation has completed
 			close(funcInvocDone)
