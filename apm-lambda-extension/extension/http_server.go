@@ -19,24 +19,26 @@ package extension
 
 import (
 	"log"
+	"net"
 	"net/http"
 )
 
 var agentDataServer *http.Server
 
-func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) {
+func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) (err error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleInfoRequest(config.apmServerUrl))
 	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(agentDataChan))
 	agentDataServer = &http.Server{Addr: config.dataReceiverServerPort, Handler: mux}
 
+	ln, err := net.Listen("tcp", agentDataServer.Addr)
+	if err != nil {
+		return
+	}
+
 	go func() {
+		agentDataServer.Serve(ln)
 		log.Printf("Extension listening for apm data on %s", agentDataServer.Addr)
-		err := agentDataServer.ListenAndServe()
-		if err != http.ErrServerClosed {
-			log.Printf("Unexpected stop on Extension Server: %v", err)
-		} else {
-			log.Printf("Extension Server closed %v", err)
-		}
 	}()
+	return nil
 }

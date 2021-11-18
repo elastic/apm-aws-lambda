@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"gotest.tools/assert"
 )
@@ -67,7 +66,6 @@ func TestInfoProxy(t *testing.T) {
 		req.Header.Add(name, value)
 	}
 
-	time.Sleep(2 * time.Second)
 	// Send the request to the extension
 	client := &http.Client{}
 	resp, err := client.Do(req)
