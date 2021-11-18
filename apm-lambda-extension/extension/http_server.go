@@ -37,8 +37,8 @@ func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) (err
 	}
 
 	go func() {
-		agentDataServer.Serve(ln)
 		log.Printf("Extension listening for apm data on %s", agentDataServer.Addr)
+		agentDataServer.Serve(ln)
 	}()
 	return nil
 }
