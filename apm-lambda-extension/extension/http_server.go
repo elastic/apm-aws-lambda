@@ -21,6 +21,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 )
 
 var agentDataServer *http.Server
@@ -29,7 +30,14 @@ func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) (err
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleInfoRequest(config.apmServerUrl))
 	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(agentDataChan))
-	agentDataServer = &http.Server{Addr: config.dataReceiverServerPort, Handler: mux}
+	timeout := time.Duration(config.dataReceiverTimeoutSeconds) * time.Second
+	agentDataServer = &http.Server{
+		Addr:           config.dataReceiverServerPort,
+		Handler:        mux,
+		ReadTimeout:    timeout,
+		WriteTimeout:   timeout,
+		MaxHeaderBytes: 1 << 20,
+	}
 
 	ln, err := net.Listen("tcp", agentDataServer.Addr)
 	if err != nil {
