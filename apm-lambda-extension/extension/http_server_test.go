@@ -19,6 +19,7 @@ package extension
 
 import (
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -46,15 +47,17 @@ func TestInfoProxy(t *testing.T) {
 		apmServerUrl:               apmServer.URL,
 		apmServerSecretToken:       "foo",
 		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     "127.0.0.1:1234",
+		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
-	extensionServer := NewHttpServer(dataChannel, &config)
-	defer extensionServer.Close()
+
+	StartHttpServer(dataChannel, &config)
+	defer agentDataServer.Close()
+
+	hosts, _ := net.LookupHost("localhost")
+	url := "http://" + hosts[0] + ":1234"
 
 	// Create a request to send to the extension
-	client := &http.Client{}
-	url := "http://" + extensionServer.Addr
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		t.Logf("Could not create request")
@@ -64,9 +67,10 @@ func TestInfoProxy(t *testing.T) {
 	}
 
 	// Send the request to the extension
+	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Logf("Error fetching %s, [%v]", extensionServer.Addr, err)
+		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
 		t.Fail()
 	} else {
 		body, _ := ioutil.ReadAll(resp.Body)

@@ -26,6 +26,7 @@ import (
 func ProcessShutdown() {
 	log.Println("Received SHUTDOWN event")
 	log.Println("Exiting")
+	agentDataServer.Close()
 }
 
 func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *extensionConfig) {

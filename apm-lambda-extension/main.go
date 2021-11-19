@@ -64,7 +64,7 @@ func main() {
 	// and get a channel to listen for that data
 	agentDataChannel := make(chan extension.AgentData, 100)
 
-	extension.NewHttpServer(agentDataChannel, config)
+	extension.StartHttpServer(agentDataChannel, config)
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	logsChannel := make(chan logsapi.LogEvent)

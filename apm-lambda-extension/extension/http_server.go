@@ -18,50 +18,27 @@
 package extension
 
 import (
+	"log"
 	"net"
 	"net/http"
-	"time"
 )
 
-type serverHandler struct {
-	data   chan AgentData
-	config *extensionConfig
-}
+var agentDataServer *http.Server
 
-func (handler *serverHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/intake/v2/events" {
-		handleIntakeV2Events(handler, w, r)
-		return
-	}
+func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) (err error) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handleInfoRequest(config.apmServerUrl))
+	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(agentDataChan))
+	agentDataServer = &http.Server{Addr: config.dataReceiverServerPort, Handler: mux}
 
-	if r.URL.Path == "/" {
-		handleInfoRequest(handler, w, r)
-		return
-	}
-
-	// if we have not yet returned, 404
-	w.WriteHeader(http.StatusNotFound)
-	w.Write([]byte("404"))
-
-}
-
-func NewHttpServer(dataChannel chan AgentData, config *extensionConfig) *http.Server {
-	var handler = serverHandler{data: dataChannel, config: config}
-	timeout := time.Duration(config.dataReceiverTimeoutSeconds) * time.Second
-	s := &http.Server{
-		Addr:           config.dataReceiverServerPort,
-		Handler:        &handler,
-		ReadTimeout:    timeout,
-		WriteTimeout:   timeout,
-		MaxHeaderBytes: 1 << 20,
-	}
-
-	addr := s.Addr
-	ln, err := net.Listen("tcp", addr)
+	ln, err := net.Listen("tcp", agentDataServer.Addr)
 	if err != nil {
-		return s
+		return
 	}
-	go s.Serve(ln)
 
-	return s
+	go func() {
+		log.Printf("Extension listening for apm data on %s", agentDataServer.Addr)
+		agentDataServer.Serve(ln)
+	}()
+	return nil
 }
