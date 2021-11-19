@@ -50,7 +50,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	if config.dataReceiverServerPort != ":8200" {
+	if config.dataReceiverPort != ":8200" {
 		t.Log("Default port not set correctly")
 		t.Fail()
 	}
@@ -60,9 +60,9 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", ":8201")
+	os.Setenv("ELASTIC_APM_DATA_RECEIVER_PORT", ":8201")
 	config = ProcessEnv()
-	if config.dataReceiverServerPort != ":8201" {
+	if config.dataReceiverPort != ":8201" {
 		t.Log("Env port not set correctly")
 		t.Fail()
 	}

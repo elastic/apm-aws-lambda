@@ -29,7 +29,7 @@ func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) (err
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleInfoRequest(config.apmServerUrl))
 	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(agentDataChan))
-	agentDataServer = &http.Server{Addr: config.dataReceiverServerPort, Handler: mux}
+	agentDataServer = &http.Server{Addr: config.dataReceiverPort, Handler: mux}
 
 	ln, err := net.Listen("tcp", agentDataServer.Addr)
 	if err != nil {

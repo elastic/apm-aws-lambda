@@ -27,7 +27,7 @@ type extensionConfig struct {
 	apmServerUrl               string
 	apmServerSecretToken       string
 	apmServerApiKey            string
-	dataReceiverServerPort     string
+	dataReceiverPort           string
 	dataReceiverTimeoutSeconds int
 }
 
@@ -58,12 +58,12 @@ func ProcessEnv() *extensionConfig {
 		apmServerUrl:               normalizedApmLambdaServer,
 		apmServerSecretToken:       os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
 		apmServerApiKey:            os.Getenv("ELASTIC_APM_API_KEY"),
-		dataReceiverServerPort:     os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"),
+		dataReceiverPort:           os.Getenv("ELASTIC_APM_DATA_RECEIVER_PORT"),
 		dataReceiverTimeoutSeconds: dataReceiverTimeoutSeconds,
 	}
 
-	if config.dataReceiverServerPort == "" {
-		config.dataReceiverServerPort = ":8200"
+	if config.dataReceiverPort == "" {
+		config.dataReceiverPort = ":8200"
 	}
 	if config.apmServerUrl == "" {
 		log.Fatalln("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
