@@ -84,11 +84,6 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 		w.WriteHeader(http.StatusAccepted)
 		w.Write([]byte("ok"))
 
-		if r.Body == nil {
-			log.Println("No body in agent request")
-			return
-		}
-
 		rawBytes, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			log.Println("Could not read bytes from agent request body")

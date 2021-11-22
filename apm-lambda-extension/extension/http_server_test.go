@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"gotest.tools/assert"
@@ -116,5 +117,49 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 		t.Fail()
 	} else {
 		assert.Equal(t, 401, resp.StatusCode)
+	}
+}
+
+func Test_handleInfoRequest(t *testing.T) {
+	headers := map[string]string{"Authorization": "test-value"}
+	// Copied from https://github.com/elastic/apm-server/blob/master/testdata/intake-v2/transactions.ndjson.
+	agentRequestBody := `{"metadata": {"service": {"name": "1234_service-12a3","node": {"configured_name": "node-123"},"version": "5.1.3","environment": "staging","language": {"name": "ecmascript","version": "8"},"runtime": {"name": "node","version": "8.0.0"},"framework": {"name": "Express","version": "1.2.3"},"agent": {"name": "elastic-node","version": "3.14.0"}},"user": {"id": "123user", "username": "bar", "email": "bar@user.com"}, "labels": {"tag0": null, "tag1": "one", "tag2": 2}, "process": {"pid": 1234,"ppid": 6789,"title": "node","argv": ["node","server.js"]},"system": {"hostname": "prod1.example.com","architecture": "x64","platform": "darwin", "container": {"id": "container-id"}, "kubernetes": {"namespace": "namespace1", "pod": {"uid": "pod-uid", "name": "pod-name"}, "node": {"name": "node-name"}}},"cloud":{"account":{"id":"account_id","name":"account_name"},"availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"project":{"id":"project_id","name":"project_name"},"provider":"cloud_provider","region":"cloud_region","service":{"name":"lambda"}}}}
+{"transaction": { "id": "945254c567a5417e", "trace_id": "0123456789abcdef0123456789abcdef", "parent_id": "abcdefabcdef01234567", "type": "request", "duration": 32.592981,  "span_count": { "started": 43 }}}
+{"transaction": { "id": "00xxxxFFaaaa1234", "trace_id": "0123456789abcdef0123456789abcdef", "name": "amqp receive", "parent_id": "abcdefabcdef01234567", "type": "messaging", "duration": 3, "span_count": { "started": 1 }, "context": {"message": {"queue": { "name": "new_users"}, "age":{ "ms": 1577958057123}, "headers": {"user_id": "1ax3", "involved_services": ["user", "auth"]}, "body": "user created", "routing_key": "user-created-transaction"}},"session":{"id":"sunday","sequence":123}}}
+`
+
+	// Create extension config
+	dataChannel := make(chan AgentData, 100)
+	config := extensionConfig{
+		apmServerSecretToken:       "foo",
+		apmServerApiKey:            "bar",
+		dataReceiverServerPort:     ":1234",
+		dataReceiverTimeoutSeconds: 15,
+	}
+
+	// Start extension server
+	StartHttpServer(dataChannel, &config)
+	defer agentDataServer.Close()
+
+	// Create a request to send to the extension
+	hosts, _ := net.LookupHost("localhost")
+	url := "http://" + hosts[0] + ":1234/intake/v2/events"
+	req, err := http.NewRequest("POST", url, strings.NewReader(agentRequestBody))
+	if err != nil {
+		t.Logf("Could not create request")
+	}
+	// Add headers to the request
+	for name, value := range headers {
+		req.Header.Add(name, value)
+	}
+
+	// Send the request to the extension
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
+		t.Fail()
+	} else {
+		assert.Equal(t, 202, resp.StatusCode)
 	}
 }
