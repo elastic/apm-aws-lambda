@@ -78,3 +78,43 @@ func TestInfoProxy(t *testing.T) {
 		resp.Body.Close()
 	}
 }
+
+func TestInfoProxyErrorStatusCode(t *testing.T) {
+	// Create apm server and handler
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(401)
+	}))
+	defer apmServer.Close()
+
+	// Create extension config and start the server
+	dataChannel := make(chan AgentData, 100)
+	config := extensionConfig{
+		apmServerUrl:               apmServer.URL,
+		apmServerSecretToken:       "foo",
+		apmServerApiKey:            "bar",
+		dataReceiverServerPort:     ":1234",
+		dataReceiverTimeoutSeconds: 15,
+	}
+
+	StartHttpServer(dataChannel, &config)
+	defer agentDataServer.Close()
+
+	hosts, _ := net.LookupHost("localhost")
+	url := "http://" + hosts[0] + ":1234"
+
+	// Create a request to send to the extension
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		t.Logf("Could not create request")
+	}
+
+	// Send the request to the extension
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
+		t.Fail()
+	} else {
+		assert.Equal(t, 401, resp.StatusCode)
+	}
+}
