@@ -16,9 +16,9 @@
 // under the License.
 
 const AWS = require('aws-sdk')
-AWS.config.update({region: process.env.AWS_DEFAULT_REGION});
+AWS.config.update({ region: process.env.AWS_DEFAULT_REGION })
 
-function getUnversionedArn(arn) {
+function getUnversionedArn (arn) {
   const parts = arn.split(':')
   parts.pop()
   const unversionedArn = parts.join(':')
@@ -35,32 +35,32 @@ function getUnversionedArn(arn) {
  * @param {string} arn The new layer arn to add or update
  * @param {array} layers An array of the currently configured layers from getFunction
  */
-function getNewLayersArray(arn, layers=[]) {
-  const layerNames = layers.map(function(item){
+function getNewLayersArray (arn, layers = []) {
+  const layerNames = layers.map(function (item) {
     return item.Arn
   })
 
   const unversionedArn = getUnversionedArn(arn)
 
   let foundArn = false
-  for(const i in layerNames) {
+  for (const i in layerNames) {
     const name = layerNames[i]
-    if(unversionedArn === getUnversionedArn(name)) {
+    if (unversionedArn === getUnversionedArn(name)) {
       layerNames[i] = arn
       foundArn = true
     }
   }
-  if(!foundArn) {
+  if (!foundArn) {
     layerNames.push(arn)
   }
   return layerNames
 }
 
-async function cmd(argv) {
-  const lambda = new AWS.Lambda({apiVersion:'2015-03-31'})
+async function cmd (argv) {
+  const lambda = new AWS.Lambda({ apiVersion: '2015-03-31' })
   const configuration = await lambda.getFunction({
     FunctionName: argv.function_name
-  }).promise();
+  }).promise()
 
   const layers = getNewLayersArray(argv.layer_arn, configuration.Configuration.Layers)
 
