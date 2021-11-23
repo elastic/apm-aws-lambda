@@ -60,19 +60,19 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 			w.WriteHeader(serverResp.StatusCode)
 		}
 
-		// copy body to request sent back to the agent
-		_, err = io.Copy(w, serverResp.Body)
-		if err != nil {
-			log.Printf("could not read info request response to APM Server: %v", err)
-			return
-		}
-
 		// send every header received
 		for name, values := range serverResp.Header {
 			// Loop over all values for the name.
 			for _, value := range values {
 				w.Header().Add(name, value)
 			}
+		}
+
+		// copy body to request sent back to the agent
+		_, err = io.Copy(w, serverResp.Body)
+		if err != nil {
+			log.Printf("could not read info request response to APM Server: %v", err)
+			return
 		}
 	}
 }

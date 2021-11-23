@@ -38,6 +38,7 @@ func TestInfoProxy(t *testing.T) {
 			assert.Equal(t, 1, len(r.Header[key]))
 			assert.Equal(t, headers[key], r.Header[key][0])
 		}
+		w.Header().Add("test", "header")
 		w.Write([]byte(`{"foo": "bar"}`))
 	}))
 	defer apmServer.Close()
@@ -76,6 +77,7 @@ func TestInfoProxy(t *testing.T) {
 	} else {
 		body, _ := ioutil.ReadAll(resp.Body)
 		assert.Equal(t, string(body), wantResp)
+		assert.Equal(t, "header", resp.Header.Get("test"))
 		resp.Body.Close()
 	}
 }
