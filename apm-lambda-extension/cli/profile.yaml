@@ -1,0 +1,4 @@
+profile:
+  otel:
+    function_name_prefix: 'otel-'
+    layer_arns: []
