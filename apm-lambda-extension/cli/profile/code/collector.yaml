@@ -12,7 +12,7 @@ exporters:
     endpoint: "https://01cd7a0a66084992906782275a699198.apm.us-east-1.aws.cloud.es.io:443"
     headers:
       # APM Server secret token
-      Authorization: "Bearer DljDqIApWF7EMjS8ta"
+      Authorization: "Bearer "
 
 service:
   pipelines:
