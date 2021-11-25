@@ -142,7 +142,7 @@ func main() {
 			}()
 
 			// Receive Logs API events
-			// Send to the runtimeDone channel to signal when a runtimeDone event is received
+			// Send to the FuncDone channel to signal when a runtimeDone event is received
 			go func() {
 				for {
 					select {
