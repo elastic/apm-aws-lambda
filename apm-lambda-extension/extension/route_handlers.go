@@ -29,6 +29,8 @@ type AgentData struct {
 	ContentEncoding string
 }
 
+var FuncDone chan struct{}
+
 // URL: http://server/
 func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -97,5 +99,9 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 		}
 		log.Println("Adding agent data to buffer to be sent to apm server")
 		agentDataChan <- agentData
+
+		if r.URL.Query()["flushed"][0] == "true" {
+			FuncDone <- struct{}{}
+		}
 	}
 }
