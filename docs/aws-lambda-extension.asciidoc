@@ -219,4 +219,3 @@ Either `ELASTIC_APM_API_KEY` or `ELASTIC_APM_SECRET_TOKEN` needs to be set.  Thi
 ==== `ELASTIC_APM_SERVER_URL`
 
 This _must_ be configured to the value `http://localhost:8200`.  This configuration field controls where your APM Agent sends data.  The extension listens for data on `localhost:8200`.
-
