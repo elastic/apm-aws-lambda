@@ -18,12 +18,14 @@
 package extension
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"gotest.tools/assert"
 )
@@ -82,15 +84,7 @@ func TestInfoProxy(t *testing.T) {
 	}
 }
 
-<<<<<<< HEAD
 func TestInfoProxyErrorStatusCode(t *testing.T) {
-=======
-func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
-	body := []byte(`{"metadata": {}`)
-
-	FuncDone = make(chan struct{})
-
->>>>>>> Check length of query param slice before accessing index
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
@@ -174,10 +168,60 @@ func Test_handleInfoRequest(t *testing.T) {
 	}
 }
 
-func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
+func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	body := []byte(`{"metadata": {}`)
 
-	FuncDone = make(chan struct{})
+	AgentDoneSignal = make(chan struct{})
+
+	// Create apm server and handler
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	}))
+	defer apmServer.Close()
+
+	// Create extension config and start the server
+	dataChannel := make(chan AgentData, 100)
+	config := extensionConfig{
+		apmServerUrl:               apmServer.URL,
+		dataReceiverServerPort:     ":1234",
+		dataReceiverTimeoutSeconds: 15,
+	}
+
+	StartHttpServer(dataChannel, &config)
+	defer agentDataServer.Close()
+
+	hosts, _ := net.LookupHost("localhost")
+	url := "http://" + hosts[0] + ":1234/intake/v2/events?flushed=true"
+
+	// Create a request to send to the extension
+	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	if err != nil {
+		t.Logf("Could not create request")
+	}
+
+	// Send the request to the extension
+	client := &http.Client{}
+	go func() {
+		_, err := client.Do(req)
+		if err != nil {
+			t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
+			t.Fail()
+		}
+	}()
+
+	timer := time.NewTimer(1 * time.Second)
+	defer timer.Stop()
+
+	select {
+	case <-AgentDoneSignal:
+		<-dataChannel
+	case <-timer.C:
+		t.Log("Timed out waiting for server to send FuncDone signal")
+		t.Fail()
+	}
+}
+
+func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
+	body := []byte(`{"metadata": {}`)
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -211,5 +255,6 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
 		t.Fail()
 	}
+	<-dataChannel
 	assert.Equal(t, 202, resp.StatusCode)
 }

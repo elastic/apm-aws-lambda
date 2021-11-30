@@ -29,7 +29,7 @@ type AgentData struct {
 	ContentEncoding string
 }
 
-var FuncDone chan struct{}
+var AgentDoneSignal chan struct{}
 
 // URL: http://server/
 func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.Request) {
@@ -101,7 +101,7 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 		agentDataChan <- agentData
 
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {
-			FuncDone <- struct{}{}
+			AgentDoneSignal <- struct{}{}
 		}
 	}
 }
