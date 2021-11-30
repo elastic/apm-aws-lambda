@@ -100,7 +100,7 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 		log.Println("Adding agent data to buffer to be sent to apm server")
 		agentDataChan <- agentData
 
-		if r.URL.Query()["flushed"][0] == "true" {
+		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {
 			FuncDone <- struct{}{}
 		}
 	}

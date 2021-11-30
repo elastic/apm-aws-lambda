@@ -82,7 +82,15 @@ func TestInfoProxy(t *testing.T) {
 	}
 }
 
+<<<<<<< HEAD
 func TestInfoProxyErrorStatusCode(t *testing.T) {
+=======
+func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
+	body := []byte(`{"metadata": {}`)
+
+	FuncDone = make(chan struct{})
+
+>>>>>>> Check length of query param slice before accessing index
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
@@ -164,4 +172,44 @@ func Test_handleInfoRequest(t *testing.T) {
 	} else {
 		assert.Equal(t, 202, resp.StatusCode)
 	}
+}
+
+func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
+	body := []byte(`{"metadata": {}`)
+
+	FuncDone = make(chan struct{})
+
+	// Create apm server and handler
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	}))
+	defer apmServer.Close()
+
+	// Create extension config and start the server
+	dataChannel := make(chan AgentData, 100)
+	config := extensionConfig{
+		apmServerUrl:               apmServer.URL,
+		dataReceiverServerPort:     ":1234",
+		dataReceiverTimeoutSeconds: 15,
+	}
+
+	StartHttpServer(dataChannel, &config)
+	defer agentDataServer.Close()
+
+	hosts, _ := net.LookupHost("localhost")
+	url := "http://" + hosts[0] + ":1234/intake/v2/events"
+
+	// Create a request to send to the extension
+	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	if err != nil {
+		t.Logf("Could not create request")
+	}
+
+	// Send the request to the extension
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
+		t.Fail()
+	}
+	assert.Equal(t, 202, resp.StatusCode)
 }
