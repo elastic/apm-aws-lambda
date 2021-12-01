@@ -116,8 +116,8 @@ func main() {
 			// Make a channel for signaling that the function invocation is complete
 			funcDone := make(chan struct{})
 
-			// Flush any APM data, in case waiting for the FuncDone signal timed out,
-			// the agent data wasn't available yet, and we got to the next event
+			// Flush any APM data, in case waiting for the agentDone or runtimeDone signals
+			// timed out, the agent data wasn't available yet, and we got to the next event
 			extension.FlushAPMData(client, agentDataChannel, config)
 
 			// A shutdown event indicates the execution environment is shutting down.
@@ -170,7 +170,7 @@ func main() {
 				}
 			}()
 
-			// Calculate how long to wait for a FuncDone signal
+			// Calculate how long to wait for a runtimeDoneSignal or AgentDoneSignal signal
 			flushDeadlineMs := event.DeadlineMs - 100
 			durationUntilFlushDeadline := time.Until(time.Unix(flushDeadlineMs/1000, 0))
 
