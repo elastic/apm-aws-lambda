@@ -1,0 +1,25 @@
+profile:
+  config:
+    path_java: '/usr/local/opt/openjdk/bin/java'
+    path_lpt_jar: '/Users/astorm/Documents/github/elastic/apm-aws-lambda/apm-lambda-extension/cli/lpt-0.1.jar'
+    n: 500
+  scenarios:
+    # each section under scenarios represents a single lambda function
+    # to deploy and test via lpt-0.1.jar
+    otel:
+      function_name_prefix: 'otel-autotest-'
+      role: '[... enter role ...]'
+      code: './profile/code'
+      handler: 'index.handler'
+      runtime: 'nodejs14.x'
+      layer_arns:
+        - '[... enter first layer, up to five ...]'
+        - '[... enter second layer, up to five ...]'
+      environment:
+        variables:
+          AWS_LAMBDA_EXEC_WRAPPER: '/opt/otel-handler'
+          OPENTELEMETRY_COLLECTOR_CONFIG_FILE: '/var/task/collector.yaml'
+          OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:55681/v1/traces'
+          OTEL_TRACES_SAMPLER: 'AlwaysOn'
+          APM_ELASTIC_SECRET_TOKEN: '[... enter secret token ...]'
+          ELASTIC_APM_SERVER_URL: '[... enter APM Server URL ...]'

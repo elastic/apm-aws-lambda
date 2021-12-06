@@ -8,6 +8,22 @@ const { exit } = require('process')
 AWS.config.update({region: 'us-west-2'});
 const lambda = new AWS.Lambda({apiVersion:'2015-03-31'})
 
+function generateZipFile(pathSource, pathDest) {
+  return new Promise(function(resolve, reject){
+    const env = Object.assign({}, process.env)
+    exec(`rm -f ${pathDest} && cd ${pathSource} && zip -r ${pathDest} .`,
+          env,
+          function(error, stdout, stderr) {
+            if(error) {
+              reject(error)
+            } else {
+              resolve(stdout)
+            }
+          }
+    )
+  })
+}
+
 function convertStdoutTableToObject(string) {
   const split = string.split('┌')
   split.shift()
@@ -54,15 +70,24 @@ function generateTmpFunctionName(prefix) {
 }
 
 async function cmd() {
+  if(!fs.existsSync(__dirname + '/profile.yaml')) {
+    console.log('no profile.yaml found, please copy profile.yaml.dist and edit with your own values');
+    return;
+  }
   const config = yaml.load(fs.readFileSync(__dirname + '/profile.yaml')).profile
   const scenario = config.scenarios.otel
   const functionName = generateTmpFunctionName(scenario.function_name_prefix)
+  const tmpZipName = `/tmp/${functionName}.zip`
+  await generateZipFile(
+    __dirname + '/' + scenario.code,
+    tmpZipName
+  )
 
   let createFunctionPromise = createFunction({
     FunctionName: functionName,
     Role: scenario.role,
     Code: {
-      ZipFile: fs.readFileSync(__dirname + '/' + scenario.code),
+      ZipFile: fs.readFileSync(tmpZipName),
     },
     Handler: scenario.handler,
     Runtime: scenario.runtime,
