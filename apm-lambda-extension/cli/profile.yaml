@@ -2,12 +2,12 @@ profile:
   config:
     path_java: '/usr/local/opt/openjdk/bin/java'
     path_lpt_jar: '/Users/astorm/Documents/github/elastic/apm-aws-lambda/apm-lambda-extension/cli/lpt-0.1.jar'
-    n: 100
+    n: 500
   scenarios:
     otel:
       function_name_prefix: 'otel-autotest-'
       role: 'arn:aws:iam::627286350134:role/service-role/http-api-node-role-egndxmyl'
-      code: 'code.zip'
+      code: './profile/code'
       handler: 'index.handler'
       runtime: 'nodejs14.x'
       layer_arns:
@@ -20,3 +20,4 @@ profile:
           OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:55681/v1/traces'
           OTEL_TRACES_SAMPLER: 'AlwaysOn'
           APM_ELASTIC_SECRET_TOKEN: 'DljDqIApWF7EMjS8ta'
+          ELASTIC_APM_SERVER_URL: 'https://01cd7a0a66084992906782275a699198.apm.us-east-1.aws.cloud.es.io:443'
