@@ -1,7 +1,7 @@
 profile:
   config:
-    path_java: '/usr/local/opt/openjdk/bin/java'
-    path_lpt_jar: '/Users/astorm/Documents/github/elastic/apm-aws-lambda/apm-lambda-extension/cli/lpt-0.1.jar'
+    path_java: '/path/to/bin/java'
+    path_lpt_jar: '/path/to/lpt-0.1.jar'
     n: 500
   scenarios:
     # each section under scenarios represents a single lambda function

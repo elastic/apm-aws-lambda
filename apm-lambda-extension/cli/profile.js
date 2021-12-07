@@ -69,98 +69,111 @@ function generateTmpFunctionName(prefix) {
   return name
 }
 
+async function runScenario(scenario, config) {
+  return new Promise(async function(resolve, reject){
+    const functionName = generateTmpFunctionName(scenario.function_name_prefix)
+    const tmpZipName = `/tmp/${functionName}.zip`
+    await generateZipFile(
+      __dirname + '/' + scenario.code,
+      tmpZipName
+    )
+
+    let createFunctionPromise = createFunction({
+      FunctionName: functionName,
+      Role: scenario.role,
+      Code: {
+        ZipFile: fs.readFileSync(tmpZipName),
+      },
+      Handler: scenario.handler,
+      Runtime: scenario.runtime,
+      Layers: scenario.layer_arns,
+      "Environment": {
+        "Variables": scenario.environment.variables
+      },
+    })
+
+
+    if(!createFunctionPromise) {
+      console.log("Could not call createFunction, bailing early")
+      reject(new Error("Could not call createFunction, bailing early"))
+    }
+    createFunctionPromise.then(function(resultCreateFunction) {
+      // need to wait for function to be created and its status
+      // to no longer be PENDING before we throw traffic at it
+      async function waitUntilNotPending(toRun, times=0) {
+        const maxTimes = 10
+        const configuration = await lambda.getFunctionConfiguration({
+          FunctionName: functionName
+        }).promise()
+
+        if(configuration.State === "Pending" && times <= maxTimes) {
+          console.log("waiting for function state != Pending");
+          times++
+          setTimeout(function(){
+            waitUntilNotPending(toRun, times)
+          }, 1000)
+          return;
+        } else if(times > maxTimes) {
+          console.log("waited 10ish seconds and lambda did not activiate, bailing")
+          process.exit(1)
+        }
+        else {
+          toRun()
+        }
+      }
+      waitUntilNotPending(function() {
+        // invoke test runner here
+        const times = config.config.n
+
+        console.log(`Running profile command with -n ${times} (this may take a while)`);
+
+        const env = Object.assign({}, process.env)
+        exec(`${config.config.path_java} -jar ` +
+             `${config.config.path_lpt_jar} -n ${times} ` +
+             `-a ${resultCreateFunction.FunctionArn} `,
+             env,
+             function(error, stdout, stderr) {
+               if(error) {
+                 reject(error)
+                 return
+               }
+               console.log("command done")
+               console.log(stdout)
+               cleanup(functionName)
+               resolve((convertStdoutTableToObject(stdout)))
+             }
+        )
+      })
+    }).catch(function(e){
+      console.log('Error creating function')
+      if(e.statusCode === 409 && e.code === 'ResourceConflictException') {
+        console.log('Function already exists, deleting. Rerun profiler.')
+        cleanup(functionName)
+      } else {
+        console.log(e)
+      }
+      reject(e)
+    })
+  })
+}
+
 async function cmd() {
   if(!fs.existsSync(__dirname + '/profile.yaml')) {
     console.log('no profile.yaml found, please copy profile.yaml.dist and edit with your own values');
     return;
   }
   const config = yaml.load(fs.readFileSync(__dirname + '/profile.yaml')).profile
-  const scenario = config.scenarios.otel
-  const functionName = generateTmpFunctionName(scenario.function_name_prefix)
-  const tmpZipName = `/tmp/${functionName}.zip`
-  await generateZipFile(
-    __dirname + '/' + scenario.code,
-    tmpZipName
-  )
 
-  let createFunctionPromise = createFunction({
-    FunctionName: functionName,
-    Role: scenario.role,
-    Code: {
-      ZipFile: fs.readFileSync(tmpZipName),
-    },
-    Handler: scenario.handler,
-    Runtime: scenario.runtime,
-    Layers: scenario.layer_arns,
-    "Environment": {
-      "Variables": scenario.environment.variables
-    },
-  })
-
-
-  if(!createFunctionPromise) {
-    console.log("Could not call createFunction, bailing early")
-    return
+  const all = []
+  for(const [name,scenario] of Object.entries(config.scenarios)) {
+    console.log(`starting ${name}`)
+    try {
+      all.push(await runScenario(scenario, config))
+    } catch (e) {
+      console.log('error calling runScenario')
+    }
   }
-  createFunctionPromise.then(function(resultCreateFunction) {
-    // need to wait for function to be created and its status
-    // to no longer be PENDING before we throw traffic at it
-    async function waitUntilNotPending(toRun, times=0) {
-      const maxTimes = 10
-      const configuration = await lambda.getFunctionConfiguration({
-        FunctionName: functionName
-      }).promise()
-
-      if(configuration.State === "Pending" && times <= maxTimes) {
-        console.log("waiting for function state != Pending");
-        times++
-        setTimeout(function(){
-          waitUntilNotPending(toRun, times)
-        }, 1000)
-        return;
-      } else if(times > maxTimes) {
-        console.log("waited 10ish seconds and lambda did not activiate, bailing")
-        process.exit(1)
-      }
-      else {
-        toRun()
-      }
-    }
-    waitUntilNotPending(function() {
-      // invoke test runner here
-      const times = config.config.n
-
-      console.log(`Running profile command with -n ${times} (this may take a while)`);
-
-      const env = Object.assign({}, process.env)
-      exec(`${config.config.path_java} -jar ` +
-           `${config.config.path_lpt_jar} -n ${times} ` +
-           `-a ${resultCreateFunction.FunctionArn} `,
-           env,
-           function(error, stdout, stderr) {
-             console.log("command done")
-             console.log(stdout)
-             console.log(convertStdoutTableToObject(stdout))
-             cleanup(functionName)
-           }
-      )
-    })
-  }).catch(function(e){
-    console.log('Error creating function')
-    if(e.statusCode === 409 && e.code === 'ResourceConflictException') {
-      console.log('Function already exists, deleting. Rerun profiler.')
-      cleanup(functionName)
-    } else {
-      console.log(e)
-    }
-  })
-
-
-
-  // console.log(configuration.State)
-  // console.log("deleting function")
-
-  // cleanup()
+  console.log(all)
 }
 
 module.exports = {
