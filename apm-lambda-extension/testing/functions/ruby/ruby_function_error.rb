@@ -8,11 +8,10 @@ $LOAD_PATH.unshift(*load_paths)
 require 'json'
 require 'elastic-apm'
 
-ElasticAPM.start(pool_size: 2, service_name: 'LocalLambdaTesting')
+ElasticAPM.start(service_name: 'LocalLambdaTesting')
 
 def lambda_handler(event:, context:)
   raise Exception
-rescue => e
-  ElasticAPM.flush
-  raise e
+ensure
+  HTTP.post("http://localhost:8200/intake/v2/events", :params => {:flushed => "true"})
 end

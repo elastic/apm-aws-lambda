@@ -9,6 +9,17 @@ Globals:
   Function:
     Timeout: 20
 
+Parameters:
+  LayerArn:
+    Type: String
+    Description: Function Layer arn
+  ApmServerURL:
+    Type: String
+    Description: APM server URL
+  ApmSecretToken:
+    Type: String
+    Description: APM server secret token
+
 Resources:
   TestFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
@@ -18,7 +29,7 @@ Resources:
       Runtime: ruby2.7
       PackageType: Zip
       Layers:
-        - ${LAYER_ARN}
+        - !Ref LayerArn
       Events:
         Test:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
@@ -27,6 +38,6 @@ Resources:
             Method: get
       Environment:
         Variables:
-          ELASTIC_APM_LAMBDA_APM_SERVER: ${ELASTIC_APM_LAMBDA_APM_SERVER}
-          ELASTIC_APM_SECRET_TOKEN: ${ELASTIC_APM_SECRET_TOKEN}
+          ELASTIC_APM_LAMBDA_APM_SERVER: !Ref ApmServerURL
+          ELASTIC_APM_SECRET_TOKEN: !Ref ApmSecretToken
           GEM_PATH: vendor/bundle/ruby/2.7.0
