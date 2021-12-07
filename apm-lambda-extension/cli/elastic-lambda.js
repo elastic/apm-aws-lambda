@@ -35,43 +35,41 @@ function checkAwsRegion () {
     const { cmd } = require('./update-layer.js')
     cmd(argv)
   }
-  ).command(
-    'build-and-publish',
-    "runs build-and-publish make command in ..\n",
-    function(yargs) {
-    },
-    function(argv) {
-      const {cmd} = require('./build-and-publish')
-      cmd(argv)
-    }
-  ).command(
-    'update-function-env [function_name] [env_as_json]',
-    "adds env configuration to named lambda function\n",
-    function(yargs) {
-    },
-    function(argv){
-      checkAwsRegion()
-      const {cmd} = require('./update-function-env')
-      cmd(argv)
-    }
-  ).command(
-    'install',
-    'reads in install.yaml and run commands needed to install lambda product',
-    function(yargs) {
-    },
-    function(argv) {
-      const {cmd} = require('./install')
-      cmd(argv)
-    }
-  ).command(
-    'profile',
-    'runs the profiler based on configuration in profile.yaml',
-    function(yargs) {
-    },
-    function(argv) {
-      const {cmd} = require('./profile')
-      cmd(argv)
-    }
-  ).demandCommand().recommendCommands().strict().parse()
-
-
+).command(
+  'build-and-publish',
+  'runs build-and-publish make command in ..\n',
+  function (yargs) {
+  },
+  function (argv) {
+    const { cmd } = require('./build-and-publish')
+    cmd(argv)
+  }
+).command(
+  'update-function-env [function_name] [env_as_json]',
+  'adds env configuration to named lambda function\n',
+  function (yargs) {
+  },
+  function (argv) {
+    checkAwsRegion()
+    const { cmd } = require('./update-function-env')
+    cmd(argv)
+  }
+).command(
+  'install',
+  'reads in install.yaml and run commands needed to install lambda product',
+  function (yargs) {
+  },
+  function (argv) {
+    const { cmd } = require('./install')
+    cmd(argv)
+  }
+).command(
+  'profile',
+  'runs the profiler based on configuration in profile.yaml',
+  function (yargs) {
+  },
+  function (argv) {
+    const { cmd } = require('./profile')
+    cmd(argv)
+  }
+).demandCommand().recommendCommands().strict().parse()
