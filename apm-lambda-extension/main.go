@@ -60,11 +60,16 @@ func main() {
 	// pulls ELASTIC_ env variable into globals for easy access
 	config := extension.ProcessEnv()
 
-	// setup http server to receive data from agent
-	// and get a channel to listen for that data
+	// Create a channel to buffer apm agent data
 	agentDataChannel := make(chan extension.AgentData, 100)
 
+	// Start http server to receive data from agent
 	extension.StartHttpServer(agentDataChannel, config)
+
+	// Create a client to use for sending data to the apm server
+	client := &http.Client{
+		Transport: http.DefaultTransport.(*http.Transport).Clone(),
+	}
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	logsChannel := make(chan logsapi.LogEvent)
@@ -74,7 +79,7 @@ func main() {
 		extensionClient.ExtensionID,
 		[]logsapi.EventType{logsapi.Platform})
 	if err != nil {
-		log.Printf("Could not subscribe to the logs API. Will instead flush APM data 100ms before the function deadline.")
+		log.Printf("Could not subscribe to the logs API.")
 	} else {
 		logsAPIListener, err := logsapi.NewLogsAPIHttpListener(logsChannel)
 		if err != nil {
@@ -88,9 +93,6 @@ func main() {
 		}
 	}
 
-	client := &http.Client{
-		Transport: http.DefaultTransport.(*http.Transport).Clone(),
-	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -107,6 +109,17 @@ func main() {
 			}
 			log.Printf("Received event: %v\n", extension.PrettyPrint(event))
 
+			// Make a channel for signaling that we received the agent flushed signal
+			extension.AgentDoneSignal = make(chan struct{})
+			// Make a channel for signaling that we received the runtimeDone logs API event
+			runtimeDoneSignal := make(chan struct{})
+			// Make a channel for signaling that the function invocation is complete
+			funcDone := make(chan struct{})
+
+			// Flush any APM data, in case waiting for the agentDone or runtimeDone signals
+			// timed out, the agent data wasn't available yet, and we got to the next event
+			extension.FlushAPMData(client, agentDataChannel, config)
+
 			// A shutdown event indicates the execution environment is shutting down.
 			// This is usually due to inactivity.
 			if event.EventType == extension.Shutdown {
@@ -114,24 +127,14 @@ func main() {
 				return
 			}
 
-			// Flush any APM data, in case waiting for the runtimeDone event timed out,
-			// the agent data wasn't available yet, and we got to the next event
-			extension.FlushAPMData(client, agentDataChannel, config)
-
-			// Make a channel for signaling that a runtimeDone event has been received
-			runtimeDone := make(chan struct{})
-
-			// Make a channel for signaling that that function invocation has completed
-			funcInvocDone := make(chan struct{})
-
 			// Receive agent data as it comes in and post it to the APM server.
 			// Stop checking for, and sending agent data when the function invocation
 			// has completed, signaled via a channel.
 			go func() {
 				for {
 					select {
-					case <-funcInvocDone:
-						log.Println("Function invocation is complete, not receiving any more agent data")
+					case <-funcDone:
+						log.Println("funcDone signal received, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
 						err := extension.PostToApmServer(client, agentData, config)
@@ -143,12 +146,12 @@ func main() {
 			}()
 
 			// Receive Logs API events
-			// Send to the runtimeDone channel to signal when a runtimeDone event is received
+			// Send to the runtimeDoneSignal channel to signal when a runtimeDone event is received
 			go func() {
 				for {
 					select {
-					case <-funcInvocDone:
-						log.Println("Function invocation is complete, not receiving any more log events")
+					case <-funcDone:
+						log.Println("funcDone signal received, not processing any more log events")
 						return
 					case logEvent := <-logsChannel:
 						log.Printf("Received log event %v\n", logEvent.Type)
@@ -156,8 +159,8 @@ func main() {
 						// to the id that came in via the Next API
 						if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
 							if logEvent.Record.RequestId == event.RequestID {
-								log.Printf("Received runtimeDone event %v", logEvent)
-								runtimeDone <- struct{}{}
+								log.Println("Received runtimeDone event for this function invocation")
+								runtimeDoneSignal <- struct{}{}
 								return
 							} else {
 								log.Println("Log API runtimeDone event request id didn't match")
@@ -167,7 +170,7 @@ func main() {
 				}
 			}()
 
-			// Calculate how long to wait for a runtimeDone event
+			// Calculate how long to wait for a runtimeDoneSignal or AgentDoneSignal signal
 			flushDeadlineMs := event.DeadlineMs - 100
 			durationUntilFlushDeadline := time.Until(time.Unix(flushDeadlineMs/1000, 0))
 
@@ -176,17 +179,20 @@ func main() {
 			defer timer.Stop()
 
 			select {
-			case <-runtimeDone:
-				log.Println("Received runtimeDone event signal")
+			case <-extension.AgentDoneSignal:
+				log.Println("Received agent done signal")
+			case <-runtimeDoneSignal:
+				log.Println("Received runtimeDone signal")
 			case <-timer.C:
-				log.Println("Time expired waiting for runtimeDone event")
+				log.Println("Time expired waiting for agent signal or runtimeDone event")
 			}
 
 			// Flush APM data now that the function invocation has completed
 			extension.FlushAPMData(client, agentDataChannel, config)
 
-			// Signal that the function invocation has completed
-			close(funcInvocDone)
+			close(funcDone)
+			close(runtimeDoneSignal)
+			close(extension.AgentDoneSignal)
 		}
 	}
 }

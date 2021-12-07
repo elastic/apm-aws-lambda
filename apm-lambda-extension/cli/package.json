@@ -4,10 +4,9 @@
   "description": "cli for configuring lambda",
   "main": "cli.js",
   "scripts": {
-    "test": "tap --no-coverage tests/*.test.js",
-    "install": "./elastic-lambda.js install",
     "lint:run": "eslint . --ext .js",
-    "lint:fix": "eslint . --ext .js --fix"
+    "lint:fix": "eslint . --ext .js --fix",
+    "test": "tap --no-coverage tests/*.test.js"
   },
   "author": "",
   "license": "BSD-2-Clause",
