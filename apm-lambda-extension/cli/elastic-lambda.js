@@ -16,24 +16,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-const AWS = require('aws-sdk')
 const yargs = require('yargs/yargs')
-const {hideBin} = require('yargs/helpers')
+const { hideBin } = require('yargs/helpers')
 
-function checkAwsRegion() {
-  if(!process.env.AWS_DEFAULT_REGION) {
+function checkAwsRegion () {
+  if (!process.env.AWS_DEFAULT_REGION) {
     console.log('please set AWS_DEFAULT_REGION')
     process.exit(1)
   }
 }
 
-const argv = yargs(hideBin(process.argv)).command(
+/* const argv = */ yargs(hideBin(process.argv)).command(
   'update-layer [function_name] [layer_arn]',
   "updates or adds a layer ARN to a lambda's layers\n",
-  function(yargs) {
+  function (yargs) {
   },
-  async function(argv) {
-    const {cmd} = require('./update-layer.js')
+  async function (argv) {
+    const { cmd } = require('./update-layer.js')
     cmd(argv)
   }
   ).command(

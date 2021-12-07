@@ -15,12 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-const tap = require('tap');
+const tap = require('tap')
 
-const {getLastJsonFromShellOutput} = require('../build-and-publish')
+const { getLastJsonFromShellOutput } = require('../build-and-publish')
 
-
-tap.test('all', function(t){
+tap.test('all', function (t) {
   const fixture = `... AWS_SECRET_ACCESS_KEY=h...E ELASTIC_LAYER_NAME=apm-lambda-extension make build-and-publish
   make build
   GOOS=linux GOARCH=amd64 go build -o bin/extensions/apm-lambda-extension main.go
@@ -39,9 +38,8 @@ tap.test('all', function(t){
       "Description": "",
       "CreatedDate": "2021-09-27T20:37:28.446+0000",
       "Version": 99
-  }`;
+  }`
   const object = getLastJsonFromShellOutput(fixture)
   t.equal(99, object.Version)
   t.end()
 })
-

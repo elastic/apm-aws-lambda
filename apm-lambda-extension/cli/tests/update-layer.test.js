@@ -15,23 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-const tap = require('tap');
-const {getNewLayersArray} = require('../update-layer')
+const tap = require('tap')
+const { getNewLayersArray } = require('../update-layer')
 
-tap.test('all', function(t){
+tap.test('all', function (t) {
   const fixtures = [
     {
-      arn:'arn:aws:lambda:us-west-2:xxxxxxxxxxxx:layer:apm-lambda-extension:12',
-      layers:[{Arn:'foo'},{Arn:'bar'}],
-      expected:['foo','bar','arn:aws:lambda:us-west-2:xxxxxxxxxxxx:layer:apm-lambda-extension:12']
+      arn: 'arn:aws:lambda:us-west-2:xxxxxxxxxxxx:layer:apm-lambda-extension:12',
+      layers: [{ Arn: 'foo' }, { Arn: 'bar' }],
+      expected: ['foo', 'bar', 'arn:aws:lambda:us-west-2:xxxxxxxxxxxx:layer:apm-lambda-extension:12']
     },
     {
-      arn:'arn:aws:lambda:us-west-2:xxxxxxxxxxxx:layer:apm-lambda-extension:9',
-      layers:[{Arn:'foo'},{Arn:'bar'},{Arn:'arn:aws:lambda:us-west-2:xxxxxxxxxxxx:layer:apm-lambda-extension:12'}],
-      expected:['foo','bar','arn:aws:lambda:us-west-2:xxxxxxxxxxxx:layer:apm-lambda-extension:9']
-    },
+      arn: 'arn:aws:lambda:us-west-2:xxxxxxxxxxxx:layer:apm-lambda-extension:9',
+      layers: [{ Arn: 'foo' }, { Arn: 'bar' }, { Arn: 'arn:aws:lambda:us-west-2:xxxxxxxxxxxx:layer:apm-lambda-extension:12' }],
+      expected: ['foo', 'bar', 'arn:aws:lambda:us-west-2:xxxxxxxxxxxx:layer:apm-lambda-extension:9']
+    }
   ]
-  for(const i in fixtures) {
+  for (const i in fixtures) {
     const fixture = fixtures[i]
     const result = getNewLayersArray(
       fixture.arn,
@@ -41,4 +41,4 @@ tap.test('all', function(t){
     t.same(result, fixture.expected)
   }
   t.end()
-});
+})
