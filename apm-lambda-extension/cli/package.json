@@ -4,8 +4,7 @@
   "description": "cli for configuring lambda",
   "main": "cli.js",
   "scripts": {
-    "test": "tap --no-coverage tests/*.test.js",
-    "install": "./elastic-lambda.js install"
+    "test": "tap --no-coverage tests/*.test.js"
   },
   "author": "",
   "license": "BSD-2-Clause",
