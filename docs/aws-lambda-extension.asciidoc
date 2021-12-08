@@ -185,6 +185,15 @@ def handler(event, context):
 ----
 
 [discrete]
+[[aws-lambda-java]]
+=== Java
+
+Similarly to the extension, the Elastic APM Java agent is installed as a Lambda layer as well. Since it relies on a
+https://docs.aws.amazon.com/lambda/latest/dg/runtimes-modify.html[wrapper script] to automatically attach to the
+Lambda function, not all environment variables listed below need to be configured. See more information in the
+https://www.elastic.co/guide/en/apm/agent/java/current/aws-lambda.html[Java agent setup guide].
+
+[discrete]
 [[aws-lambda-manual-instrumentation]]
 == Manual Installation
 
