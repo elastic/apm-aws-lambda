@@ -21,9 +21,9 @@ By using a custom-built AWS Lambda Extension, Elastic APM Agents can send data t
 
 The rest of this guide contains instructions for instrumenting a Lambda function. There are two high level steps to instrumenting an AWS Lambda function.
 
-1. Installing the Lambda Extension ...
-   * ... <<aws-lambda-install,Using the Installer>>
-   * ... <<aws-lambda-manual-instrumentation,Through Manual Installation>>
+1. Installing the Lambda Extension
+   * <<aws-lambda-install,Using the Installer>>
+   * <<aws-lambda-manual-instrumentation,Through Manual Installation>>
 2. <<aws-lambda-handler>>
 
 We'll start with installing the Lambda extension.
