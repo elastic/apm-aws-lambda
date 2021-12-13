@@ -207,7 +207,7 @@ Finally, once the layer's in place you'll need to configure a few environmental 
 [[aws-lambda-variables]]
 === The Necessary Variables
 
-NOTE: The necessary environment variables depend on the APM agent being used. Follow the https://www.elastic.co/guide/en/apm/agent/nodejs/current/lambda.html[Node.js agent setup guide], https://www.elastic.co/guide/en/apm/agent/python/current/lambda-support.html#lambda-setup[Python agent setup guide] or https://www.elastic.co/guide/en/apm/agent/java/current/aws-lambda.html#aws-lambda-instrumenting[Java agent setup guide], respectively, for specific instructions on setting the environment variables.
+NOTE: The necessary environment variables depend on the APM agent being used. Follow the {apm-node-ref}/lambda.html[Node.js agent setup guide], {apm-py-ref}/lambda-support.html#lambda-setup[Python agent setup guide] or {apm-java-ref}/aws-lambda.html#aws-lambda-instrumenting[Java agent setup guide], respectively, for specific instructions on setting the environment variables.
 
 [discrete]
 [[aws-lambda-central_config]]
@@ -263,7 +263,7 @@ exports.handler = apm.lambda(async function handler (event, context) {
 })
 ----
 
-See the https://www.elastic.co/guide/en/apm/agent/nodejs/current/lambda.html[Node.js agent setup guide] for detailed instructions on setting up the Node.js agent for AWS Lambda.
+See the {apm-node-ref}/lambda.html[Node.js agent setup guide] for detailed instructions on setting up the Node.js agent for AWS Lambda.
 
 [discrete]
 [[aws-lambda-python]]
@@ -279,14 +279,14 @@ def handler(event, context):
     return {"statusCode": r.status_code, "body": "Success!"}
 ----
 
-See the https://www.elastic.co/guide/en/apm/agent/python/current/lambda-support.html[Python agent setup guide] for detailed instructions on setting up the Python agent for AWS Lambda.
+See the {apm-py-ref}/lambda-support.html[Python agent setup guide] for detailed instructions on setting up the Python agent for AWS Lambda.
 
 [discrete]
 [[aws-lambda-java]]
 === Java
 
-Similarly to the extension, the Elastic APM Java agent is installed as a Lambda layer as well. Since it relies on a
+Like the extension, the Elastic APM Java agent is installed as a Lambda layer. Since it relies on a
 https://docs.aws.amazon.com/lambda/latest/dg/runtimes-modify.html[wrapper script] to automatically attach to the
 Lambda function, not all environment variables listed in <<aws-lambda-variables>> need to be configured.
 
-See the https://www.elastic.co/guide/en/apm/agent/java/current/aws-lambda.html[Java agent setup guide] for detailed instructions on setting up the Java agent for AWS Lambda.
+See the {apm-java-ref}/aws-lambda.html[Java agent setup guide] for detailed instructions on setting up the Java agent for AWS Lambda.
