@@ -21,10 +21,10 @@ First, tag the release via your preferred tagging method.  Tagging a release (v0
     To github.com:elastic/apm-aws-lambda.git
      * [new tag]         v0.0.2 -> v0.0.2
 
- 
+
 ### Create the Build Artifacts
 
-Next, create the build artifacts for the release.  These are go binaries of the Lambda Extension, built for both Intel and ARM architectures. 
+Next, create the build artifacts for the release.  These are go binaries of the Lambda Extension, built for both Intel and ARM architectures.
 
 If you were creating the build artifacts for the v0.0.2 release, that might look something like this
 
@@ -52,4 +52,4 @@ You can add a release via the GitHub UI by
 
 4. Entering a release title, description, and binaries
 
-5. Clicking on 
+5. Clicking on the Publish Release button
