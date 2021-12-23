@@ -12,9 +12,12 @@ profile:
       code: './profile/code'
       handler: 'index.handler'
       runtime: 'nodejs14.x'
+      # up to five
       layer_arns:
-        - '[... enter first layer, up to five ...]'
-        - '[... enter second layer, up to five ...]'
+        - '... enter first layer'
+        - '... enter second layer'
+        # use this value to trigger a build and deploy of the latest extension
+        # - 'ELASTIC_LATEST'
       environment:
         variables:
           AWS_LAMBDA_EXEC_WRAPPER: '/opt/otel-handler'

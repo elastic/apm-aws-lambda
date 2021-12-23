@@ -67,3 +67,63 @@ The `install` sub-command will automatically
 1. Update your Lambda environmental variables     
 2. Build the Lambda Extension Layer and Publish it to AWS
 3. Add the just published layer to your Lambda function's configuration
+
+## Running the Profiler
+
+You can use the `./elastic-lambda.js profile` command to run performance _scenarios_ using the `lpt-0.1.jar` perf. runner. The `profile` sub-command expects a `profile.yaml` file to be present -- copy `profile.yaml.dist` as a starter file.  Thie configuration file contains the location of your downloaded `ltp-0.1.jar` file, and configuration for individual scenarios.
+
+A scenario configuration looks like the following
+
+      scenarios:
+        # each section under scenarios represents a single lambda function
+        # to deploy and test via lpt-0.1.jar
+        otel:
+          function_name_prefix: 'otel-autotest-'
+          role: '[... enter role ...]'
+          code: './profile/code'
+          handler: 'index.handler'
+          runtime: 'nodejs14.x'
+          # up to five
+          layer_arns:
+            - '... enter first layer'
+            - '... enter second layer'
+            # use this value to trigger a build and deploy of the latest extension
+            # - 'ELASTIC_LATEST'
+          environment:
+            variables:
+              AWS_LAMBDA_EXEC_WRAPPER: '/opt/otel-handler'
+              OPENTELEMETRY_COLLECTOR_CONFIG_FILE: '/var/task/collector.yaml'
+              OTEL_EXPORTER_OTLP_ENDPOINT: 'http://localhost:55681/v1/traces'
+              OTEL_TRACES_SAMPLER: 'AlwaysOn'
+              APM_ELASTIC_SECRET_TOKEN: '[... enter secret token ...]'
+              ELASTIC_APM_SERVER_URL: '[... enter APM Server URL ...]'
+              
+Each individual object under the `scenarios` key represents an individual perf. scenario.
+
+**`function_name_prefix`**              
+
+The `profile` sub-command will use the `function_name_prefix` configuration value when naming the Lambda function it creates and deploys.  This helps ensure your function name will be complete. 
+
+**`role`**
+
+AWS needs a _role_ in order to create a Lambda function.  Use the `role` field to provide this value.
+
+**`code`**
+
+The `code` configuration value points to a folder that contains file.  This folder will be zipped up, and used to upload the source code of the lambda function that the `profile` command creates.
+ 
+**`handler`**
+
+The `handler` configuration value sets the created lambda function's handler value.  The above example is for a Node.js function.
+
+**`runtime`**
+
+The `runtime` configuration value set the runtime of the created lambda function.
+
+**`layer_arns`**
+
+The `profile` command will use the `layer_arn` values to automatically configure up to five layers in the lambda function it creates for profiling.  Use a value of `ELASTIC_LATEST` to build and deploy a layer with the latest lambda extension from this repo.
+
+**`environment`**              
+
+Use the `environment` configuration value to set any needed environment variables in the created lambda function.

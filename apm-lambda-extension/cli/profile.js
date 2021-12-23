@@ -3,6 +3,8 @@ const yaml = require('js-yaml')
 const AWS = require('aws-sdk')
 const fs = require('fs')
 const { exec /* execFile */ } = require('child_process')
+const { buildAndPublish } = require('./build-and-publish')
+const { resolve } = require('path')
 
 AWS.config.update({ region: 'us-west-2' })
 const lambda = new AWS.Lambda({ apiVersion: '2015-03-31' })
@@ -153,13 +155,7 @@ async function runScenario (scenario, config) {
   })
 }
 
-async function cmd () {
-  if (!fs.existsSync([__dirname, '/profile.yaml'].join(''))) {
-    console.log('no profile.yaml found, please copy profile.yaml.dist and edit with your own values')
-    return
-  }
-  const config = yaml.load(fs.readFileSync([__dirname, '/profile.yaml'].join(''))).profile
-
+async function runScenarios(config) {
   const all = []
   for (const [name, scenario] of Object.entries(config.scenarios)) {
     console.log(`starting ${name}`)
@@ -170,6 +166,49 @@ async function cmd () {
     }
   }
   console.log(all)
+}
+
+const FLAG_LATEST = 'ELASTIC_LATEST'
+function buildAndDeployArn(config) {
+  return new Promise(function(resolve, reject) {
+    const arns = Object.values(config.scenarios).map(function(item){
+      return item.layer_arns
+    }).flat()
+
+    if(arns.indexOf(FLAG_LATEST) === -1) {
+      resolve()
+    }
+
+    // build latest arn, modify config to include it
+    buildAndPublish().then(function result(arn) {
+      for(const [key,item] of Object.entries(config.scenarios)) {
+        for(let i=0;i<item.layer_arns.length;i++) {
+          if(config.scenarios[key].layer_arns[i] === FLAG_LATEST) {
+            config.scenarios[key].layer_arns[i] = arn
+          } else {
+            console.log(config.scenarios[key].layer_arns[i])
+          }
+        }
+      }
+      resolve()
+    })
+  })
+}
+
+function cmd () {
+  if (!fs.existsSync([__dirname, '/profile.yaml'].join(''))) {
+    console.log('no profile.yaml found, please copy profile.yaml.dist and edit with your own values')
+    return
+  }
+  const config = yaml.load(fs.readFileSync([__dirname, '/profile.yaml'].join(''))).profile
+  // build and deploy the latest extension ARN (if neccesary)
+  buildAndDeployArn(config).then(function() {
+    runScenarios(config)
+  })
+
+  // return // tmp
+  // run all our scenarios
+
 }
 
 module.exports = {
