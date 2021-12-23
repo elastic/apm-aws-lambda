@@ -35,8 +35,8 @@ function getLastJsonFromShellOutput (output) {
   return object
 }
 
-function buildAndPublish() {
-  return new Promise(function(resolve, reject){
+function buildAndPublish () {
+  return new Promise(function (resolve, reject) {
     if (!process.env.ELASTIC_LAYER_NAME) {
       process.env.ELASTIC_LAYER_NAME = 'apm-lambda-extension'
     }
@@ -59,8 +59,8 @@ function buildAndPublish() {
 }
 
 function cmd () {
-  buildAndPublish().then(function(arn) {
-    console.log("FINAL: " + arn)
+  buildAndPublish().then(function (arn) {
+    console.log('FINAL: ' + arn)
   })
 }
 
