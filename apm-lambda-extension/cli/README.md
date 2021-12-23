@@ -70,7 +70,7 @@ The `install` sub-command will automatically
 
 ## Running the Profiler
 
-You can use the `./elastic-lambda.js profile` command to run performance _scenarios_ using the `lpt-0.1.jar` perf. runner. The `profile` sub-command expects a `profile.yaml` file to be present -- copy `profile.yaml.dist` as a starter file.  Thie configuration file contains the location of your downloaded `ltp-0.1.jar` file, and configuration for individual scenarios.
+You can use the `./elastic-lambda.js profile` command to run performance _scenarios_ using the `lpt-0.1.jar` perf. runner. The `profile` sub-command expects a `profile.yaml` file to be present -- copy `profile.yaml.dist` as a starter file.  This configuration file contains the location of your downloaded `ltp-0.1.jar` file, and configuration for individual scenarios.
 
 A scenario configuration looks like the following
 
@@ -118,7 +118,7 @@ The `handler` configuration value sets the created lambda function's handler val
 
 **`runtime`**
 
-The `runtime` configuration value set the runtime of the created lambda function.
+The `runtime` configuration value sets the runtime of the created lambda function.
 
 **`layer_arns`**
 
