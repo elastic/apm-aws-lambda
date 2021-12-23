@@ -35,28 +35,38 @@ function getLastJsonFromShellOutput (output) {
   return object
 }
 
+function buildAndPublish () {
+  return new Promise(function (resolve, reject) {
+    if (!process.env.ELASTIC_LAYER_NAME) {
+      process.env.ELASTIC_LAYER_NAME = 'apm-lambda-extension'
+    }
+    console.log('running cd .. && make build-and-publish')
+    exec('cd .. && make build-and-publish', (error, stdout, stderr) => {
+      if (error) {
+        console.log(`error: ${error.message}`)
+        return
+      }
+      if (stderr) {
+        console.log(`stderr: ${stderr}`)
+        return
+      }
+      console.log(`stdout: ${stdout}`)
+      const object = getLastJsonFromShellOutput(stdout)
+      console.log(`Published Layer as: ${object.LayerVersionArn}`)
+      resolve(object.LayerVersionArn)
+    })
+  })
+}
+
 function cmd () {
-  if (!process.env.ELASTIC_LAYER_NAME) {
-    process.env.ELASTIC_LAYER_NAME = 'apm-lambda-extension'
-  }
-  console.log('running cd .. && make build-and-publish')
-  exec('cd .. && make build-and-publish', (error, stdout, stderr) => {
-    if (error) {
-      console.log(`error: ${error.message}`)
-      return
-    }
-    if (stderr) {
-      console.log(`stderr: ${stderr}`)
-      return
-    }
-    console.log(`stdout: ${stdout}`)
-    const object = getLastJsonFromShellOutput(stdout)
-    console.log(`Published Layer as: ${object.LayerVersionArn}`)
+  buildAndPublish().then(function (arn) {
+    console.log('FINAL: ' + arn)
   })
 }
 
 module.exports = {
   cmd,
 
-  getLastJsonFromShellOutput
+  getLastJsonFromShellOutput,
+  buildAndPublish
 }

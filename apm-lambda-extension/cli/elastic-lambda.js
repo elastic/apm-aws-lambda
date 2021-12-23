@@ -63,4 +63,13 @@ function checkAwsRegion () {
     const { cmd } = require('./install')
     cmd(argv)
   }
+).command(
+  'profile',
+  'runs the profiler based on configuration in profile.yaml',
+  function (yargs) {
+  },
+  function (argv) {
+    const { cmd } = require('./profile')
+    cmd(argv)
+  }
 ).demandCommand().recommendCommands().strict().parse()
