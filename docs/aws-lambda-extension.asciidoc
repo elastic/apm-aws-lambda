@@ -21,16 +21,19 @@ By using a custom-built AWS Lambda Extension, Elastic APM Agents can send data t
 
 The rest of this guide contains instructions for instrumenting a Lambda function. There are two high level steps to instrumenting an AWS Lambda function.
 
-1. Install the Lambda extension
-2. Configure the Agent and Lambda function handler
+1. Installing the Lambda Extension
+   * <<aws-lambda-install,Using the Installer>>
+   * <<aws-lambda-manual-instrumentation,Through Manual Installation>>
+2. <<aws-lambda-handler>>
 
 We'll start with installing the Lambda extension.
 
 [discrete]
 [[aws-lambda-install]]
-== Installing the Lambda Extension
+== Installing the Lambda Extension using the Installer
 
-Elastic offers an installer for adding the Lambda Extension to your Lambda functions. (If you'd prefer to skip the installer and manually install the extension, see the <<aws-lambda-install,Manual Installation>> section below.)
+Elastic offers an installer for adding the Lambda Extension to your Lambda functions.
+If you'd prefer to skip the installer and manually install the extension, see the <<aws-lambda-manual-instrumentation>> section below.
 
 This installer will:
 
@@ -147,44 +150,6 @@ If unset, the APM Agent will automatically set the value based on `AWS_LAMBDA_FU
 The timeout value, in seconds, for the Lambda Extension's server.
 
 [discrete]
-[[aws-lambda-handler]]
-== Configuring the Agent and Lambda Function handler
-
-Once you've installed the extension, there's one last step to take. You'll need to wrap the Lambda function handler.
-
-[discrete]
-[[aws-lambda-nodejs]]
-=== Node.js
-
-In Node.js, you wrap a Lambda function handler using the following syntax.
-
-[source,js]
-----
-const apm = require('elastic-apm-node').start({/*...*/})
-exports.handler = apm.lambda(async function handler (event, context) {
-    const response = {
-      statusCode: 200,
-      body: "hello new async."
-    };
-    return response
-})
-----
-
-[discrete]
-[[aws-lambda-python]]
-=== Python
-
-In Python, you wrap a Lambda function handler using the following syntax.
-
-[source,python]
-----
-from elasticapm import capture_serverless
-@capture_serverless()
-def handler(event, context):
-    return {"statusCode": r.status_code, "body": "Success!"}
-----
-
-[discrete]
 [[aws-lambda-manual-instrumentation]]
 == Manual Installation
 
@@ -242,6 +207,8 @@ Finally, once the layer's in place you'll need to configure a few environmental 
 [[aws-lambda-variables]]
 === The Necessary Variables
 
+NOTE: The necessary environment variables depend on the APM agent being used. Follow the {apm-node-ref}/lambda.html[Node.js agent setup guide], {apm-py-ref}/lambda-support.html#lambda-setup[Python agent setup guide] or {apm-java-ref}/aws-lambda.html#aws-lambda-instrumenting[Java agent setup guide], respectively, for specific instructions on setting the environment variables.
+
 [discrete]
 [[aws-lambda-central_config]]
 ==== `ELASTIC_APM_CENTRAL_CONFIG`
@@ -271,3 +238,55 @@ Either `ELASTIC_APM_API_KEY` or `ELASTIC_APM_SECRET_TOKEN` needs to be set.  Thi
 ==== `ELASTIC_APM_SERVER_URL`
 
 This _must_ be configured to the value `http://localhost:8200`.  This configuration field controls where your APM Agent sends data.  The extension listens for data on `localhost:8200`.
+
+[discrete]
+[[aws-lambda-handler]]
+== Configuring the Agent and Lambda Function handler
+
+Once you've installed the extension, there's one last step to take. You'll need to wrap the Lambda function handler.
+
+[discrete]
+[[aws-lambda-nodejs]]
+=== Node.js
+
+In Node.js, you wrap a Lambda function handler using the following syntax.
+
+[source,js]
+----
+const apm = require('elastic-apm-node').start({/*...*/})
+exports.handler = apm.lambda(async function handler (event, context) {
+    const response = {
+      statusCode: 200,
+      body: "hello new async."
+    };
+    return response
+})
+----
+
+See the {apm-node-ref}/lambda.html[Node.js agent setup guide] for detailed instructions on setting up the Node.js agent for AWS Lambda.
+
+[discrete]
+[[aws-lambda-python]]
+=== Python
+
+In Python, you wrap a Lambda function handler using the following syntax.
+
+[source,python]
+----
+from elasticapm import capture_serverless
+@capture_serverless()
+def handler(event, context):
+    return {"statusCode": r.status_code, "body": "Success!"}
+----
+
+See the {apm-py-ref}/lambda-support.html[Python agent setup guide] for detailed instructions on setting up the Python agent for AWS Lambda.
+
+[discrete]
+[[aws-lambda-java]]
+=== Java
+
+Like the extension, the Elastic APM Java agent is installed as a Lambda layer. Since it relies on a
+https://docs.aws.amazon.com/lambda/latest/dg/runtimes-modify.html[wrapper script] to automatically attach to the
+Lambda function, not all environment variables listed in <<aws-lambda-variables>> need to be configured.
+
+See the {apm-java-ref}/aws-lambda.html[Java agent setup guide] for detailed instructions on setting up the Java agent for AWS Lambda.
