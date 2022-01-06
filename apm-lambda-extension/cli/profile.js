@@ -141,11 +141,12 @@ async function runScenario (scenario, config) {
         }
         )
       })
-    }).catch(function (e) {
+    }).catch(async function (e) {
       console.log('Error creating function')
       if (e.statusCode === 409 && e.code === 'ResourceConflictException') {
         console.log('Function already exists, deleting. Rerun profiler.')
-        cleanup(functionName)
+        await cleanup(functionName)
+        process.exit(1)
       } else {
         console.log(e)
       }
@@ -176,6 +177,7 @@ function buildAndDeployArn (config) {
 
     if (arns.indexOf(FLAG_LATEST) === -1) {
       resolve()
+      return
     }
 
     // build latest arn, modify config to include it
