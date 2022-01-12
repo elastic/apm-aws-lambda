@@ -29,7 +29,7 @@ type extensionConfig struct {
 	apmServerSecretToken       string
 	apmServerApiKey            string
 	dataReceiverServerPort     string
-	sendStrategy               SendStrategy
+	SendStrategy               SendStrategy
 	dataReceiverTimeoutSeconds int
 }
 
@@ -70,10 +70,10 @@ func ProcessEnv() *extensionConfig {
 	}
 
 	// Get the send strategy, convert to lowercase
-	normalizedSendStrategy := Background
+	normalizedSendStrategy := SyncFlush
 	sendStrategy := strings.ToLower(os.Getenv("ELASTIC_APM_SEND_STRATEGY"))
-	if sendStrategy == string(SyncFlush) {
-		normalizedSendStrategy = SyncFlush
+	if sendStrategy == string(Background) {
+		normalizedSendStrategy = Background
 	}
 
 	config := &extensionConfig{
@@ -81,7 +81,7 @@ func ProcessEnv() *extensionConfig {
 		apmServerSecretToken:       os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
 		apmServerApiKey:            os.Getenv("ELASTIC_APM_API_KEY"),
 		dataReceiverServerPort:     os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"),
-		sendStrategy:               normalizedSendStrategy,
+		SendStrategy:               normalizedSendStrategy,
 		dataReceiverTimeoutSeconds: dataReceiverTimeoutSeconds,
 	}
 
