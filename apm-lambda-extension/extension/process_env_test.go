@@ -60,6 +60,11 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
+	if config.sendStrategy != Background {
+		t.Log("Default send strategy not set correctly")
+		t.Fail()
+	}
+
 	os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", ":8201")
 	config = ProcessEnv()
 	if config.dataReceiverServerPort != ":8201" {
@@ -85,6 +90,20 @@ func TestProcessEnv(t *testing.T) {
 	config = ProcessEnv()
 	if config.apmServerApiKey != "foo" {
 		t.Log("API Key not set correctly")
+		t.Fail()
+	}
+
+	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "SyncFlush")
+	config = ProcessEnv()
+	if config.sendStrategy != "syncflush" {
+		t.Log("Send strategy not set correctly")
+		t.Fail()
+	}
+
+	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "invalid")
+	config = ProcessEnv()
+	if config.sendStrategy != "background" {
+		t.Log("Send strategy not set correctly")
 		t.Fail()
 	}
 }
