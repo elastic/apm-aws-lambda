@@ -40,6 +40,7 @@ const (
 	// Background send strategy allows the extension to send remaining buffered
 	// agent data on the next function invocation
 	Background SendStrategy = "background"
+
 	// SyncFlush send strategy indicates that the extension will synchronously
 	// flush remaining buffered agent data when it receives a signal that the
 	// function is complete

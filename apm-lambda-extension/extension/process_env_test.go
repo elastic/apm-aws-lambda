@@ -93,13 +93,6 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "SyncFlush")
-	config = ProcessEnv()
-	if config.SendStrategy != "syncflush" {
-		t.Log("Send strategy not set correctly")
-		t.Fail()
-	}
-
 	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "Background")
 	config = ProcessEnv()
 	if config.SendStrategy != "background" {
