@@ -42,6 +42,7 @@ get-all-aws-regions:
 
 # Publish the given LAYER in all the AWS regions
 publish-in-all-aws-regions: validate-layer-name get-all-aws-regions
+	@mv ./bin/$(GOARCH).zip bin/$(BRANCH_NAME)-linux-$(GOARCH).zip
 	@while read AWS_DEFAULT_REGION; do \
 		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) publish; \
 	done <.regions
@@ -51,7 +52,6 @@ publish-in-all-aws-regions: validate-layer-name get-all-aws-regions
 publish: validate-branch-name validate-layer-name validate-aws-default-region
 	@echo 'publish "${ELASTIC_LAYER_NAME}" in ${AWS_DEFAULT_REGION}'
 	@mkdir -p $(AWS_FOLDER)
-	@mv bin/$(GOARCH).zip bin/$(BRANCH_NAME)-linux-$(GOARCH).zip
 	@aws lambda \
 		--output json \
 		publish-layer-version \
