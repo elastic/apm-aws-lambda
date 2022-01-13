@@ -79,8 +79,6 @@ pipeline {
           stage('Test') {
             steps {
               withGithubNotify(context: "Test-${GO_VERSION}-${PLATFORM}") {
-                deleteDir()
-                unstash 'source'
                 withGoEnv(){
                   dir("${BASE_DIR}/apm-lambda-extension"){
                     goTestJUnit(options: '-v ./...', output: 'junit-report.xml')
