@@ -136,7 +136,6 @@ pipeline {
                       dir("${BASE_DIR}/apm-lambda-extension"){
                         cmd(label: 'make publish-in-all-aws-regions', script: 'make publish-in-all-aws-regions')
                         stash(includes: "*${PREFIX_ARN_FILE}", name: "arn-${isArm() ? 'arm' : 'amd'}")
-                        stash(allowEmpty: true, name: "arn-${isArm() ? 'arm' : 'amd'}", useDefaultExcludes: false)
                       }
                     }
                   }
