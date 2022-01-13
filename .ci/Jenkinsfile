@@ -131,11 +131,11 @@ pipeline {
               stage('Publish') {
                 steps {
                   withGithubNotify(context: "Publish-${PLATFORM}") {
-                    //withAWSEnv(secret: 'TBD') {
+                    withAWSEnv(secret: 'secret/observability-team/ci/service-account/apm-aws-lambda', forceInstallation: true, version: '2.4.10') {
                       dir("${BASE_DIR}/apm-lambda-extension"){
                         cmd(label: 'make publish', script: 'echo publish')
                       }
-                    //}
+                    }
                   }
                 }
               }
