@@ -1,3 +1,5 @@
+SHELL = /bin/bash -eo pipefail
+
 build:
 ifndef GOARCH
 	GOARCH=amd64
