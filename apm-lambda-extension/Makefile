@@ -38,4 +38,5 @@ endif
 ifndef CHANGELOG
 	$(error CHANGELOG is undefined)
 endif
-	gh release create $(BRANCH_NAME) -F $(CHANGELOG)
+	@gh release list
+	@echo "gh release create $(BRANCH_NAME) -F $(CHANGELOG)"
