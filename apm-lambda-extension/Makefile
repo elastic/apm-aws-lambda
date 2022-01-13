@@ -62,7 +62,12 @@ ifndef ELASTIC_LAYER_NAME
 	$(error ELASTIC_LAYER_NAME is undefined)
 endif
 	@echo 'publish "${ELASTIC_LAYER_NAME}" in ${AWS_DEFAULT_REGION}'
-	@echo 'aws lambda publish-layer-version --layer-name "${ELASTIC_LAYER_NAME}" --zip-file "fileb://./bin/extension.zip"'
+	aws lambda \
+		--output json \
+		publish-layer-version \
+		--layer-name "${ELASTIC_LAYER_NAME}" \
+		--zip-file "fileb://./bin/extension.zip" \
+		--generate-cli-skeleton
 
 release-notes:
 ifndef BRANCH_NAME
