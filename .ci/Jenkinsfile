@@ -122,7 +122,6 @@ pipeline {
                     withGoEnv(){
                       dir("${BASE_DIR}/apm-lambda-extension"){
                         cmd(label: 'make dist', script: 'make dist')
-                        stash(includes: 'bin/*.zip', name: "dist-${isArm() ? 'arm' : 'linux'}")
                       }
                     }
                   }
