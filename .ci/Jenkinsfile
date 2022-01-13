@@ -9,6 +9,7 @@ pipeline {
     BASE_DIR = "src/github.com/elastic/${env.REPO}"
     PIPELINE_LOG_LEVEL = 'INFO'
     CHANGELOG = 'changelog.md'
+    ELASTIC_LAYER_NAME = 'apm-lambda-extension'
   }
   options {
     timeout(time: 1, unit: 'HOURS')
@@ -133,10 +134,15 @@ pipeline {
                   withGithubNotify(context: "Publish-${PLATFORM}") {
                     withAWSEnv(secret: 'secret/observability-team/ci/service-account/apm-aws-lambda', forceInstallation: true, version: '2.4.10') {
                       dir("${BASE_DIR}/apm-lambda-extension"){
-                        cmd(label: 'make publish', script: 'echo publish')
+                        cmd(label: 'make publish-in-all-aws-regions', script: 'make publish-in-all-aws-regions')
                       }
                     }
                   }
+                }
+              }
+              post {
+                always {
+                  archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/.regions")
                 }
               }
             }

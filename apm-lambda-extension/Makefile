@@ -19,7 +19,7 @@ ifndef ELASTIC_LAYER_NAME
 endif
 	GOARCH=${GOARCH} make build
 	GOARCH=${GOARCH} make zip
-	aws lambda publish-layer-version --layer-name "${ELASTIC_LAYER_NAME}" --zip-file "fileb://./bin/extension.zip"
+	$(MAKE) publish
 zip:
 	cd bin && rm -f extension.zip || true && zip -r extension.zip extensions && cp extension.zip ${GOARCH}.zip
 test:
@@ -30,6 +30,36 @@ ifndef GOARCH
 endif
 	env
 dist: build test zip
+
+# List all the AWS regions
+get-all-aws-regions:
+	@aws \
+		ec2 \
+		describe-regions \
+		--all-regions \
+		--output json \
+		--no-cli-pager \
+		| jq -r '.Regions[].RegionName' > .regions
+
+# Publish the given LAYER in all the AWS regions
+publish-in-all-aws-regions: get-all-aws-regions
+ifndef ELASTIC_LAYER_NAME
+	$(error ELASTIC_LAYER_NAME is undefined)
+endif
+	@while read AWS_DEFAULT_REGION; do \
+		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) publish; \
+	done <.regions
+
+# Publish the given LAYER in the given AWS region
+publish:
+ifndef AWS_DEFAULT_REGION
+	$(error AWS_DEFAULT_REGION is undefined)
+endif
+ifndef ELASTIC_LAYER_NAME
+	$(error ELASTIC_LAYER_NAME is undefined)
+endif
+	@echo 'publish "${ELASTIC_LAYER_NAME}" in ${AWS_DEFAULT_REGION}'
+	aws lambda publish-layer-version --layer-name "${ELASTIC_LAYER_NAME}" --zip-file "fileb://./bin/extension.zip"
 
 release-notes:
 ifndef BRANCH_NAME
