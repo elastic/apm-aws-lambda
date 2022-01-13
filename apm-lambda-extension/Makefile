@@ -99,9 +99,11 @@ ifndef PREFIX_ARN_FILE
 endif
 	@gh release list
 	@cat *-$(PREFIX_ARN_FILE) > $(PREFIX_ARN_FILE)
-	@echo "gh \
+	@gh \
 		release \
 		create $(BRANCH_NAME) \
 		--title '$(BRANCH_NAME)' \
+		--draft \
+		--generate-notes \
 		--notes-file $(PREFIX_ARN_FILE) \
-		./bin/$(BRANCH_NAME)*.zip"
+		./bin/$(BRANCH_NAME)*.zip
