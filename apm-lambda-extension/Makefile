@@ -36,6 +36,7 @@ get-all-aws-regions:
 	@aws \
 		ec2 \
 		describe-regions \
+		--region us-east-1 \
 		--all-regions \
 		--output json \
 		--no-cli-pager \
