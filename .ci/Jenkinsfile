@@ -139,10 +139,10 @@ pipeline {
                     }
                   }
                 }
-              }
-              post {
-                always {
-                  archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/.regions")
+                post {
+                  always {
+                    archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/.regions")
+                  }
                 }
               }
             }
