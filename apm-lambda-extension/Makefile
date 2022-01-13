@@ -30,3 +30,12 @@ ifndef GOARCH
 endif
 	env
 dist: build test zip
+
+release-notes:
+ifndef BRANCH_NAME
+	$(error BRANCH_NAME is undefined)
+endif
+ifndef CHANGELOG
+	$(error CHANGELOG is undefined)
+endif
+	gh release create $(BRANCH_NAME) -F $(CHANGELOG)

@@ -8,6 +8,7 @@ pipeline {
     REPO = 'apm-aws-lambda'
     BASE_DIR = "src/github.com/elastic/${env.REPO}"
     PIPELINE_LOG_LEVEL = 'INFO'
+    CHANGELOG = 'changelog.md'
   }
   options {
     timeout(time: 1, unit: 'HOURS')
@@ -143,7 +144,11 @@ pipeline {
         }
         stage('Release Notes') {
           steps {
-            echo 'TBD'
+            withGhEnv(forceInstallation: true, version: '2.4.0') {
+              dir("${BASE_DIR}/apm-lambda-extension"){
+                cmd(label: 'make release-notes', script: 'make release-notes')
+              }
+            }
           }
         }
       }
