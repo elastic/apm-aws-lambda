@@ -136,6 +136,7 @@ pipeline {
                       dir("${BASE_DIR}/apm-lambda-extension"){
                         cmd(label: 'make publish-in-all-aws-regions', script: 'make publish-in-all-aws-regions')
                         stash(includes: "*${PREFIX_ARN_FILE}", name: "arn-${isArm() ? 'arm' : 'amd'}")
+                        stash(includes: "bin/${BRANCH_NAME}-*.zip", name: "dist-${isArm() ? 'arm' : 'amd'}")
                       }
                     }
                   }
@@ -155,6 +156,8 @@ pipeline {
               dir("${BASE_DIR}/apm-lambda-extension"){
                 unstash "arn-arm"
                 unstash "arn-amd"
+                unstash "dist-arm"
+                unstash "dist-amd"
                 cmd(label: 'make release-notes', script: 'make release-notes')
               }
             }

@@ -64,11 +64,15 @@ publish:
 ifndef AWS_DEFAULT_REGION
 	$(error AWS_DEFAULT_REGION is undefined)
 endif
+ifndef BRANCH_NAME
+	$(error BRANCH_NAME is undefined)
+endif
 ifndef ELASTIC_LAYER_NAME
 	$(error ELASTIC_LAYER_NAME is undefined)
 endif
 	@echo 'publish "${ELASTIC_LAYER_NAME}" in ${AWS_DEFAULT_REGION}'
 	@mkdir -p $(AWS_FOLDER)
+	@mv bin/$(GOARCH).zip bin/$(BRANCH_NAME)-linux-$(GOARCH).zip
 	@aws lambda \
 		--output json \
 		publish-layer-version \
@@ -95,4 +99,9 @@ ifndef PREFIX_ARN_FILE
 endif
 	@gh release list
 	@cat *-$(PREFIX_ARN_FILE) > $(PREFIX_ARN_FILE)
-	@echo "gh release create $(BRANCH_NAME) -F $(PREFIX_ARN_FILE)"
+	@echo "gh \
+		release \
+		create $(BRANCH_NAME) \
+		--title '$(BRANCH_NAME)' \
+		--notes-file $(PREFIX_ARN_FILE) \
+		./bin/$(BRANCH_NAME)*.zip"
