@@ -73,7 +73,8 @@ release-notes: validate-branch-name validate-prefix-arn-file
 		--draft \
 		--generate-notes \
 		--notes-file $(PREFIX_ARN_FILE) \
-		./bin/$(BRANCH_NAME)*.zip
+		./bin/$(BRANCH_NAME)*.zip \
+		--repo v1v/apm-aws-lambda
 
 validate-branch-name:
 ifndef BRANCH_NAME
