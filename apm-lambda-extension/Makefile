@@ -32,9 +32,6 @@ zip:
 test:
 	go test extension/*.go -v
 env:
-ifndef GOARCH
-	export GOARCH=amd64
-endif
 	env
 dist: build test zip
 
