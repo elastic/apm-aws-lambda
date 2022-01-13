@@ -100,8 +100,52 @@ pipeline {
       when {
         tag pattern: 'v\\d+\\.\\d+\\.\\d+', comparator: 'REGEXP'
       }
-      steps {
-        echo 'TBD'
+      stages {
+        stage('BuildPublish') {
+          failFast false
+          matrix {
+            agent {label "${PLATFORM}"}
+            options { skipDefaultCheckout() }
+            axes {
+              axis {
+                name 'PLATFORM'
+                values 'arm', 'ubuntu-18 && immutable'
+              }
+            }
+            stages {
+              stage('Dist') {
+                steps {
+                  withGithubNotify(context: "Dist-${PLATFORM}") {
+                    deleteDir()
+                    unstash 'source'
+                    withGoEnv(){
+                      dir("${BASE_DIR}/apm-lambda-extension"){
+                        cmd(label: 'make dist', script: 'make dist')
+                        stash(includes: 'bin/*.zip', name: "dist-${isArm() ? 'arm' : 'linux'}")
+                      }
+                    }
+                  }
+                }
+              }
+              stage('Publish') {
+                steps {
+                  withGithubNotify(context: "Publish-${PLATFORM}") {
+                    //withAWSEnv(secret: 'TBD') {
+                      dir("${BASE_DIR}/apm-lambda-extension"){
+                        cmd(label: 'make publish', script: 'echo publish')
+                      }
+                    //}
+                  }
+                }
+              }
+            }
+          }
+        }
+        stage('Release Notes') {
+          steps {
+            echo 'TBD'
+          }
+        }
       }
     }
   }
