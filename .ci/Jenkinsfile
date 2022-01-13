@@ -8,7 +8,7 @@ pipeline {
     REPO = 'apm-aws-lambda'
     BASE_DIR = "src/github.com/elastic/${env.REPO}"
     PIPELINE_LOG_LEVEL = 'INFO'
-    CHANGELOG = 'changelog.md'
+    PREFIX_ARN_FILE = 'arn-file.md'
     ELASTIC_LAYER_NAME = 'apm-lambda-extension'
   }
   options {
@@ -135,6 +135,8 @@ pipeline {
                     withAWSEnv(secret: 'secret/observability-team/ci/service-account/apm-aws-lambda', forceInstallation: true, version: '2.4.10') {
                       dir("${BASE_DIR}/apm-lambda-extension"){
                         cmd(label: 'make publish-in-all-aws-regions', script: 'make publish-in-all-aws-regions')
+                        stash(includes: "*${PREFIX_ARN_FILE}", name: "arn-${isArm() ? 'arm' : 'amd'}")
+                        stash(allowEmpty: true, name: "arn-${isArm() ? 'arm' : 'amd'}", useDefaultExcludes: false)
                       }
                     }
                   }
@@ -152,6 +154,8 @@ pipeline {
           steps {
             withGhEnv(forceInstallation: true, version: '2.4.0') {
               dir("${BASE_DIR}/apm-lambda-extension"){
+                unstash "arn-arm"
+                unstash "arn-amd"
                 cmd(label: 'make release-notes', script: 'make release-notes')
               }
             }

@@ -1,9 +1,14 @@
 SHELL = /bin/bash -eo pipefail
 
-build:
+AWS_FOLDER = .aws
+
 ifndef GOARCH
 	GOARCH=amd64
 endif
+
+export AWS_FOLDER GOARCH
+
+build:
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
 	chmod +x bin/extensions/apm-lambda-extension
 build-and-publish:
@@ -52,6 +57,7 @@ endif
 	@while read AWS_DEFAULT_REGION; do \
 		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) publish; \
 	done <.regions
+	$(MAKE) create-arn-file
 
 # Publish the given LAYER in the given AWS region
 publish:
@@ -62,19 +68,31 @@ ifndef ELASTIC_LAYER_NAME
 	$(error ELASTIC_LAYER_NAME is undefined)
 endif
 	@echo 'publish "${ELASTIC_LAYER_NAME}" in ${AWS_DEFAULT_REGION}'
-	aws lambda \
+	@mkdir -p $(AWS_FOLDER)
+	@aws lambda \
 		--output json \
 		publish-layer-version \
 		--layer-name "${ELASTIC_LAYER_NAME}" \
 		--zip-file "fileb://./bin/extension.zip" \
-		--generate-cli-skeleton
+		--generate-cli-skeleton > $(AWS_FOLDER)/${AWS_DEFAULT_REGION}
+
+# Generate the file with the ARN entries
+create-arn-file:
+ifndef BRANCH_NAME
+	$(error BRANCH_NAME is undefined)
+endif
+ifndef PREFIX_ARN_FILE
+	$(error PREFIX_ARN_FILE is undefined)
+endif
+	@../.ci/create-arn-table.sh
 
 release-notes:
 ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined)
 endif
-ifndef CHANGELOG
-	$(error CHANGELOG is undefined)
+ifndef PREFIX_ARN_FILE
+	$(error PREFIX_ARN_FILE is undefined)
 endif
 	@gh release list
-	@echo "gh release create $(BRANCH_NAME) -F $(CHANGELOG)"
+	@cat *-$(PREFIX_ARN_FILE) > $(PREFIX_ARN_FILE)
+	@echo "gh release create $(BRANCH_NAME) -F $(PREFIX_ARN_FILE)"

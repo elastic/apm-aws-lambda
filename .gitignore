@@ -16,3 +16,4 @@
 
 # AWS regions file
 .regions
+.aws/
