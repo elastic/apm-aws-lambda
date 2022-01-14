@@ -27,7 +27,8 @@ test:
 	go test extension/*.go -v
 env:
 	env
-dist: build test zip
+dist: validate-branch-name build test zip
+	@cp ./bin/$(GOARCH).zip bin/$(BRANCH_NAME)-linux-$(GOARCH).zip
 
 # List all the AWS regions
 get-all-aws-regions:
@@ -42,7 +43,6 @@ get-all-aws-regions:
 
 # Publish the given LAYER in all the AWS regions
 publish-in-all-aws-regions: validate-layer-name get-all-aws-regions
-	@mv ./bin/$(GOARCH).zip bin/$(BRANCH_NAME)-linux-$(GOARCH).zip
 	@while read AWS_DEFAULT_REGION; do \
 		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) publish; \
 	done <.regions
