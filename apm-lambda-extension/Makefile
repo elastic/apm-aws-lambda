@@ -65,7 +65,7 @@ create-arn-file: validate-branch-name validate-prefix-arn-file
 
 release-notes: validate-branch-name validate-prefix-arn-file
 	@gh release list
-	@cat *-$(PREFIX_ARN_FILE) > $(PREFIX_ARN_FILE)
+	cat *-$(PREFIX_ARN_FILE) > $(PREFIX_ARN_FILE)
 	@gh \
 		release \
 		create $(BRANCH_NAME) \
