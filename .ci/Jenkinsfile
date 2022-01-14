@@ -130,11 +130,13 @@ pipeline {
               stage('Publish') {
                 steps {
                   withGithubNotify(context: "Publish-${PLATFORM}") {
-                    withAWSEnv(secret: 'secret/observability-team/ci/service-account/apm-aws-lambda', forceInstallation: true, version: '2.4.10') {
-                      dir("${BASE_DIR}/apm-lambda-extension"){
-                        cmd(label: 'make publish-in-all-aws-regions', script: 'make publish-in-all-aws-regions')
-                        stash(includes: "*${PREFIX_ARN_FILE}", name: "arn-${isArm() ? 'arm' : 'amd'}")
-                        stash(includes: "bin/${BRANCH_NAME}-*.zip", name: "dist-${isArm() ? 'arm' : 'amd'}")
+                    withGoEnv(){
+                      withAWSEnv(secret: 'secret/observability-team/ci/service-account/apm-aws-lambda', forceInstallation: true, version: '2.4.10') {
+                        dir("${BASE_DIR}/apm-lambda-extension"){
+                          cmd(label: 'make publish-in-all-aws-regions', script: 'make publish-in-all-aws-regions')
+                          stash(includes: "*${PREFIX_ARN_FILE}", name: "arn-${isArm() ? 'arm' : 'amd'}")
+                          stash(includes: "bin/${BRANCH_NAME}-*.zip", name: "dist-${isArm() ? 'arm' : 'amd'}")
+                        }
                       }
                     }
                   }
