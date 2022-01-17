@@ -187,8 +187,10 @@ func main() {
 				log.Println("Time expired waiting for agent signal or runtimeDone event")
 			}
 
-			// Flush APM data now that the function invocation has completed
-			extension.FlushAPMData(client, agentDataChannel, config)
+			if config.SendStrategy == extension.SyncFlush {
+				// Flush APM data now that the function invocation has completed
+				extension.FlushAPMData(client, agentDataChannel, config)
+			}
 
 			close(funcDone)
 			close(runtimeDoneSignal)

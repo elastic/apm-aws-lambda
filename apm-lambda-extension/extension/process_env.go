@@ -21,6 +21,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type extensionConfig struct {
@@ -28,8 +29,23 @@ type extensionConfig struct {
 	apmServerSecretToken       string
 	apmServerApiKey            string
 	dataReceiverServerPort     string
+	SendStrategy               SendStrategy
 	dataReceiverTimeoutSeconds int
 }
+
+// SendStrategy represents the type of sending strategy the extension uses
+type SendStrategy string
+
+const (
+	// Background send strategy allows the extension to send remaining buffered
+	// agent data on the next function invocation
+	Background SendStrategy = "background"
+
+	// SyncFlush send strategy indicates that the extension will synchronously
+	// flush remaining buffered agent data when it receives a signal that the
+	// function is complete
+	SyncFlush SendStrategy = "syncflush"
+)
 
 func getIntFromEnv(name string) (int, error) {
 	strValue := os.Getenv(name)
@@ -54,11 +70,19 @@ func ProcessEnv() *extensionConfig {
 		normalizedApmLambdaServer = normalizedApmLambdaServer + "/"
 	}
 
+	// Get the send strategy, convert to lowercase
+	normalizedSendStrategy := SyncFlush
+	sendStrategy := strings.ToLower(os.Getenv("ELASTIC_APM_SEND_STRATEGY"))
+	if sendStrategy == string(Background) {
+		normalizedSendStrategy = Background
+	}
+
 	config := &extensionConfig{
 		apmServerUrl:               normalizedApmLambdaServer,
 		apmServerSecretToken:       os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
 		apmServerApiKey:            os.Getenv("ELASTIC_APM_API_KEY"),
 		dataReceiverServerPort:     os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"),
+		SendStrategy:               normalizedSendStrategy,
 		dataReceiverTimeoutSeconds: dataReceiverTimeoutSeconds,
 	}
 
