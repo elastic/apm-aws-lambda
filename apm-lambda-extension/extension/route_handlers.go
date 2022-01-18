@@ -93,12 +93,14 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 			return
 		}
 
-		agentData := AgentData{
-			Data:            rawBytes,
-			ContentEncoding: r.Header.Get("Content-Encoding"),
+		if len(rawBytes) > 0 {
+			agentData := AgentData{
+				Data:            rawBytes,
+				ContentEncoding: r.Header.Get("Content-Encoding"),
+			}
+			log.Println("Adding agent data to buffer to be sent to apm server")
+			agentDataChan <- agentData
 		}
-		log.Println("Adding agent data to buffer to be sent to apm server")
-		agentDataChan <- agentData
 
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {
 			AgentDoneSignal <- struct{}{}
