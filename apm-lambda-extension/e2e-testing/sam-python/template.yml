@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  sam-python
+
+  Sample SAM Template for sam-python
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 20
+
+Parameters:
+  ApmServerURL:
+    Type: String
+    Description: APM server URL
+  ApmSecretToken:
+    Type: String
+    Description: APM server secret token
+  TestUUID:
+    Type: String
+    Description: The UUID used to verify the end-to-end test
+
+Resources:
+  ElasticAPMExtensionLayer:
+      Type: AWS::Serverless::LayerVersion
+      Properties:
+        ContentUri: ../../bin
+        LayerName: apm-lambda-extension
+        CompatibleArchitectures:
+          - x86_64
+  SamTestingPython:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: sam-testing-python/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Architectures:
+        - x86_64
+      Layers:
+        - !Ref ElasticAPMExtensionLayer
+      Events:
+        SamTest:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /hello
+            Method: get
+      Environment:
+        Variables:
+          ELASTIC_APM_LAMBDA_APM_SERVER: !Ref ApmServerURL
+          ELASTIC_APM_SECRET_TOKEN: !Ref ApmSecretToken
+          ELASTIC_APM_CENTRAL_CONFIG: false
+          ELASTIC_APM_CLOUD_PROVIDER: none
+          ELASTIC_APM_SERVER_URL: http://localhost:8200
+          APM_AWS_EXTENSION_TEST_UUID: !Ref TestUUID
