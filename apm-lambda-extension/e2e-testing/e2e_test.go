@@ -17,6 +17,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -56,9 +57,26 @@ func TestEndToEndExtensionBehavior(t *testing.T) {
 	}
 	changeJavaAgentPermissions("sam-java")
 
-	assert.True(t, runTest("sam-node", "SamTestingNode", forceBuildLambdasFlag))
-	assert.True(t, runTest("sam-python", "SamTestingPython", forceBuildLambdasFlag))
-	assert.True(t, runTest("sam-java", "SamTestingJava", forceBuildLambdasFlag))
+	if os.Getenv("PARALLEL_EXECUTION") == "true" {
+		var waitGroup sync.WaitGroup
+		waitGroup.Add(3)
+
+		cNode := make(chan bool)
+		go runTestAsync("sam-node", "SamTestingNode", forceBuildLambdasFlag, &waitGroup, cNode)
+		cPython := make(chan bool)
+		go runTestAsync("sam-python", "SamTestingPython", forceBuildLambdasFlag, &waitGroup, cPython)
+		cJava := make(chan bool)
+		go runTestAsync("sam-java", "SamTestingJava", forceBuildLambdasFlag, &waitGroup, cJava)
+		assert.True(t, <-cNode)
+		assert.True(t, <-cPython)
+		assert.True(t, <-cJava)
+		waitGroup.Wait()
+
+	} else {
+		assert.True(t, runTest("sam-node", "SamTestingNode", forceBuildLambdasFlag))
+		assert.True(t, runTest("sam-python", "SamTestingPython", forceBuildLambdasFlag))
+		assert.True(t, runTest("sam-java", "SamTestingJava", forceBuildLambdasFlag))
+	}
 
 }
 
@@ -91,6 +109,12 @@ func runTest(path string, serviceName string, buildFlag bool) bool {
 	}
 	log.Printf("FAILURE : Transaction %s bound to %s not found in Elasticsearch", uuidWithHyphen, serviceName)
 	return false
+}
+
+func runTestAsync(path string, serviceName string, buildFlag bool, wg *sync.WaitGroup, c chan bool) {
+	defer wg.Done()
+	out := runTest(path, serviceName, buildFlag)
+	c <- out
 }
 
 func retrieveJavaAgent(samJavaPath string) {
