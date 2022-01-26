@@ -69,7 +69,7 @@ publish: validate-layer-name validate-aws-default-region
 		--generate-cli-skeleton > $(AWS_FOLDER)/${AWS_DEFAULT_REGION}
 
 # Generate the file with the ARN entries
-create-arn-file: validate-branch-name validate-prefix-arn-file
+create-arn-file: validate-prefix-arn-file
 	@../.ci/create-arn-table.sh
 
 release-notes: validate-branch-name validate-prefix-arn-file
