@@ -97,10 +97,9 @@ pipeline {
     }
     stage('Release') {
       options { skipDefaultCheckout() }
-      // TODO: for testing purposes
-      //when {
-      //  tag pattern: 'v\\d+\\.\\d+\\.\\d+', comparator: 'REGEXP'
-      //}
+      when {
+        tag pattern: 'v\\d+\\.\\d+\\.\\d+', comparator: 'REGEXP'
+      }
       stages {
         stage('BuildPublish') {
           failFast false
