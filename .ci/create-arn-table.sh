@@ -16,7 +16,7 @@ set -exo pipefail
 	echo '|------|----|---|'
 	for f in $(ls "${AWS_FOLDER}"); do
 		# TODO: identify what field to be used.
-		echo "|${f}|${GOARCH}|$(cat $AWS_FOLDER/${f} | jq -r .LayerName)|"
+		echo "|${f}|${GOARCH}|$(cat $AWS_FOLDER/${f} | jq -r .LayerVersionArn)|"
 	done
 	echo ''
 } > ${GOARCH}-${PREFIX_ARN_FILE}
