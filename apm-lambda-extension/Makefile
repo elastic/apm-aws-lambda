@@ -49,7 +49,7 @@ publish-in-all-aws-regions: validate-layer-name get-all-aws-regions
 	$(MAKE) create-arn-file
 
 # Publish the given LAYER in the given AWS region
-publish: validate-branch-name validate-layer-name validate-aws-default-region
+publish: validate-layer-name validate-aws-default-region
 	@echo 'publish "${ELASTIC_LAYER_NAME}" in ${AWS_DEFAULT_REGION}'
 	@mkdir -p $(AWS_FOLDER)
 	@aws lambda \
