@@ -12,9 +12,6 @@ Parameters:
   ApmServerURL:
     Type: String
     Description: APM server URL
-  ApmSecretToken:
-    Type: String
-    Description: APM server secret token
   TestUUID:
     Type: String
     Description: The UUID used to verify the end-to-end test
@@ -46,7 +43,7 @@ Resources:
       Environment:
         Variables:
           ELASTIC_APM_LAMBDA_APM_SERVER: !Ref ApmServerURL
-          ELASTIC_APM_SECRET_TOKEN: !Ref ApmSecretToken
+          ELASTIC_APM_SECRET_TOKEN: none
           ELASTIC_APM_CENTRAL_CONFIG: false
           ELASTIC_APM_CLOUD_PROVIDER: none
           ELASTIC_APM_SERVER_URL: http://localhost:8200
