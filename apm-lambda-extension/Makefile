@@ -43,7 +43,6 @@ get-all-aws-regions:
 		ec2 \
 		describe-regions \
 		--region us-east-1 \
-		--all-regions \
 		--output json \
 		--no-cli-pager \
 		| jq -r '.Regions[].RegionName' > .regions
