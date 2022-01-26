@@ -64,6 +64,7 @@ publish: validate-layer-name validate-aws-default-region
 		--layer-name "${ELASTIC_LAYER_NAME}" \
 		--description "AWS Lambda Extension Layer for Elastic APM" \
 		--license "Apache-2.0" \
+		--compatible-architectures "$(ARCHITECTURE)" \
 		--zip-file "fileb://./bin/extension.zip"  > $(AWS_FOLDER)/${AWS_DEFAULT_REGION}
 
 # Generate the file with the ARN entries
