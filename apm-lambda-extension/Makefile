@@ -65,8 +65,7 @@ publish: validate-layer-name validate-aws-default-region
 		--layer-name "${ELASTIC_LAYER_NAME}" \
 		--description "AWS Lambda Extension Layer for Elastic APM" \
 		--license "Apache-2.0" \
-		--zip-file "fileb://./bin/extension.zip" \
-		--generate-cli-skeleton > $(AWS_FOLDER)/${AWS_DEFAULT_REGION}
+		--zip-file "fileb://./bin/extension.zip"  > $(AWS_FOLDER)/${AWS_DEFAULT_REGION}
 
 # Generate the file with the ARN entries
 create-arn-file: validate-suffix-arn-file
@@ -79,11 +78,9 @@ release-notes: validate-branch-name validate-suffix-arn-file
 		release \
 		create $(BRANCH_NAME) \
 		--title '$(BRANCH_NAME)' \
-		--draft \
 		--generate-notes \
 		--notes-file $(SUFFIX_ARN_FILE) \
-		./bin/$(BRANCH_NAME)*.zip \
-		--repo v1v/apm-aws-lambda
+		./bin/$(BRANCH_NAME)*.zip
 
 validate-branch-name:
 ifndef BRANCH_NAME
