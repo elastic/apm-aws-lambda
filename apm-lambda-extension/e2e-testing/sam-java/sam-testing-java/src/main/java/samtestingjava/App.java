@@ -26,9 +26,7 @@ public class App implements RequestHandler<APIGatewayProxyRequestEvent, APIGatew
         headers.put("Content-Type", "application/json");
         headers.put("X-Custom-Header", "application/json");
 
-        Transaction transaction = ElasticApm.startTransaction();
-        transaction.setName(System.getenv("APM_AWS_EXTENSION_TEST_UUID"));
-        transaction.end();
+        ElasticApm.currentTransaction().setName(System.getenv("APM_AWS_EXTENSION_TEST_UUID"));
 
         APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent()
                 .withHeaders(headers);

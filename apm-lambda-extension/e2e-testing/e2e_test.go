@@ -50,19 +50,20 @@ func TestEndToEndExtensionBehavior(t *testing.T) {
 	}
 
 	buildExtensionBinaries()
-
-	assert.True(t, runTest("sam-node", "SamTestingNode", forceBuildLambdasFlag))
-	assert.True(t, runTest("sam-python", "SamTestingPython", forceBuildLambdasFlag))
 	if !folderExists(filepath.Join("sam-java", "agent")) {
 		log.Println("Java agent not found ! Collecting archive from Github...")
 		retrieveJavaAgent("sam-java")
 	}
+	changeJavaAgentPermissions("sam-java")
+
+	assert.True(t, runTest("sam-node", "SamTestingNode", forceBuildLambdasFlag))
+	assert.True(t, runTest("sam-python", "SamTestingPython", forceBuildLambdasFlag))
 	assert.True(t, runTest("sam-java", "SamTestingJava", forceBuildLambdasFlag))
 
 }
 
 func buildExtensionBinaries() {
-	runCommandInDir("make", []string{}, "..", false)
+	runCommandInDir("make", []string{}, "..", os.Getenv("DEBUG_OUTPUT") == "true")
 }
 
 func runTest(path string, serviceName string, buildFlag bool) bool {
@@ -70,7 +71,7 @@ func runTest(path string, serviceName string, buildFlag bool) bool {
 
 	if !folderExists(filepath.Join(path, ".aws-sam")) || buildFlag {
 		log.Printf("Building the Lambda function %s", serviceName)
-		runCommandInDir("sam", []string{"build"}, path, false)
+		runCommandInDir("sam", []string{"build"}, path, os.Getenv("DEBUG_OUTPUT") == "true")
 	}
 
 	log.Printf("Invoking the Lambda function %s", serviceName)
@@ -79,7 +80,7 @@ func runTest(path string, serviceName string, buildFlag bool) bool {
 		fmt.Sprintf("ParameterKey=ApmServerURL,ParameterValue=%s", os.Getenv("ELASTIC_APM_SERVER_URL")),
 		fmt.Sprintf("ParameterKey=ApmSecretToken,ParameterValue=%s", os.Getenv("ELASTIC_APM_SERVER_TOKEN")),
 		fmt.Sprintf("ParameterKey=TestUUID,ParameterValue=%s", uuidWithHyphen)},
-		path, false)
+		path, os.Getenv("DEBUG_OUTPUT") == "true")
 	log.Printf("%s execution complete", serviceName)
 
 	log.Printf("Querying Elasticsearch for transaction %s bound to %s...", uuidWithHyphen, serviceName)
@@ -111,8 +112,10 @@ func retrieveJavaAgent(samJavaPath string) {
 	unzip(agentArchivePath, agentFolderPath)
 	err = os.Remove(agentArchivePath)
 	processError(err)
+}
 
-	// Change permissions
+func changeJavaAgentPermissions(samJavaPath string) {
+	agentFolderPath := filepath.Join(samJavaPath, "agent")
 	log.Println("Setting appropriate permissions for Java agent files...")
 	agentFiles, err := ioutil.ReadDir(agentFolderPath)
 	processError(err)
