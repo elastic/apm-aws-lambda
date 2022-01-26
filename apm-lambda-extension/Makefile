@@ -69,19 +69,19 @@ publish: validate-layer-name validate-aws-default-region
 		--generate-cli-skeleton > $(AWS_FOLDER)/${AWS_DEFAULT_REGION}
 
 # Generate the file with the ARN entries
-create-arn-file: validate-prefix-arn-file
+create-arn-file: validate-suffix-arn-file
 	@../.ci/create-arn-table.sh
 
-release-notes: validate-branch-name validate-prefix-arn-file
+release-notes: validate-branch-name validate-suffix-arn-file
 	@gh release list
-	cat *-$(PREFIX_ARN_FILE) > $(PREFIX_ARN_FILE)
+	cat *-$(SUFFIX_ARN_FILE) > $(SUFFIX_ARN_FILE)
 	@gh \
 		release \
 		create $(BRANCH_NAME) \
 		--title '$(BRANCH_NAME)' \
 		--draft \
 		--generate-notes \
-		--notes-file $(PREFIX_ARN_FILE) \
+		--notes-file $(SUFFIX_ARN_FILE) \
 		./bin/$(BRANCH_NAME)*.zip \
 		--repo v1v/apm-aws-lambda
 
@@ -90,9 +90,9 @@ ifndef BRANCH_NAME
 	$(error BRANCH_NAME is undefined)
 endif
 
-validate-prefix-arn-file:
-ifndef PREFIX_ARN_FILE
-	$(error PREFIX_ARN_FILE is undefined)
+validate-suffix-arn-file:
+ifndef SUFFIX_ARN_FILE
+	$(error SUFFIX_ARN_FILE is undefined)
 endif
 
 validate-layer-name:

@@ -6,7 +6,7 @@ set -exo pipefail
 #
 #   - AWS_FOLDER      - that's the location of the publish-layer-version output for each region
 #	- ARCHITECTURE    - that's the supported architecture.
-#	- PREFIX_ARN_FILE - that's the output file.
+#	- SUFFIX_ARN_FILE - that's the output file.
 #
 
 {
@@ -19,4 +19,4 @@ set -exo pipefail
 		echo "|${f}|${ARCHITECTURE}|$(cat $AWS_FOLDER/${f} | jq -r .LayerVersionArn)|"
 	done
 	echo ''
-} > ${ARCHITECTURE}-${PREFIX_ARN_FILE}
+} > ${ARCHITECTURE}-${SUFFIX_ARN_FILE}
