@@ -6,7 +6,14 @@ ifndef GOARCH
 	GOARCH=amd64
 endif
 
-export AWS_FOLDER GOARCH
+# Transform GOARCH into the architecture of the extension layer
+ifeq ($(GOARCH),amd64)
+	ARCHITECTURE=x86_64
+else
+	ARCHITECTURE=arm64
+endif
+
+export AWS_FOLDER GOARCH ARCHITECTURE
 
 build:
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
