@@ -56,6 +56,8 @@ publish: validate-layer-name validate-aws-default-region
 		--output json \
 		publish-layer-version \
 		--layer-name "${ELASTIC_LAYER_NAME}" \
+		--description "AWS Lambda Extension Layer for Elastic APM" \
+		--license "Apache-2.0" \
 		--zip-file "fileb://./bin/extension.zip" \
 		--generate-cli-skeleton > $(AWS_FOLDER)/${AWS_DEFAULT_REGION}
 
