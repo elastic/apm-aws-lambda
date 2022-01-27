@@ -49,15 +49,15 @@ get-all-aws-regions:
 
 # Publish the given LAYER in all the AWS regions
 publish-in-all-aws-regions: validate-layer-name get-all-aws-regions
+	@mkdir -p $(AWS_FOLDER)
 	@while read AWS_DEFAULT_REGION; do \
-		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) publish; \
+		echo "publish '$(ELASTIC_LAYER_NAME)' in $${AWS_DEFAULT_REGION}"; \
+		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) publish > $(AWS_FOLDER)/$${AWS_DEFAULT_REGION}; \
 	done <.regions
 	$(MAKE) create-arn-file
 
 # Publish the given LAYER in the given AWS region
 publish: validate-layer-name validate-aws-default-region
-	@echo 'publish "${ELASTIC_LAYER_NAME}" in ${AWS_DEFAULT_REGION}'
-	@mkdir -p $(AWS_FOLDER)
 	@aws lambda \
 		--output json \
 		publish-layer-version \
@@ -65,7 +65,7 @@ publish: validate-layer-name validate-aws-default-region
 		--description "AWS Lambda Extension Layer for Elastic APM" \
 		--license "Apache-2.0" \
 		--compatible-architectures "$(ARCHITECTURE)" \
-		--zip-file "fileb://./bin/extension.zip"  > $(AWS_FOLDER)/${AWS_DEFAULT_REGION}
+		--zip-file "fileb://./bin/extension.zip"
 
 # Generate the file with the ARN entries
 create-arn-file: validate-suffix-arn-file
