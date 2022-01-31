@@ -5,7 +5,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
-	"encoding/base64"
+	"compress/zlib"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -50,7 +50,8 @@ func TestEndToEnd(t *testing.T) {
 	mockAPMServerLog := ""
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/intake/v2/events" {
-			mockAPMServerLog += decodeRequest(r)
+			bytesRes, _ := getDecompressedBytesFromRequest(r)
+			mockAPMServerLog += string(bytesRes)
 		}
 	}))
 	defer ts.Close()
@@ -241,13 +242,36 @@ func unzip(archivePath string, destinationFolderPath string) {
 	}
 }
 
-func decodeRequest(r *http.Request) string {
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(r.Body)
-	str := base64.StdEncoding.EncodeToString(buf.Bytes())
-	data, _ := base64.StdEncoding.DecodeString(str)
-	rdata := bytes.NewReader(data)
-	reader, _ := gzip.NewReader(rdata)
-	s, _ := ioutil.ReadAll(reader)
-	return string(s)
+func getDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
+	var rawBytes []byte
+	if req.Body != nil {
+		rawBytes, _ = ioutil.ReadAll(req.Body)
+	}
+
+	switch req.Header.Get("Content-Encoding") {
+	case "deflate":
+		reader := bytes.NewReader([]byte(rawBytes))
+		zlibreader, err := zlib.NewReader(reader)
+		if err != nil {
+			return nil, fmt.Errorf("could not create zlib.NewReader: %v", err)
+		}
+		bodyBytes, err := ioutil.ReadAll(zlibreader)
+		if err != nil {
+			return nil, fmt.Errorf("could not read from zlib reader using ioutil.ReadAll: %v", err)
+		}
+		return bodyBytes, nil
+	case "gzip":
+		reader := bytes.NewReader([]byte(rawBytes))
+		zlibreader, err := gzip.NewReader(reader)
+		if err != nil {
+			return nil, fmt.Errorf("could not create gzip.NewReader: %v", err)
+		}
+		bodyBytes, err := ioutil.ReadAll(zlibreader)
+		if err != nil {
+			return nil, fmt.Errorf("could not read from gzip reader using ioutil.ReadAll: %v", err)
+		}
+		return bodyBytes, nil
+	default:
+		return rawBytes, nil
+	}
 }
