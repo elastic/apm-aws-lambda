@@ -130,7 +130,8 @@ func retrieveJavaAgent(samJavaPath string) {
 	out, err := os.Create(agentArchivePath)
 	processError(err)
 	defer out.Close()
-	resp, err := http.Get("https://github.com/elastic/apm-agent-java/releases/download/v1.28.4/elastic-apm-java-aws-lambda-layer-1.28.4.zip")
+	resp, err := http.Get(fmt.Sprintf("https://github.com/elastic/apm-agent-java/releases/download/v%[1]s/elastic-apm-java-aws-lambda-layer-%[1]s.zip",
+		os.Getenv("APM_AGENT_JAVA_VERSION")))
 	processError(err)
 	defer resp.Body.Close()
 	io.Copy(out, resp.Body)
