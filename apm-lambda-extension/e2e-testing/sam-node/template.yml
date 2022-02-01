@@ -3,11 +3,6 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   sam-node
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
-Globals:
-  Function:
-    Timeout: 20
-
 Parameters:
   ApmServerURL:
     Type: String
@@ -15,6 +10,9 @@ Parameters:
   TestUUID:
     Type: String
     Description: The UUID used to verify the end-to-end test
+  TimeoutParam:
+    Type: Integer
+    Description: The Timeout for this lambda function
 
 Resources:
   ElasticAPMExtensionLayer:
@@ -27,6 +25,7 @@ Resources:
   SamTestingNode:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
+      Timeout: !Ref TimeoutParam
       CodeUri: sam-testing-node/
       Handler: app.lambdaHandler
       Runtime: nodejs14.x
