@@ -139,6 +139,7 @@ pipeline {
                       withAWSEnv(secret: 'secret/observability-team/ci/service-account/apm-aws-lambda', forceInstallation: true, version: '2.4.10') {
                         dir("${BASE_DIR}/apm-lambda-extension"){
                           cmd(label: 'make publish-in-all-aws-regions', script: 'make publish-in-all-aws-regions')
+                          cmd(label: 'make create-arn-file', script: 'make create-arn-file')
                           stash(includes: "*${SUFFIX_ARN_FILE}", name: "arn-${isArm() ? 'arm' : 'amd'}")
                           stash(includes: "bin/${BRANCH_NAME}-*.zip", name: "dist-${isArm() ? 'arm' : 'amd'}")
                         }
@@ -149,6 +150,8 @@ pipeline {
                 post {
                   always {
                     archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/.regions")
+                    archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/*${SUFFIX_ARN_FILE}")
+                    archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/.aws")
                   }
                 }
               }
