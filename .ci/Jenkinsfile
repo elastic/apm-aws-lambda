@@ -9,7 +9,7 @@ pipeline {
     BASE_DIR = "src/github.com/elastic/${env.REPO}"
     PIPELINE_LOG_LEVEL = 'INFO'
     SUFFIX_ARN_FILE = 'arn-file.md'
-    ELASTIC_LAYER_NAME = 'apm-lambda-extension'
+    ELASTIC_LAYER_NAME = 'elastic-apm-lambda-extension'
   }
   options {
     timeout(time: 1, unit: 'HOURS')
