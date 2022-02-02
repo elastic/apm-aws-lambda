@@ -179,7 +179,7 @@ pipeline {
 */
 def getVersion() {
   if (env.BRANCH_NAME?.trim() && env.BRANCH_NAME.startsWith('v')) {
-    return env.BRANCH_NAME.replaceAll('v', '-ver').replaceAll('\.', '-')
+    return env.BRANCH_NAME.replaceAll('v', '-ver').replaceAll('\\.', '-')
   }
   return ''
 }
