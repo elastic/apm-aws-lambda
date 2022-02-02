@@ -9,7 +9,7 @@ exporters:
     loglevel: debug
   otlp/elastic:
     # APM server https endpoint without https://
-    endpoint: "https://01cd7a0a66084992906782275a699198.apm.us-east-1.aws.cloud.es.io:443"
+    endpoint: "${ELASTIC_APM_SERVER_URL}"
     headers:
       # APM Server secret token
       Authorization: "Bearer ${APM_ELASTIC_SECRET_TOKEN}"
