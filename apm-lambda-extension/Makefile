@@ -53,6 +53,7 @@ publish-in-all-aws-regions: validate-layer-name get-all-aws-regions
 	@while read AWS_DEFAULT_REGION; do \
 		echo "publish '$(ELASTIC_LAYER_NAME)' in $${AWS_DEFAULT_REGION}"; \
 		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) publish > $(AWS_FOLDER)/$${AWS_DEFAULT_REGION}; \
+		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) grant-public-layer-access; \
 	done <.regions
 	$(MAKE) create-arn-file
 
@@ -65,6 +66,17 @@ publish: validate-layer-name validate-aws-default-region
 		--description "AWS Lambda Extension Layer for Elastic APM $(ARCHITECTURE)" \
 		--license "Apache-2.0" \
 		--zip-file "fileb://./bin/extension.zip"
+
+# Grant public access to the given LAYER in the given AWS region
+grant-public-layer-access: validate-layer-name validate-aws-default-region
+	@aws lambda \
+		--output json \
+		add-layer-version-permission \
+		--layer-name "$(ELASTIC_LAYER_NAME)" \
+		--action lambda:GetLayerVersion \
+		--principal '*' \
+		--statement-id "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
+		--version-number $$(jq -r .Version $(AWS_FOLDER)/$(AWS_DEFAULT_REGION)) > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
 
 # Generate the file with the ARN entries
 create-arn-file: validate-suffix-arn-file
