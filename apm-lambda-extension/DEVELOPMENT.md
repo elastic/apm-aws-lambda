@@ -1,15 +1,11 @@
 
 ## Releasing
 
-Releasing a version of the Lambda Extension is currently a three step manual process.
+### :robot: Automatically
 
-1. Tag the Release
-2. Create the Build Artifacts
-3. Add a Release via the Github UI
+Releasing a version of the Lambda Extension requires a tag release.
 
-### Tag the Release
-
-First, tag the release via your preferred tagging method.  Tagging a release (v0.0.2) via the command line looks something like this.
+Tag the release via your preferred tagging method.  Tagging a release (v0.0.2) via the command line looks something like this.
 
     % git clone git@github.com:elastic/apm-aws-lambda.git
     # ...
@@ -21,7 +17,20 @@ First, tag the release via your preferred tagging method.  Tagging a release (v0
     To github.com:elastic/apm-aws-lambda.git
      * [new tag]         v0.0.2 -> v0.0.2
 
+This will trigger a build in the CI that will create the Build Artifacts
+and a Release in the Github UI.
 
+### :thumbsdown: Manually
+
+Releasing a version of the Lambda Extension is currently a three step manual process.
+
+1. Tag the Release
+2. Create the Build Artifacts
+3. Add a Release via the Github UI
+
+### Tag the Release
+
+See the above section regarding tagging a release.
 ### Create the Build Artifacts
 
 Next, create the build artifacts for the release.  These are go binaries of the Lambda Extension, built for both Intel and ARM architectures.

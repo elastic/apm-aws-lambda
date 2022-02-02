@@ -8,6 +8,8 @@ pipeline {
     REPO = 'apm-aws-lambda'
     BASE_DIR = "src/github.com/elastic/${env.REPO}"
     PIPELINE_LOG_LEVEL = 'INFO'
+    SUFFIX_ARN_FILE = 'arn-file.md'
+    ELASTIC_LAYER_NAME = 'apm-lambda-extension'
   }
   options {
     timeout(time: 1, unit: 'HOURS')
@@ -77,8 +79,6 @@ pipeline {
           stage('Test') {
             steps {
               withGithubNotify(context: "Test-${GO_VERSION}-${PLATFORM}") {
-                deleteDir()
-                unstash 'source'
                 withGoEnv(){
                   dir("${BASE_DIR}/apm-lambda-extension"){
                     goTestJUnit(options: '-v ./...', output: 'junit-report.xml')
@@ -89,6 +89,75 @@ pipeline {
             post {
               always {
                 junit(allowEmptyResults: true, keepLongStdio: true, testResults: '**/junit-report.xml')
+              }
+            }
+          }
+        }
+      }
+    }
+    stage('Release') {
+      options { skipDefaultCheckout() }
+      when {
+        tag pattern: 'v\\d+\\.\\d+\\.\\d+', comparator: 'REGEXP'
+      }
+      stages {
+        stage('BuildPublish') {
+          failFast false
+          matrix {
+            agent {label "${PLATFORM}"}
+            options { skipDefaultCheckout() }
+            axes {
+              axis {
+                name 'PLATFORM'
+                values 'arm', 'ubuntu-18 && immutable'
+              }
+            }
+            stages {
+              stage('Dist') {
+                steps {
+                  withGithubNotify(context: "Dist-${PLATFORM}") {
+                    deleteDir()
+                    unstash 'source'
+                    withGoEnv(){
+                      dir("${BASE_DIR}/apm-lambda-extension"){
+                        cmd(label: 'make dist', script: 'make dist')
+                      }
+                    }
+                  }
+                }
+              }
+              stage('Publish') {
+                steps {
+                  withGithubNotify(context: "Publish-${PLATFORM}") {
+                    withGoEnv(){
+                      withAWSEnv(secret: 'secret/observability-team/ci/service-account/apm-aws-lambda', forceInstallation: true, version: '2.4.10') {
+                        dir("${BASE_DIR}/apm-lambda-extension"){
+                          cmd(label: 'make publish-in-all-aws-regions', script: 'make publish-in-all-aws-regions')
+                          stash(includes: "*${SUFFIX_ARN_FILE}", name: "arn-${isArm() ? 'arm' : 'amd'}")
+                          stash(includes: "bin/${BRANCH_NAME}-*.zip", name: "dist-${isArm() ? 'arm' : 'amd'}")
+                        }
+                      }
+                    }
+                  }
+                }
+                post {
+                  always {
+                    archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/.regions")
+                  }
+                }
+              }
+            }
+          }
+        }
+        stage('Release Notes') {
+          steps {
+            withGhEnv(forceInstallation: true, version: '2.4.0') {
+              dir("${BASE_DIR}/apm-lambda-extension"){
+                unstash "arn-arm"
+                unstash "arn-amd"
+                unstash "dist-arm"
+                unstash "dist-amd"
+                cmd(label: 'make release-notes', script: 'make release-notes')
               }
             }
           }
