@@ -145,6 +145,7 @@ pipeline {
                   always {
                     archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/.regions")
                     archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/*${SUFFIX_ARN_FILE}")
+                    archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/.aws")
                   }
                 }
               }
