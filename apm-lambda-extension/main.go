@@ -24,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
@@ -73,6 +74,10 @@ func main() {
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	logsChannel := make(chan logsapi.LogEvent)
+
+	// Use a wait group to ensure the background go routine sending to the APM server
+	// completes before signaling that the extension is ready for the next invocation.
+	var backgroundDataSendWg sync.WaitGroup
 
 	// Subscribe to the Logs API
 	err = logsapi.Subscribe(
@@ -137,10 +142,12 @@ func main() {
 						log.Println("funcDone signal received, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
+						backgroundDataSendWg.Add(1)
 						err := extension.PostToApmServer(client, agentData, config)
 						if err != nil {
 							log.Printf("Error sending to APM server, skipping: %v", err)
 						}
+						backgroundDataSendWg.Done()
 					}
 				}
 			}()
@@ -187,6 +194,7 @@ func main() {
 				log.Println("Time expired waiting for agent signal or runtimeDone event")
 			}
 
+			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
 				// Flush APM data now that the function invocation has completed
 				extension.FlushAPMData(client, agentDataChannel, config)
