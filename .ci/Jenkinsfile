@@ -175,7 +175,7 @@ pipeline {
 /**
 * Transform TAG releases from v{major}.{minor}.{patch} to
 * ver-{major}-{minor}-{patch}. f.i: given v1.2.3 then
-* ver-1-2-3.
+* -ver-1-2-3.
 */
 def getVersion() {
   if (env.BRANCH_NAME?.trim() && env.BRANCH_NAME.startsWith('v')) {
