@@ -9,14 +9,19 @@ set -eo pipefail
 #	- SUFFIX_ARN_FILE - that's the output file.
 #
 
+ARN_FILE=${ARCHITECTURE}-${SUFFIX_ARN_FILE}
+
 {
 	echo "### ARCH: ${ARCHITECTURE}"
 	echo ''
 	echo '|Region|Arch|ARN|'
 	echo '|------|----|---|'
-	for f in $(ls "${AWS_FOLDER}"); do
-		# TODO: identify what field to be used.
-		echo "|${f}|${ARCHITECTURE}|$(cat $AWS_FOLDER/${f} | jq -r .LayerVersionArn)|"
-	done
-	echo ''
-} > ${ARCHITECTURE}-${SUFFIX_ARN_FILE}
+} > "${ARN_FILE}"
+
+for f in $(ls "${AWS_FOLDER}"); do
+	LAYER_VERSION_ARN=$(jq -r .LayerVersionArn "$AWS_FOLDER/${f}")
+	echo "INFO: create-arn-table ARN(${LAYER_VERSION_ARN}):region(${f}):arch(${ARCHITECTURE})"
+	echo "|${f}|${ARCHITECTURE}|${LAYER_VERSION_ARN}|" >> "${ARN_FILE}"
+done
+
+echo '' >> "${ARN_FILE}"

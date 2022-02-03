@@ -54,7 +54,6 @@ publish-in-all-aws-regions: validate-layer-name get-all-aws-regions
 		echo "publish '$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)' in $${AWS_DEFAULT_REGION}"; \
 		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) publish > $(AWS_FOLDER)/$${AWS_DEFAULT_REGION}; \
 	done <.regions
-	$(MAKE) create-arn-file
 
 # Publish the given LAYER in the given AWS region
 publish: validate-layer-name validate-aws-default-region

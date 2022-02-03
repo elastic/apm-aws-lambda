@@ -38,7 +38,7 @@ function getLastJsonFromShellOutput (output) {
 function buildAndPublish () {
   return new Promise(function (resolve, reject) {
     if (!process.env.ELASTIC_LAYER_NAME) {
-      process.env.ELASTIC_LAYER_NAME = 'elastic-apm-lambda-extension'
+      process.env.ELASTIC_LAYER_NAME = 'elastic-apm-extension'
     }
     console.log('running cd .. && make build-and-publish')
     exec('cd .. && make build-and-publish', (error, stdout, stderr) => {
