@@ -26,8 +26,8 @@ import (
 )
 
 var rebuildPtr = flag.Bool("rebuild", false, "rebuild lambda functions")
-var langPtr = flag.String("lang", "java", "the language of the Lambda test function : Java, Node, or Python")
-var timerPtr = flag.Int("timer", 40, "the timeout of the test lambda function")
+var langPtr = flag.String("lang", "node", "the language of the Lambda test function : Java, Node, or Python")
+var timerPtr = flag.Int("timer", 20, "the timeout of the test lambda function")
 var javaAgentVerPtr = flag.String("java-agent-ver", "1.28.4", "the version of the java APM agent")
 
 func TestEndToEnd(t *testing.T) {
