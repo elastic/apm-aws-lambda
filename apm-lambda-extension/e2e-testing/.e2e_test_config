@@ -1,0 +1,2 @@
+RUN_E2E_TESTS=true
+DEBUG_OUTPUT=true

@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
+	"errors"
+	"flag"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -18,48 +20,45 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
 
+var rebuildPtr = flag.Bool("rebuild", false, "rebuild lambda functions")
+var langPtr = flag.String("lang", "java", "the language of the Lambda test function : Java, Node, or Python")
+var timerPtr = flag.Int("timer", 40, "the timeout of the test lambda function")
+var javaAgentVerPtr = flag.String("java-agent-ver", "1.28.4", "the version of the java APM agent")
+
 func TestEndToEnd(t *testing.T) {
 
 	// Check the only mandatory environment variable
-	if err := godotenv.Load(); err != nil {
-		log.Println("No additional .env file found")
+	if err := godotenv.Load(".e2e_test_config"); err != nil {
+		log.Println("No additional .e2e_test_config file found")
 	}
 	if getEnvVarValueOrSetDefault("RUN_E2E_TESTS", "false") != "true" {
 		t.Skip("Skipping E2E tests. Please set the env. variable RUN_E2E_TESTS=true if you want to run them.")
 	}
 
-	forceBuildLambdasFlag := getEnvVarValueOrSetDefault("FORCE_REBUILD_LOCAL_SAM_LAMBDAS", "false") == "true"
-	samNodePath := "sam-node"
-	samNodeServiceName := "SamTestingNode"
-	samPythonPath := "sam-python"
-	samPythonServiceName := "SamTestingPython"
-	samJavaPath := "sam-java"
-	samJavaServiceName := "SamTestingJava"
+	supportedLanguages := []string{"node", "python", "java"}
+	if !isStringInSlice(*langPtr, supportedLanguages) {
+		processError(errors.New("unsupported language"))
+	}
 
-	// Configure Timeouts and Tested Languages
-	timeoutNode, err := strconv.Atoi(getEnvVarValueOrSetDefault("TIMEOUT_NODE", "20"))
-	processError(err)
-	timeoutPython, err := strconv.Atoi(getEnvVarValueOrSetDefault("TIMEOUT_PYTHON", "20"))
-	processError(err)
-	timeoutJava, err := strconv.Atoi(getEnvVarValueOrSetDefault("TIMEOUT_JAVA", "75"))
-	processError(err)
-	timeoutMax := getMax([]int{timeoutNode, timeoutPython, timeoutJava})
+	samPath := "sam-" + *langPtr
+	samServiceName := "sam-testing-" + *langPtr
 
 	// Build and download required binaries (extension and Java agent)
 	buildExtensionBinaries()
 
 	// Java agent processing
-	if !folderExists(filepath.Join(samJavaPath, "agent")) {
-		log.Println("Java agent not found ! Collecting archive from Github...")
-		retrieveJavaAgent(samJavaPath)
+	if *langPtr == "java" {
+		if !folderExists(filepath.Join(samPath, "agent")) {
+			log.Println("Java agent not found ! Collecting archive from Github...")
+			retrieveJavaAgent(samPath, *javaAgentVerPtr)
+		}
+		changeJavaAgentPermissions(samPath)
 	}
-	changeJavaAgentPermissions(samJavaPath)
 
 	// Initialize Mock APM Server
 	mockAPMServerLog := ""
@@ -71,69 +70,26 @@ func TestEndToEnd(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	resultsChan := make(chan string, 3)
-	resultsMap := make(map[string]string)
+	resultsChan := make(chan string, 1)
 
-	if getEnvVarValueOrSetDefault("PARALLEL_EXECUTION", "true") == "true" {
-
-		timer := time.NewTimer(time.Duration(timeoutMax) * time.Second)
-		go runTest(samNodePath, samNodeServiceName, ts.URL, forceBuildLambdasFlag, timeoutNode, resultsChan)
-		go runTest(samPythonPath, samPythonServiceName, ts.URL, forceBuildLambdasFlag, timeoutPython, resultsChan)
-		go runTest(samJavaPath, samJavaServiceName, ts.URL, forceBuildLambdasFlag, timeoutJava, resultsChan)
-
-	testLoop:
-		for i := 0; i < 3; i++ {
-			log.Println(i)
-			select {
-			case result := <-resultsChan:
-				resultSlice := strings.Split(result, ":")
-				switch resultSlice[0] {
-				case samNodeServiceName:
-					resultsMap["Node"] = resultSlice[1]
-				case samPythonServiceName:
-					resultsMap["Python"] = resultSlice[1]
-				case samJavaServiceName:
-					resultsMap["Java"] = resultSlice[1]
-				}
-			case <-timer.C:
-				break testLoop
-			}
-		}
-
-	} else {
-
-		runTestWithDedicatedTimer(samNodePath, samNodeServiceName, ts.URL, forceBuildLambdasFlag, timeoutNode, resultsMap, resultsChan)
-		runTestWithDedicatedTimer(samPythonPath, samPythonServiceName, ts.URL, forceBuildLambdasFlag, timeoutPython, resultsMap, resultsChan)
-		runTestWithDedicatedTimer(samJavaPath, samJavaServiceName, ts.URL, forceBuildLambdasFlag, timeoutJava, resultsMap, resultsChan)
-
-	}
-
-	checkTestResults(samNodeServiceName, mockAPMServerLog, resultsMap, t)
-	checkTestResults(samPythonServiceName, mockAPMServerLog, resultsMap, t)
-	checkTestResults(samJavaServiceName, mockAPMServerLog, resultsMap, t)
-}
-
-func checkTestResults(serviceName string, serverLog string, resultsMap map[string]string, t *testing.T) {
-	log.Printf("Querying the mock server for transaction bound to %s...", serviceName)
-	if uuidNode, exists := resultsMap["Node"]; exists {
-		assert.True(t, strings.Contains(serverLog, uuidNode))
-	} else {
+	uuid := runTestWithDedicatedTimer(samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
+	if uuid == "" {
 		t.Fail()
-		log.Printf("FAILURE : Transaction %s bound to %s not found", uuidNode, serviceName)
 	}
+	log.Printf("Querying the mock server for transaction bound to %s...", samServiceName)
+	assert.True(t, strings.Contains(mockAPMServerLog, uuid))
 }
 
-func runTestWithDedicatedTimer(path string, serviceName string, serverURL string, buildFlag bool, timeout int, resultsMap map[string]string, resultsChan chan string) {
-	timerNode := time.NewTimer(time.Duration(timeout) * time.Second)
-	runTest(path, serviceName, serverURL, buildFlag, timeout, resultsChan)
-	log.Println("Ready to Select")
+func runTestWithDedicatedTimer(path string, serviceName string, serverURL string, buildFlag bool, timeout int, resultsChan chan string) string {
+	timerNode := time.NewTimer(time.Duration(timeout) * time.Second * 2)
+	go runTest(path, serviceName, serverURL, buildFlag, timeout, resultsChan)
 	select {
-	case result := <-resultsChan:
-		resultSlice := strings.Split(result, ":")
-		resultsMap["Node"] = resultSlice[1]
+	case uuid := <-resultsChan:
+		return uuid
 	case <-timerNode.C:
 		break
 	}
+	return ""
 }
 
 func buildExtensionBinaries() {
@@ -159,10 +115,10 @@ func runTest(path string, serviceName string, serverURL string, buildFlag bool, 
 		path, getEnvVarValueOrSetDefault("DEBUG_OUTPUT", "false") == "true")
 	log.Printf("%s execution complete", serviceName)
 
-	resultsChan <- fmt.Sprintf("%s:%s", serviceName, uuidWithHyphen)
+	resultsChan <- uuidWithHyphen
 }
 
-func retrieveJavaAgent(samJavaPath string) {
+func retrieveJavaAgent(samJavaPath string, version string) {
 
 	agentFolderPath := filepath.Join(samJavaPath, "agent")
 	agentArchivePath := filepath.Join(samJavaPath, "agent.zip")
@@ -171,8 +127,7 @@ func retrieveJavaAgent(samJavaPath string) {
 	out, err := os.Create(agentArchivePath)
 	processError(err)
 	defer out.Close()
-	resp, err := http.Get(fmt.Sprintf("https://github.com/elastic/apm-agent-java/releases/download/v%[1]s/elastic-apm-java-aws-lambda-layer-%[1]s.zip",
-		getEnvVarValueOrSetDefault("APM_AGENT_JAVA_VERSION", "1.28.4")))
+	resp, err := http.Get(fmt.Sprintf("https://github.com/elastic/apm-agent-java/releases/download/v%[1]s/elastic-apm-java-aws-lambda-layer-%[1]s.zip", version))
 	processError(err)
 	defer resp.Body.Close()
 	io.Copy(out, resp.Body)
@@ -324,12 +279,11 @@ func getDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 	}
 }
 
-func getMax(args []int) int {
-	currMax := 0
-	for _, el := range args {
-		if el > currMax {
-			currMax = el
+func isStringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
 		}
 	}
-	return currMax
+	return false
 }

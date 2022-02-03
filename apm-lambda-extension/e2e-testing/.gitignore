@@ -1,4 +1,5 @@
 **/.aws-sam
 **/sam-java/agent
+**/sam-java/*/.gradle
 **/sam-java/*/gradle
 **/.env
