@@ -21,9 +21,9 @@ go test
 The command line arguments are presented with their default value.
 ```shell
 -rebuild=false          # Rebuilds the Lambda function images
--lang=node              # Selects the language of the Lambda function. node, java and python are supported.
+-lang=nodejs            # Selects the language of the Lambda function. node, java and python are supported.
 -timer=20               # The timeout (in seconds) used to stop the execution of the Lambda function.
-                        # Recommended values : Node : 20, Python : 30, Java : 40
+                        # Recommended values : NodeJS : 20, Python : 30, Java : 40
 -java-agent-ver=1.28.4  # The version of the Java agent used when Java is selected.
 ```
 
