@@ -81,12 +81,13 @@ func TestEndToEnd(t *testing.T) {
 }
 
 func runTestWithDedicatedTimer(path string, serviceName string, serverURL string, buildFlag bool, timeout int, resultsChan chan string) string {
-	timerNode := time.NewTimer(time.Duration(timeout) * time.Second * 2)
+	timer := time.NewTimer(time.Duration(timeout) * time.Second * 2)
+	defer timer.Stop()
 	go runTest(path, serviceName, serverURL, buildFlag, timeout, resultsChan)
 	select {
 	case uuid := <-resultsChan:
 		return uuid
-	case <-timerNode.C:
+	case <-timer.C:
 		break
 	}
 	return ""
