@@ -72,7 +72,7 @@ grant-public-layer-access: validate-layer-name validate-aws-default-region
 	aws lambda \
 		--output json \
 		add-layer-version-permission \
-		--layer-name "$(ELASTIC_LAYER_NAME)" \
+		--layer-name "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
 		--action lambda:GetLayerVersion \
 		--principal '*' \
 		--statement-id "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
