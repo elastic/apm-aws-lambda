@@ -51,7 +51,7 @@ get-all-aws-regions:
 publish-in-all-aws-regions: validate-layer-name get-all-aws-regions
 	@mkdir -p $(AWS_FOLDER)
 	@while read AWS_DEFAULT_REGION; do \
-		echo "publish '$(ELASTIC_LAYER_NAME)' in $${AWS_DEFAULT_REGION}"; \
+		echo "publish '$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)' in $${AWS_DEFAULT_REGION}"; \
 		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) publish > $(AWS_FOLDER)/$${AWS_DEFAULT_REGION}; \
 		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) grant-public-layer-access; \
 	done <.regions
@@ -61,7 +61,7 @@ publish: validate-layer-name validate-aws-default-region
 	@aws lambda \
 		--output json \
 		publish-layer-version \
-		--layer-name "${ELASTIC_LAYER_NAME}" \
+		--layer-name "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
 		--description "AWS Lambda Extension Layer for Elastic APM $(ARCHITECTURE)" \
 		--license "Apache-2.0" \
 		--zip-file "fileb://./bin/extension.zip"
