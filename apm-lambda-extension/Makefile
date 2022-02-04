@@ -73,7 +73,7 @@ grant-public-layer-access: validate-layer-name validate-aws-default-region
 	@echo "[debug] current location"
 	@pwd
 	@echo "[debug] publish-layer-version generated $(AWS_FOLDER)/$(AWS_DEFAULT_REGION)"
-	@cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | jq . || true
+	@cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | jq '.' || true
 	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$(cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | jq . )"
 	aws lambda \
 		--output json \
@@ -82,7 +82,7 @@ grant-public-layer-access: validate-layer-name validate-aws-default-region
 		--action lambda:GetLayerVersion \
 		--principal '*' \
 		--statement-id "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
-		--version-number $$(cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | jq -r .Version) > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
+		--version-number $$(cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | jq -r '.Version') > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
 
 # Generate the file with the ARN entries
 create-arn-file: validate-suffix-arn-file
