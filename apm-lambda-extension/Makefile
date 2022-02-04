@@ -73,7 +73,11 @@ grant-public-layer-access: validate-layer-name validate-aws-default-region
 	@echo "[debug] current location"
 	@pwd
 	@echo "[debug] publish-layer-version generated $(AWS_FOLDER)/$(AWS_DEFAULT_REGION)"
+	@cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)"
 	@cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | jq '.' || true
+	@[ ! -e jq ] && ( wget -q https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 -O jq; chmod 755 jq ) || true
+	./jq --version
+	./jq '.' "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" || true
 	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$(cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | jq . )"
 	aws lambda \
 		--output json \
