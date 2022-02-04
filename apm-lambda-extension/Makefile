@@ -68,9 +68,7 @@ publish: validate-layer-name validate-aws-default-region
 
 # Grant public access to the given LAYER in the given AWS region
 grant-public-layer-access: validate-layer-name validate-aws-default-region
-	@echo "[debug] publish-layer-version generated $(AWS_FOLDER)/$(AWS_DEFAULT_REGION)"
-	@ls -ltrh $(AWS_FOLDER)/$(AWS_DEFAULT_REGION)
-	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$(jq -r .Version $(AWS_FOLDER)/$(AWS_DEFAULT_REGION))"
+	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$($(MAKE) get-version)"
 	aws lambda \
 		--output json \
 		add-layer-version-permission \
@@ -79,6 +77,13 @@ grant-public-layer-access: validate-layer-name validate-aws-default-region
 		--principal '*' \
 		--statement-id "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
 		--version-number $$(jq -r .Version $(AWS_FOLDER)/$(AWS_DEFAULT_REGION)) > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
+		--version-number $$($(MAKE) get-version) > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
+
+# Get the ARN Version for the AWS_REGIONS
+get-version: validate-aws-default-region
+	# Alternative to jq -r .Version "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)"
+	# it fails in the CI with 'parse error: Invalid numeric literal at line 1, column 5'
+	@grep '"Version"' "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | cut -d":" -f2 | sed 's/ //g' | cut -d"," -f1
 
 # Generate the file with the ARN entries
 create-arn-file: validate-suffix-arn-file
