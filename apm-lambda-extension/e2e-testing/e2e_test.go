@@ -74,6 +74,7 @@ func TestEndToEnd(t *testing.T) {
 	resultsChan := make(chan string, 1)
 
 	uuid := runTestWithDedicatedTimer(samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
+	log.Printf("UUID generated during the test : %s", uuid)
 	if uuid == "" {
 		t.Fail()
 	}
