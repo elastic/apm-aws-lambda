@@ -66,7 +66,7 @@ func TestEndToEnd(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/intake/v2/events" {
 			bytesRes, _ := getDecompressedBytesFromRequest(r)
-			mockAPMServerLog += string(bytesRes)
+			mockAPMServerLog += fmt.Sprintf("%s\n", bytesRes)
 		}
 	}))
 	defer ts.Close()
@@ -90,9 +90,8 @@ func runTestWithTimer(path string, serviceName string, serverURL string, buildFl
 	case uuid := <-resultsChan:
 		return uuid
 	case <-timer.C:
-		break
+		return ""
 	}
-	return ""
 }
 
 func buildExtensionBinaries() {
