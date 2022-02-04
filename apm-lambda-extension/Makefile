@@ -58,7 +58,7 @@ publish-in-all-aws-regions: validate-layer-name get-all-aws-regions
 
 # Publish the given LAYER in the given AWS region
 publish: validate-layer-name validate-aws-default-region
-	aws lambda \
+	@aws lambda \
 		--output json \
 		publish-layer-version \
 		--layer-name "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
@@ -68,7 +68,7 @@ publish: validate-layer-name validate-aws-default-region
 
 # Grant public access to the given LAYER in the given AWS region
 grant-public-layer-access: validate-layer-name validate-aws-default-region
-	echo "$$(jq -r .Version $(AWS_FOLDER)/$(AWS_DEFAULT_REGION))"
+	@echo "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$(jq -r .Version $(AWS_FOLDER)/$(AWS_DEFAULT_REGION))"
 	aws lambda \
 		--output json \
 		add-layer-version-permission \
