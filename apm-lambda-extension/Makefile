@@ -68,7 +68,7 @@ publish: validate-layer-name validate-aws-default-region
 
 # Grant public access to the given LAYER in the given AWS region
 grant-public-layer-access: validate-layer-name validate-aws-default-region
-	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$($(MAKE) get-version)"
+	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$($(MAKE) -s get-version)"
 	@aws lambda \
 		--output json \
 		add-layer-version-permission \
@@ -76,7 +76,7 @@ grant-public-layer-access: validate-layer-name validate-aws-default-region
 		--action lambda:GetLayerVersion \
 		--principal '*' \
 		--statement-id "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
-		--version-number $$($(MAKE) get-version) > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
+		--version-number $$($(MAKE) -s get-version) > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
 
 # Get the ARN Version for the AWS_REGIONS
 # NOTE: jq -r .Version "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" fails in the CI
