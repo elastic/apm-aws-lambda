@@ -50,8 +50,6 @@ get-all-aws-regions:
 # Publish the given LAYER in all the AWS regions
 publish-in-all-aws-regions: validate-layer-name get-all-aws-regions
 	@mkdir -p $(AWS_FOLDER)
-	@echo "[debug] current location"
-	@pwd
 	@while read AWS_DEFAULT_REGION; do \
 		echo "publish '$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)' in $${AWS_DEFAULT_REGION}"; \
 		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) publish > $(AWS_FOLDER)/$${AWS_DEFAULT_REGION}; \
@@ -70,10 +68,7 @@ publish: validate-layer-name validate-aws-default-region
 
 # Grant public access to the given LAYER in the given AWS region
 grant-public-layer-access: validate-layer-name validate-aws-default-region
-	@echo "[debug] current location"
-	@pwd
 	@echo "[debug] publish-layer-version generated $(AWS_FOLDER)/$(AWS_DEFAULT_REGION)"
-	@cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)"
 	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$($(MAKE) -s --no-print-directory get-version)"
 	aws lambda \
 		--output json \
