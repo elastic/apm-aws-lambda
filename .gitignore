@@ -11,6 +11,12 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# Goland config files
+*.idea
+
+# MacOS DS_Store files
+*.DS_Store
+
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
