@@ -73,7 +73,7 @@ func TestEndToEnd(t *testing.T) {
 
 	resultsChan := make(chan string, 1)
 
-	uuid := runTestWithDedicatedTimer(samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
+	uuid := runTestWithTimer(samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
 	log.Printf("UUID generated during the test : %s", uuid)
 	if uuid == "" {
 		t.Fail()
@@ -82,10 +82,10 @@ func TestEndToEnd(t *testing.T) {
 	assert.True(t, strings.Contains(mockAPMServerLog, uuid))
 }
 
-func runTestWithDedicatedTimer(path string, serviceName string, serverURL string, buildFlag bool, timeout int, resultsChan chan string) string {
-	timer := time.NewTimer(time.Duration(timeout) * time.Second * 2)
+func runTestWithTimer(path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) string {
+	timer := time.NewTimer(time.Duration(lambdaFuncTimeout) * time.Second * 2)
 	defer timer.Stop()
-	go runTest(path, serviceName, serverURL, buildFlag, timeout, resultsChan)
+	go runTest(path, serviceName, serverURL, buildFlag, lambdaFuncTimeout, resultsChan)
 	select {
 	case uuid := <-resultsChan:
 		return uuid
@@ -99,7 +99,7 @@ func buildExtensionBinaries() {
 	runCommandInDir("make", []string{}, "..", getEnvVarValueOrSetDefault("DEBUG_OUTPUT", "false") == "true")
 }
 
-func runTest(path string, serviceName string, serverURL string, buildFlag bool, timeout int, resultsChan chan string) {
+func runTest(path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) {
 	log.Printf("Starting to test %s", serviceName)
 
 	if !folderExists(filepath.Join(path, ".aws-sam")) || buildFlag {
@@ -114,7 +114,7 @@ func runTest(path string, serviceName string, serverURL string, buildFlag bool, 
 	runCommandInDir("sam", []string{"local", "invoke", "--parameter-overrides",
 		fmt.Sprintf("ParameterKey=ApmServerURL,ParameterValue=http://host.docker.internal:%s", port),
 		fmt.Sprintf("ParameterKey=TestUUID,ParameterValue=%s", uuidWithHyphen),
-		fmt.Sprintf("ParameterKey=TimeoutParam,ParameterValue=%d", timeout)},
+		fmt.Sprintf("ParameterKey=TimeoutParam,ParameterValue=%d", lambdaFuncTimeout)},
 		path, getEnvVarValueOrSetDefault("DEBUG_OUTPUT", "false") == "true")
 	log.Printf("%s execution complete", serviceName)
 
