@@ -76,7 +76,6 @@ grant-public-layer-access: validate-layer-name validate-aws-default-region
 		--action lambda:GetLayerVersion \
 		--principal '*' \
 		--statement-id "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
-		--version-number $$(jq -r .Version $(AWS_FOLDER)/$(AWS_DEFAULT_REGION)) > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
 		--version-number $$($(MAKE) get-version) > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
 
 # Get the ARN Version for the AWS_REGIONS
