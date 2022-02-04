@@ -40,19 +40,20 @@ func TestEndToEnd(t *testing.T) {
 		t.Skip("Skipping E2E tests. Please set the env. variable RUN_E2E_TESTS=true if you want to run them.")
 	}
 
+	languageName := strings.ToLower(*langPtr)
 	supportedLanguages := []string{"node", "python", "java"}
-	if !isStringInSlice(*langPtr, supportedLanguages) {
+	if !isStringInSlice(languageName, supportedLanguages) {
 		processError(errors.New("unsupported language"))
 	}
 
-	samPath := "sam-" + *langPtr
-	samServiceName := "sam-testing-" + *langPtr
+	samPath := "sam-" + languageName
+	samServiceName := "sam-testing-" + languageName
 
 	// Build and download required binaries (extension and Java agent)
 	buildExtensionBinaries()
 
 	// Java agent processing
-	if *langPtr == "java" {
+	if languageName == "java" {
 		if !folderExists(filepath.Join(samPath, "agent")) {
 			log.Println("Java agent not found ! Collecting archive from Github...")
 			retrieveJavaAgent(samPath, *javaAgentVerPtr)

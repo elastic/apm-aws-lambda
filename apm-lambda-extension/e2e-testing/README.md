@@ -29,6 +29,6 @@ The command line arguments are presented with their default value.
 
 Example :
 ```shell
-go test -rebuild=false -lang=Java -timer=40 -java-agent-ver=1.28.4
+go test -rebuild=false -lang=java -timer=40 -java-agent-ver=1.28.4
 ```
 
