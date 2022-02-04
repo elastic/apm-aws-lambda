@@ -60,7 +60,7 @@ pipeline {
                     unstash 'source'
                     withGoEnv(){
                       dir("${BASE_DIR}/apm-lambda-extension"){
-                        cmd(label: 'make dist', script: 'make dist')
+                        cmd(label: 'make dist', script: 'BRANCH_NAME=v0.0.3 make dist')
                       }
                     }
                   }
@@ -72,10 +72,10 @@ pipeline {
                     withGoEnv(){
                       withAWSEnv(secret: 'secret/observability-team/ci/service-account/apm-aws-lambda', forceInstallation: true, version: '2.4.10') {
                         dir("${BASE_DIR}/apm-lambda-extension"){
-                          cmd(label: 'make publish-in-all-aws-regions', script: 'make publish-in-all-aws-regions')
-                          cmd(label: 'make create-arn-file', script: 'make create-arn-file')
+                          cmd(label: 'make publish-in-all-aws-regions', script: 'BRANCH_NAME=v0.0.3 make publish-in-all-aws-regions')
+                          cmd(label: 'make create-arn-file', script: 'BRANCH_NAME=v0.0.3 make create-arn-file')
                           stash(includes: "*${SUFFIX_ARN_FILE}", name: "arn-${isArm() ? 'arm' : 'amd'}")
-                          stash(includes: "bin/${BRANCH_NAME}-*.zip", name: "dist-${isArm() ? 'arm' : 'amd'}")
+                          stash(includes: "bin/v0.0.3-*.zip", name: "dist-${isArm() ? 'arm' : 'amd'}")
                         }
                       }
                     }
@@ -100,7 +100,7 @@ pipeline {
                 unstash "arn-amd"
                 unstash "dist-arm"
                 unstash "dist-amd"
-                cmd(label: 'make release-notes', script: 'make release-notes')
+                cmd(label: 'make release-notes', script: 'BRANCH_NAME=v0.0.3 make release-notes')
               }
             }
           }
@@ -131,8 +131,8 @@ pipeline {
 * -ver-1-2-3.
 */
 def getVersion() {
-  if (env.BRANCH_NAME?.trim() && env.BRANCH_NAME.startsWith('v')) {
-    return env.BRANCH_NAME.replaceAll('v', '-ver').replaceAll('\\.', '-')
+  if ('v0.0.3'.trim() && 'v0.0.3'.startsWith('v')) {
+    return 'v0.0.3'.replaceAll('v', '-ver').replaceAll('\\.', '-')
   }
   return ''
 }
