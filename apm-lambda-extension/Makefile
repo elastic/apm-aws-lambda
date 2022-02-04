@@ -74,7 +74,7 @@ grant-public-layer-access: validate-layer-name validate-aws-default-region
 	@pwd
 	@echo "[debug] publish-layer-version generated $(AWS_FOLDER)/$(AWS_DEFAULT_REGION)"
 	@cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)"
-	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$($(MAKE) -s get-version)"
+	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$($(MAKE) -s --no-print-directory get-version)"
 	aws lambda \
 		--output json \
 		add-layer-version-permission \
@@ -82,7 +82,7 @@ grant-public-layer-access: validate-layer-name validate-aws-default-region
 		--action lambda:GetLayerVersion \
 		--principal '*' \
 		--statement-id "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
-		--version-number $$($(MAKE) -s get-version) > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
+		--version-number $$($(MAKE) -s --no-print-directory get-version) > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
 
 # Alternative to jq -r .Version "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)"
 # it fails in the CI with 'parse error: Invalid numeric literal at line 1, column 5'
