@@ -74,11 +74,7 @@ grant-public-layer-access: validate-layer-name validate-aws-default-region
 	@pwd
 	@echo "[debug] publish-layer-version generated $(AWS_FOLDER)/$(AWS_DEFAULT_REGION)"
 	@cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)"
-	@cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | jq '.' || true
-	@[ ! -e jq ] && ( wget -q https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 -O jq; chmod 755 jq ) || true
-	./jq --version
-	./jq '.' "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" || true
-	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$(cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | jq . )"
+	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$(grep '"Version"' "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | cut -d":" -f2 | sed 's/ //g' | cut -d"," -f1)"
 	aws lambda \
 		--output json \
 		add-layer-version-permission \
@@ -86,7 +82,7 @@ grant-public-layer-access: validate-layer-name validate-aws-default-region
 		--action lambda:GetLayerVersion \
 		--principal '*' \
 		--statement-id "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
-		--version-number $$(cat "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | jq -r '.Version') > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
+		--version-number $$(grep '"Version"' "$(AWS_FOLDER)/$(AWS_DEFAULT_REGION)" | cut -d":" -f2 | sed 's/ //g' | cut -d"," -f1) > $(AWS_FOLDER)/.$(AWS_DEFAULT_REGION)-public
 
 # Generate the file with the ARN entries
 create-arn-file: validate-suffix-arn-file
