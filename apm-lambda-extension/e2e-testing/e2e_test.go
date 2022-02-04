@@ -43,7 +43,7 @@ func TestEndToEnd(t *testing.T) {
 	languageName := strings.ToLower(*langPtr)
 	supportedLanguages := []string{"node", "python", "java"}
 	if !isStringInSlice(languageName, supportedLanguages) {
-		processError(errors.New("unsupported language"))
+		processError(errors.New(fmt.Sprintf("Unsupported language %s ! Supported languages are %v", languageName, supportedLanguages)))
 	}
 
 	samPath := "sam-" + languageName
