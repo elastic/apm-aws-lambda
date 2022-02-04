@@ -69,7 +69,7 @@ publish: validate-layer-name validate-aws-default-region
 # Grant public access to the given LAYER in the given AWS region
 grant-public-layer-access: validate-layer-name validate-aws-default-region
 	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$($(MAKE) get-version)"
-	aws lambda \
+	@aws lambda \
 		--output json \
 		add-layer-version-permission \
 		--layer-name "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
