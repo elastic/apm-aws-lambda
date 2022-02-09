@@ -28,7 +28,7 @@ The rest of this guide contains instructions for instrumenting a Lambda function
 [[aws-lambda-configure-layer]]
 === Configuring the APM Lambda Extension Layer
 
-First, you'll need to https://github.com/elastic/apm-aws-lambda/releases[pick the right ARN from the extension release table] for your AWS Lambda function. The ARN has the pattern `arn:aws:lambda:<AWS_REGION_KEY>:267093732750:layer:elastic-apm-extension-<APM_EXTENSION_VERSION>-<ARHITECTURE_KEY>:<LAYER_VERSION>` and depends on:
+First, you'll need to https://github.com/elastic/apm-aws-lambda/releases[pick the right ARN from the extension release table] for your AWS Lambda function. The ARN has the pattern `arn:aws:lambda:<AWS_REGION_KEY>:267093732750:layer:elastic-apm-extension-<APM_EXTENSION_VERSION>-<ARCHITECTURE_KEY>:<LAYER_VERSION>` and depends on:
 
 * The AWS region your Lambda function runs in. The APM Lambda Extension layer needs to be in the same region as your Lambda function.
 * The architecture (_x86_64_ or _arm64_) used for your Lambda function.
