@@ -78,7 +78,7 @@ If unset, the APM Agent will automatically set the value based on the Lambda fun
 [[aws-lambda-timeout_seconds]]
 ===== `ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS` (optional)
 
-The timeout value, in seconds, for the Lambda Extension's server.
+The timeout value, in seconds, for the Lambda Extension's server receiving data from the agent.
 
 [discrete]
 [[aws-lambda-send_strategy]]
