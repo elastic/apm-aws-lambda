@@ -67,7 +67,7 @@ The `ELASTIC_APM_LAMBDA_APM_SERVER` controls where the Lambda extension will shi
 
 Either `ELASTIC_APM_API_KEY` or `ELASTIC_APM_SECRET_TOKEN` needs to be set.  This controls the authentication method that the extension uses when sending data to the URL configured via `ELASTIC_APM_LAMBDA_APM_SERVER`.
 
-[descrete]
+[discrete]
 [[aws-lambda-apm_service_name]]
 ===== `ELASTIC_APM_SERVICE_NAME` (optional)
 
