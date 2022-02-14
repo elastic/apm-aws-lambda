@@ -58,7 +58,7 @@ The following environment variables are relevant for instrumenting a Lambda func
 * (required) `ELASTIC_APM_LAMBDA_APM_SERVER`: +
 This required config option controls where the Lambda extension will ship data. This should be the URL of the final APM Server destination for your telemetry.
 
-* (required) <<config-secret-token, `ELASTIC_APM_SECRET_TOKEN`>> or <<config-api-key, `ELASTIC_APM_API_KEY`>>: +
+* (required) `ELASTIC_APM_SECRET_TOKEN` or `ELASTIC_APM_API_KEY`: +
 One of these needs to be set as the authentication method that the extension uses when sending data to the URL configured via `ELASTIC_APM_LAMBDA_APM_SERVER`.
 
 * (optional) `ELASTIC_APM_SERVICE_NAME`: +
