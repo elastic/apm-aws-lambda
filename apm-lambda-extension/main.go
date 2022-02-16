@@ -200,9 +200,6 @@ func main() {
 				// Flush APM data now that the function invocation has completed
 				extension.FlushAPMData(client, agentDataChannel, config)
 			}
-
-			close(runtimeDoneSignal)
-			close(extension.AgentDoneSignal)
 		}
 	}
 }
