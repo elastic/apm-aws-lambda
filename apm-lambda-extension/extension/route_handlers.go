@@ -37,16 +37,17 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 		client := &http.Client{}
 
 		req, err := http.NewRequest(r.Method, apmServerUrl, nil)
+		if err != nil {
+			log.Printf("could not create request object for %s:%s: %v", r.Method, apmServerUrl, err)
+			return
+		}
+
 		//forward every header received
 		for name, values := range r.Header {
 			// Loop over all values for the name.
 			for _, value := range values {
 				req.Header.Set(name, value)
 			}
-		}
-		if err != nil {
-			log.Printf("could not create request object for %s:%s: %v", r.Method, apmServerUrl, err)
-			return
 		}
 
 		// Send request to apm server
