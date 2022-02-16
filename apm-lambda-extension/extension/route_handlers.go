@@ -56,6 +56,7 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 			log.Printf("error forwarding info request (`/`) to APM Server: %v", err)
 			return
 		}
+		defer serverResp.Body.Close()
 
 		// If WriteHeader is not called explicitly, the first call to Write
 		// will trigger an implicit WriteHeader(http.StatusOK).
