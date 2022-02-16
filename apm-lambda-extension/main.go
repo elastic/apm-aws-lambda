@@ -79,22 +79,22 @@ func main() {
 	// completes before signaling that the extension is ready for the next invocation.
 	var backgroundDataSendWg sync.WaitGroup
 
-	// Subscribe to the Logs API
-	err = logsapi.Subscribe(
-		extensionClient.ExtensionID,
-		[]logsapi.EventType{logsapi.Platform})
+	logsAPIListener, err := logsapi.NewLogsAPIHttpListener(logsChannel)
 	if err != nil {
-		log.Printf("Could not subscribe to the logs API.")
+		log.Printf("Error while creating Logs API listener: %v", err)
 	} else {
-		logsAPIListener, err := logsapi.NewLogsAPIHttpListener(logsChannel)
-		if err != nil {
-			log.Printf("Error while creating Logs API listener: %v", err)
-		}
-
 		// Start the logs HTTP server
 		_, err = logsAPIListener.Start(logsapi.ListenOnAddress())
 		if err != nil {
 			log.Printf("Error while starting Logs API listener: %v", err)
+		} else {
+			// Subscribe to the Logs API
+			err = logsapi.Subscribe(
+				extensionClient.ExtensionID,
+				[]logsapi.EventType{logsapi.Platform})
+			if err != nil {
+				log.Printf("Could not subscribe to the logs API.")
+			}
 		}
 	}
 
