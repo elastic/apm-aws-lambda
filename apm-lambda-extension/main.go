@@ -98,6 +98,8 @@ func main() {
 		}
 	}
 
+	var prevEventID string
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -164,13 +166,21 @@ func main() {
 						log.Printf("Received log event %v\n", logEvent.Type)
 						// Check the logEvent for runtimeDone and compare the RequestID
 						// to the id that came in via the Next API
-						if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
+						switch logsapi.SubEventType(logEvent.Type) {
+						case logsapi.RuntimeDone:
 							if logEvent.Record.RequestId == event.RequestID {
 								log.Println("Received runtimeDone event for this function invocation")
 								runtimeDoneSignal <- struct{}{}
 								return
 							} else {
-								log.Println("Log API runtimeDone event request id didn't match")
+								log.Println("runtimeDone event request id didn't match the current event id")
+							}
+						case logsapi.Report:
+							if logEvent.Record.RequestId == prevEventID {
+								extension.ProcessPlatformReport(client, logEvent.Time, logEvent.Record.Metrics, config)
+								log.Println("Received platform report for the previous function invocation")
+							} else {
+								log.Println("report event request id didn't match the previous event id")
 							}
 						}
 					}
@@ -203,6 +213,9 @@ func main() {
 			close(funcDone)
 			close(runtimeDoneSignal)
 			close(extension.AgentDoneSignal)
+
+			prevEventID = event.RequestID
+
 		}
 	}
 }

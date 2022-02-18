@@ -54,7 +54,7 @@ func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
 		"time": "2021-10-20T08:13:03.278Z",
 		"type": "platform.runtimeDone",
 		"record": {
-			"requestId": "61c0fdeb-f013-4f2a-b627-56278f5666b8"
+			"requestId": "61c0fdeb-f013-4f2a-b627-56278f5666b8",
 		}
 	}
 	`)
@@ -70,7 +70,45 @@ func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
 		t.Fail()
 	}
 
-	record := LogEventRecord{RequestId: "61c0fdeb-f013-4f2a-b627-56278f5666b8"}
+	record := LogEventRecord{
+		RequestId: "61c0fdeb-f013-4f2a-b627-56278f5666b8",
+	}
+	assert.Equal(t, record, le.Record)
+}
+
+func Test_unmarshalReportRecordObject(t *testing.T) {
+	jsonBytes := []byte(`
+	{
+		"time": "2021-10-20T08:13:03.278Z",
+		"type": "platform.runtimeDone",
+		"record": {
+			"requestId": "61c0fdeb-f013-4f2a-b627-56278f5666b8",
+			"metrics":{"durationMs":182.43,"billedDurationMs":183,"memorySizeMB":128,"maxMemoryUsedMB":76,"initDurationMs":422.97}
+		}
+	}
+	`)
+
+	var le LogEvent
+	err := json.Unmarshal(jsonBytes, &le)
+	if err != nil {
+		t.Fail()
+	}
+
+	err = le.unmarshalRecord()
+	if err != nil {
+		t.Fail()
+	}
+
+	record := LogEventRecord{
+		RequestId: "61c0fdeb-f013-4f2a-b627-56278f5666b8",
+		Metrics: PlatformMetrics{
+			DurationMs:       182.43,
+			BilledDurationMs: 183,
+			MemorySizeMB:     128,
+			MaxMemoryUsedMB:  76,
+			InitDurationMs:   422.97,
+		},
+	}
 	assert.Equal(t, record, le.Record)
 }
 
