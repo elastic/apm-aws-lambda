@@ -54,7 +54,7 @@ func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
 		"time": "2021-10-20T08:13:03.278Z",
 		"type": "platform.runtimeDone",
 		"record": {
-			"requestId": "61c0fdeb-f013-4f2a-b627-56278f5666b8",
+			"requestId": "61c0fdeb-f013-4f2a-b627-56278f5666b8"
 		}
 	}
 	`)
