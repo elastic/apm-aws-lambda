@@ -44,7 +44,7 @@ func TestSubscribeWithSamLocalTest(t *testing.T) {
 func TestSubscribeWithListenerEnvVariable(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	os.Setenv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS", "localhost:1234")
+	os.Setenv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS", "localhost:5678")
 	defer t.Cleanup(func() {
 		os.Unsetenv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS")
 	})
@@ -63,7 +63,7 @@ func TestSubscribeWithListenerEnvVariable(t *testing.T) {
 	defer logsAPIServer.Close()
 
 	// Create a request to send to the extension
-	url := "http://" + "localhost" + ":1234"
+	url := "http://" + "localhost" + ":5678"
 	req, err := http.NewRequest("GET", url, bytes.NewReader(body))
 	if err != nil {
 		t.Logf("Could not create request")
