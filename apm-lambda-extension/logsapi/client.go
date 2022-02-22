@@ -130,8 +130,18 @@ type SubscribeResponse struct {
 }
 
 // Subscribe calls the Logs API to subscribe for the log events.
-func (c *Client) Subscribe(types []EventType, bufferingCfg BufferingCfg, destination Destination, extensionId string) (*SubscribeResponse, error) {
-
+func (c *Client) Subscribe(types []EventType, destinationURI URI, extensionId string) (*SubscribeResponse, error) {
+	bufferingCfg := BufferingCfg{
+		MaxItems:  10000,
+		MaxBytes:  262144,
+		TimeoutMS: 25,
+	}
+	destination := Destination{
+		Protocol:   HttpProto,
+		URI:        destinationURI,
+		HttpMethod: HttpPost,
+		Encoding:   JSON,
+	}
 	data, err := json.Marshal(
 		&SubscribeRequest{
 			SchemaVersion: SchemaVersionLatest,

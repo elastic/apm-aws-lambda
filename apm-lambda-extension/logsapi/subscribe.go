@@ -60,20 +60,7 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 		return err
 	}
 
-	bufferingCfg := BufferingCfg{
-		MaxItems:  10000,
-		MaxBytes:  262144,
-		TimeoutMS: 25,
-	}
-
-	destination := Destination{
-		Protocol:   HttpProto,
-		URI:        URI("http://" + logsAPIListener.Addr().String()),
-		HttpMethod: HttpPost,
-		Encoding:   JSON,
-	}
-
-	_, err = logsAPIClient.Subscribe(eventTypes, bufferingCfg, destination, extensionID)
+	_, err = logsAPIClient.Subscribe(eventTypes, URI("http://"+logsAPIListener.Addr().String()), extensionID)
 	return err
 }
 
