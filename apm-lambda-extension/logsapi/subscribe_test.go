@@ -38,12 +38,16 @@ func TestSubscribeWithSamLocalTest(t *testing.T) {
 	out := make(chan LogEvent)
 
 	Subscribe(ctx, "testing123", []EventType{Platform}, out)
+	logsAPIServer.Close()
 }
 
 func TestSubscribeWithListenerEnvVariable(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	os.Setenv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS", "localhost:1234")
+	defer t.Cleanup(func() {
+		os.Unsetenv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS")
+	})
 	platformDoneEvent := `{
 		"time": "2021-02-04T20:00:05.123Z",
 		"type": "platform.runtimeDone",
@@ -56,6 +60,7 @@ func TestSubscribeWithListenerEnvVariable(t *testing.T) {
 	out := make(chan LogEvent)
 
 	Subscribe(ctx, "testing123", []EventType{Platform}, out)
+	defer logsAPIServer.Close()
 
 	// Create a request to send to the extension
 	url := "http://" + "localhost" + ":1234"
@@ -94,6 +99,7 @@ func TestSubscribeWithListenerRandomPort(t *testing.T) {
 	out := make(chan LogEvent)
 
 	Subscribe(ctx, "testing123", []EventType{Platform}, out)
+	defer logsAPIServer.Close()
 
 	// Create a request to send to the extension
 	url := "http://" + logsAPIListener.Addr().String()
@@ -140,4 +146,5 @@ func TestSubscribeRequest(t *testing.T) {
 
 	os.Setenv("AWS_LAMBDA_RUNTIME_API", awsRuntimeApiServer.Listener.Addr().String())
 	Subscribe(ctx, "testing123", []EventType{Platform}, out)
+	logsAPIServer.Close()
 }
