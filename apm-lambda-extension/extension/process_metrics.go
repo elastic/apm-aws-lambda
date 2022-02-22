@@ -192,30 +192,12 @@ type Metric struct {
 // Add adds a metric with the given name, labels, and value,
 // The labels are expected to be sorted lexicographically.
 func (m *Metrics) Add(name string, labels []MetricLabel, value float64) {
-	m.addMetric(name, labels, Metric{Value: value})
-}
-
-// AddHistogram adds a histogram metric with the given name, labels, counts,
-// and values. The labels are expected to be sorted lexicographically, and
-// bucket values provided in ascending order.
-func (m *Metrics) AddHistogram(name string, labels []MetricLabel, values []float64, counts []uint64) {
-	m.addMetric(name, labels, Metric{Values: values, Counts: counts, Type: "histogram"})
+	m.addMetric(name, Metric{Value: value})
 }
 
 // Simplified version of https://github.com/elastic/apm-agent-go/blob/675e8398c7fe546f9fd169bef971b9ccfbcdc71f/metrics.go#L89
-func (m *Metrics) addMetric(name string, labels []MetricLabel, metric Metric) {
+func (m *Metrics) addMetric(name string, metric Metric) {
 
-	var modelLabels StringMap
-	if len(labels) > 0 {
-		modelLabels = make(StringMap, len(labels))
-		for i, l := range labels {
-			modelLabels[i] = StringMapItem{
-				Key: l.Name, Value: l.Value,
-			}
-		}
-	}
-
-	m.Labels = modelLabels
 	if m.Samples == nil {
 		m.Samples = make(map[string]Metric)
 	}
