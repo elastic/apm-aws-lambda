@@ -20,7 +20,10 @@ package logsapi
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -37,7 +40,7 @@ func TestSubscribeWithSamLocalTest(t *testing.T) {
 	Subscribe(ctx, "testing123", []EventType{Platform}, out)
 }
 
-func TestSubscribeWithEnvVariable(t *testing.T) {
+func TestSubscribeWithListenerEnvVariable(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	os.Setenv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS", "localhost:1234")
@@ -76,7 +79,7 @@ func TestSubscribeWithEnvVariable(t *testing.T) {
 	}
 }
 
-func TestSubscribeWithRandomPort(t *testing.T) {
+func TestSubscribeWithListenerRandomPort(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	platformDoneEvent := `{
@@ -112,4 +115,29 @@ func TestSubscribeWithRandomPort(t *testing.T) {
 		event := <-out
 		assert.Equal(t, event.Record.RequestId, "6f7f0961f83442118a7af6fe80b88")
 	}
+}
+
+func TestSubscribeRequest(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	out := make(chan LogEvent)
+	expectedTypes := []EventType{Platform}
+	expectedBufferingCfg := BufferingCfg{
+		MaxItems:  10000,
+		MaxBytes:  262144,
+		TimeoutMS: 25,
+	}
+
+	// Create aws runtime API server and handler
+	awsRuntimeApiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request_bytes, _ := ioutil.ReadAll(r.Body)
+		req := SubscribeRequest{}
+		json.Unmarshal(request_bytes, &req)
+		assert.Equal(t, req.BufferingCfg, expectedBufferingCfg)
+		assert.Equal(t, req.EventTypes, expectedTypes)
+	}))
+	defer awsRuntimeApiServer.Close()
+
+	os.Setenv("AWS_LAMBDA_RUNTIME_API", awsRuntimeApiServer.Listener.Addr().String())
+	Subscribe(ctx, "testing123", []EventType{Platform}, out)
 }

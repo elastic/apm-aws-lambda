@@ -55,7 +55,6 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 	}
 
 	logsAPIBaseUrl := fmt.Sprintf("http://%s", extensions_api_address)
-
 	logsAPIClient, err := NewClient(logsAPIBaseUrl)
 	if err != nil {
 		return err
@@ -65,9 +64,6 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 		MaxItems:  10000,
 		MaxBytes:  262144,
 		TimeoutMS: 25,
-	}
-	if err != nil {
-		return err
 	}
 
 	destination := Destination{
@@ -82,8 +78,8 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 }
 
 func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, out chan LogEvent) error {
-
 	if checkAwsSamLocal() {
+		// TODO: or return error?
 		log.Printf("Not subscribing to LogsAPI, detected sam local environment")
 		return nil
 	} else {
@@ -110,7 +106,6 @@ func startHttpServer(out chan LogEvent) (err error) {
 	}
 
 	logsAPIServer = &http.Server{
-		Addr:    listenerAddress,
 		Handler: mux,
 	}
 

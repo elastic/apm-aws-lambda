@@ -30,7 +30,6 @@ func handleLogEventsRequest(out chan LogEvent) func(w http.ResponseWriter, r *ht
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		// w.WriteHeader(http.StatusAccepted)
-		// w.Write([]byte("ok"))
 
 		body, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
