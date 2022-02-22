@@ -74,6 +74,7 @@ func main() {
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	logsChannel := make(chan logsapi.LogEvent)
+	var metadataContainer extension.MetadataContainer
 
 	// Use a wait group to ensure the background go routine sending to the APM server
 	// completes before signaling that the extension is ready for the next invocation.
@@ -145,6 +146,9 @@ func main() {
 						return
 					case agentData := <-agentDataChannel:
 						backgroundDataSendWg.Add(1)
+						if metadataContainer.Metadata == nil {
+							extension.ProcessMetadata(agentData, &metadataContainer)
+						}
 						err := extension.PostToApmServer(client, agentData, config)
 						if err != nil {
 							log.Printf("Error sending to APM server, skipping: %v", err)
@@ -177,7 +181,7 @@ func main() {
 							}
 						case logsapi.Report:
 							if logEvent.Record.RequestId == prevEventID {
-								extension.ProcessPlatformReport(client, logEvent.Time, logEvent.Record.Metrics, config)
+								extension.ProcessPlatformReport(client, metadataContainer, logEvent.Time, logEvent.Record.Metrics, config)
 								log.Println("Received platform report for the previous function invocation")
 							} else {
 								log.Println("report event request id didn't match the previous event id")
