@@ -30,7 +30,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var listenerAddress = "sandbox:0"
+var listenerHost = "sandbox"
 var logsAPIServer *http.Server
 var logsAPIListener net.Listener
 
@@ -60,7 +60,7 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 	}
 
 	_, port, _ := net.SplitHostPort(logsAPIListener.Addr().String())
-	_, err = logsAPIClient.Subscribe(eventTypes, URI("http://sandbox:"+port), extensionID)
+	_, err = logsAPIClient.Subscribe(eventTypes, URI("http://"+listenerHost+":"+port), extensionID)
 	return err
 }
 
@@ -89,7 +89,7 @@ func startHttpServer(out chan LogEvent) (err error) {
 		Handler: mux,
 	}
 
-	logsAPIListener, err = net.Listen("tcp", listenerAddress)
+	logsAPIListener, err = net.Listen("tcp", listenerHost+":0")
 	if err != nil {
 		return
 	}

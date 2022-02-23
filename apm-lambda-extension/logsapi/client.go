@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -163,7 +162,6 @@ func (c *Client) Subscribe(types []EventType, destinationURI URI, extensionId st
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusAccepted {
-		log.Println("Logs API is not supported. Is this extension running in a local sandbox?")
 		return nil, errors.Errorf("Logs API is not supported in this environment")
 	} else if resp.StatusCode != http.StatusOK {
 		body, err := ioutil.ReadAll(resp.Body)

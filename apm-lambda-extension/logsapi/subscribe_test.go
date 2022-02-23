@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,7 +44,7 @@ func TestSubscribeWithSamLocalEnv(t *testing.T) {
 }
 
 func TestSubscribeAwsRequest(t *testing.T) {
-	listenerAddress = "localhost:0"
+	listenerHost = "localhost"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	out := make(chan LogEvent)
@@ -73,7 +72,6 @@ func TestSubscribeAwsRequest(t *testing.T) {
 		req := SubscribeRequest{}
 		json.Unmarshal(request_bytes, &req)
 		// Validate the subscription request
-		assert.True(t, strings.Contains(string(req.Destination.URI), "sandbox"))
 		assert.Equal(t, req.BufferingCfg, expectedBufferingCfg)
 		assert.Equal(t, req.EventTypes, expectedTypes)
 	}))
