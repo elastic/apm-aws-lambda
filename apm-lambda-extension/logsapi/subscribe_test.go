@@ -39,7 +39,7 @@ func TestSubscribeWithSamLocalEnv(t *testing.T) {
 	})
 	out := make(chan LogEvent)
 
-	err := Subscribe(ctx, "testing123", []EventType{Platform}, out)
+	err := Subscribe(ctx, "testID", []EventType{Platform}, out)
 	assert.Error(t, err)
 }
 
@@ -55,16 +55,6 @@ func TestSubscribeAwsRequest(t *testing.T) {
 		MaxBytes:  262144,
 		TimeoutMS: 25,
 	}
-	// For logs API event
-	platformDoneEvent := `{
-		"time": "2021-02-04T20:00:05.123Z",
-		"type": "platform.runtimeDone",
-		"record": {
-		   "requestId":"6f7f0961f83442118a7af6fe80b88",
-		   "status": "success"
-		}
-	}`
-	body := []byte(`[` + platformDoneEvent + `]`)
 
 	// Create aws runtime API server and handler
 	awsRuntimeApiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -81,7 +71,7 @@ func TestSubscribeAwsRequest(t *testing.T) {
 	os.Setenv("AWS_LAMBDA_RUNTIME_API", awsRuntimeApiServer.Listener.Addr().String())
 
 	// Subscribe to the logs api and start the http server listening for events
-	err := Subscribe(ctx, "testing123", []EventType{Platform}, out)
+	err := Subscribe(ctx, "testID", []EventType{Platform}, out)
 	if err != nil {
 		t.Logf("Error subscribing, %v", err)
 		t.Fail()
@@ -90,6 +80,15 @@ func TestSubscribeAwsRequest(t *testing.T) {
 	defer logsAPIServer.Close()
 
 	// Create a request to send to the logs listener
+	platformDoneEvent := `{
+		"time": "2021-02-04T20:00:05.123Z",
+		"type": "platform.runtimeDone",
+		"record": {
+		   "requestId":"6f7f0961f83442118a7af6fe80b88",
+		   "status": "success"
+		}
+	}`
+	body := []byte(`[` + platformDoneEvent + `]`)
 	url := "http://" + logsAPIListener.Addr().String()
 	req, err := http.NewRequest("GET", url, bytes.NewReader(body))
 	if err != nil {
@@ -109,4 +108,41 @@ func TestSubscribeAwsRequest(t *testing.T) {
 		event := <-out
 		assert.Equal(t, event.Record.RequestId, "6f7f0961f83442118a7af6fe80b88")
 	}
+}
+
+func TestSubscribeWithBadLogsRequest(t *testing.T) {
+	listenerHost = "localhost"
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	out := make(chan LogEvent)
+
+	// Create aws runtime API server and handler
+	awsRuntimeApiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer awsRuntimeApiServer.Close()
+
+	// Set the Runtime server address as an env variable
+	os.Setenv("AWS_LAMBDA_RUNTIME_API", awsRuntimeApiServer.Listener.Addr().String())
+
+	// Subscribe to the logs api and start the http server listening for events
+	err := Subscribe(ctx, "testID", []EventType{Platform}, out)
+	if err != nil {
+		t.Logf("Error subscribing, %v", err)
+		t.Fail()
+		return
+	}
+	defer logsAPIServer.Close()
+
+	// Create a request to send to the logs listener
+	logEvent := `{"type": "invalid"}`
+	body := []byte(`[` + logEvent + `]`)
+	url := "http://" + logsAPIListener.Addr().String()
+	req, err := http.NewRequest("GET", url, bytes.NewReader(body))
+	if err != nil {
+		t.Log("Could not create request")
+	}
+
+	// Send the request to the logs listener
+	client := &http.Client{}
+	resp, _ := client.Do(req)
+	assert.Equal(t, resp.StatusCode, 500)
 }

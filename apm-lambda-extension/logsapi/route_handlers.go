@@ -40,6 +40,7 @@ func handleLogEventsRequest(out chan LogEvent) func(w http.ResponseWriter, r *ht
 		err = json.Unmarshal(body, &logEvents)
 		if err != nil {
 			log.Println("Error unmarshalling log event batch:", err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -47,6 +48,7 @@ func handleLogEventsRequest(out chan LogEvent) func(w http.ResponseWriter, r *ht
 			err = logEvents[idx].unmarshalRecord()
 			if err != nil {
 				log.Printf("Error unmarshalling log event: %+v", err)
+				w.WriteHeader(http.StatusInternalServerError)
 				continue
 			}
 			out <- logEvents[idx]
