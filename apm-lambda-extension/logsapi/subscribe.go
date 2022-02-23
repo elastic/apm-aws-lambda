@@ -46,7 +46,7 @@ type LogEventRecord struct {
 	Status    string `json:"status"`
 }
 
-// Init initializes the configuration for the Logs API and subscribes to the Logs API for HTTP
+// Subscribes to the Logs API
 func subscribe(extensionID string, eventTypes []EventType) error {
 	extensions_api_address, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API")
 	if !ok {
@@ -64,19 +64,19 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 	return err
 }
 
-func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, out chan LogEvent) error {
+// Starts the HTTP server listening for log events and subscribes to the Logs API
+func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, out chan LogEvent) (err error) {
 	if checkAwsSamLocal() {
-		return errors.New("Not subscribing to LogsAPI, detected sam local environment")
-	} else {
-		err := startHttpServer(out)
-		if err != nil {
-			return err
-		}
+		return errors.New("Detected sam local environment")
+	}
+	err = startHttpServer(out)
+	if err != nil {
+		return
+	}
 
-		err = subscribe(extensionID, eventTypes)
-		if err != nil {
-			return err
-		}
+	err = subscribe(extensionID, eventTypes)
+	if err != nil {
+		return
 	}
 	return nil
 }
