@@ -30,8 +30,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const DefaultHttpListenerPort = "0"
-
+var listenerAddress = "sandbox:0"
 var logsAPIServer *http.Server
 var logsAPIListener net.Listener
 
@@ -60,15 +59,14 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 		return err
 	}
 
-	_, err = logsAPIClient.Subscribe(eventTypes, URI("http://"+logsAPIListener.Addr().String()), extensionID)
+	_, port, _ := net.SplitHostPort(logsAPIListener.Addr().String())
+	_, err = logsAPIClient.Subscribe(eventTypes, URI("http://sandbox:"+port), extensionID)
 	return err
 }
 
 func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, out chan LogEvent) error {
 	if checkAwsSamLocal() {
-		// TODO: or return error?
-		log.Printf("Not subscribing to LogsAPI, detected sam local environment")
-		return nil
+		return errors.New("Not subscribing to LogsAPI, detected sam local environment")
 	} else {
 		err := startHttpServer(out)
 		if err != nil {
@@ -87,11 +85,6 @@ func startHttpServer(out chan LogEvent) (err error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleLogEventsRequest(out))
 
-	listenerAddress, ok := os.LookupEnv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS")
-	if !ok || listenerAddress == "" {
-		listenerAddress = "localhost:0"
-	}
-
 	logsAPIServer = &http.Server{
 		Handler: mux,
 	}
@@ -102,14 +95,14 @@ func startHttpServer(out chan LogEvent) (err error) {
 	}
 
 	go func() {
-		log.Printf("Extension listening for logsAPI events on %s", logsAPIListener.Addr())
+		log.Printf("Extension listening for logsAPI events on %s", logsAPIListener.Addr().String())
 		logsAPIServer.Serve(logsAPIListener)
 	}()
 	return nil
 }
 
 func checkAwsSamLocal() bool {
-	env_aws_local, ok := os.LookupEnv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS")
+	env_aws_local, ok := os.LookupEnv("AWS_SAM_LOCAL")
 	if ok && env_aws_local == "true" {
 		return true
 	}
