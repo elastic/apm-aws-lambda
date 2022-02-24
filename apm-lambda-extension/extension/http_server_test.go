@@ -19,6 +19,7 @@ package extension
 
 import (
 	"bytes"
+	"errors"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -166,6 +167,24 @@ func Test_handleInfoRequest(t *testing.T) {
 	} else {
 		assert.Equal(t, 202, resp.StatusCode)
 	}
+}
+
+type errReader int
+
+func (errReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("test error")
+}
+
+func Test_handleInfoRequestInvalidBody(t *testing.T) {
+	testChan := make(chan AgentData)
+	mux := http.NewServeMux()
+	urlPath := "/intake/v2/events"
+	mux.HandleFunc(urlPath, handleIntakeV2Events(testChan))
+	req := httptest.NewRequest(http.MethodGet, urlPath, errReader(0))
+	recorder := httptest.NewRecorder()
+
+	mux.ServeHTTP(recorder, req)
+	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
 }
 
 func Test_handleIntakeV2EventsQueryParam(t *testing.T) {

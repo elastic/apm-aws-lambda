@@ -85,13 +85,11 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusAccepted)
-		w.Write([]byte("ok"))
-
 		rawBytes, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {
 			log.Printf("Could not read agent intake request body: %v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -107,5 +105,8 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {
 			AgentDoneSignal <- struct{}{}
 		}
+
+		w.WriteHeader(http.StatusAccepted)
+		w.Write([]byte("ok"))
 	}
 }
