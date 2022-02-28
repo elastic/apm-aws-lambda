@@ -5,8 +5,8 @@ import (
 	"elastic/apm-lambda-extension/model"
 	"encoding/json"
 	"log"
+	"math"
 	"net/http"
-	"time"
 )
 
 type MetricsContainer struct {
@@ -28,31 +28,47 @@ func (mc MetricsContainer) addMetric(name string, metric model.Metric) {
 	mc.Metrics.Samples[name] = metric
 }
 
-func ProcessPlatformReport(client *http.Client, metadataContainer MetadataContainer, timestamp time.Time, platformReportMetrics logsapi.PlatformMetrics, config *extensionConfig) {
+func ProcessPlatformReport(client *http.Client, metadataContainer MetadataContainer, functionData *NextEventResponse, platformReport logsapi.LogEvent, config *extensionConfig) {
 
 	metricsContainer := MetricsContainer{
 		Metrics: &model.Metrics{},
 	}
 	convMB2Bytes := float64(1024 * 1024)
+	platformReportMetrics := platformReport.Record.Metrics
 
 	// APM Spec Fields
-	metricsContainer.Metrics.Timestamp = timestamp.UnixMicro()
+	// Timestamp
+	metricsContainer.Metrics.Timestamp = platformReport.Time.UnixMicro()
+	// FaaS Fields
+	metricsContainer.Metrics.Labels = make(map[string]interface{})
+	metricsContainer.Metrics.Labels["faas.execution"] = platformReport.Record.RequestId
+	metricsContainer.Metrics.Labels["faas.id"] = functionData.InvokedFunctionArn
+	if platformReportMetrics.InitDurationMs > 0 {
+		metricsContainer.Metrics.Labels["faas.coldstart"] = true
+	} else {
+		metricsContainer.Metrics.Labels["faas.coldstart"] = false
+	}
+	// System
 	metricsContainer.Add("system.memory.total", nil, float64(platformReportMetrics.MemorySizeMB)*convMB2Bytes)                                             // Unit : Bytes
 	metricsContainer.Add("system.memory.actual.free", nil, float64(platformReportMetrics.MemorySizeMB-platformReportMetrics.MaxMemoryUsedMB)*convMB2Bytes) // Unit : Bytes
 
 	// Raw Metrics
 	// AWS uses binary multiples to compute memory : https://aws.amazon.com/about-aws/whats-new/2020/12/aws-lambda-supports-10gb-memory-6-vcpu-cores-lambda-functions/
-	metricsContainer.Add("faas.metrics.memory.total.bytes", nil, float64(platformReportMetrics.MemorySizeMB)*convMB2Bytes)      // Unit : Bytes
-	metricsContainer.Add("faas.metrics.memory.maxUsed.bytes", nil, float64(platformReportMetrics.MaxMemoryUsedMB)*convMB2Bytes) // Unit : Bytes
-	metricsContainer.Add("faas.metrics.duration.measured.ms", nil, float64(platformReportMetrics.DurationMs))                   // Unit : Milliseconds
-	metricsContainer.Add("faas.metrics.duration.billed.ms", nil, float64(platformReportMetrics.BilledDurationMs))               // Unit : Milliseconds
-	metricsContainer.Add("faas.metrics.duration.init.ms", nil, float64(platformReportMetrics.InitDurationMs))                   // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.TotalMemory", nil, float64(platformReportMetrics.MemorySizeMB)*convMB2Bytes)                             // Unit : Bytes
+	metricsContainer.Add("aws.lambda.metrics.UsedMemory", nil, float64(platformReportMetrics.MaxMemoryUsedMB)*convMB2Bytes)                           // Unit : Bytes
+	metricsContainer.Add("aws.lambda.metrics.Duration", nil, float64(platformReportMetrics.DurationMs))                                               // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.BilledDuration", nil, float64(platformReportMetrics.BilledDurationMs))                                   // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.ColdStartDuration", nil, float64(platformReportMetrics.InitDurationMs))                                  // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.Timeout", nil, math.Ceil(float64(functionData.DeadlineMs-functionData.Timestamp.UnixMilli())/1000)*1000) // Unit : Milliseconds
 
 	metricsJson, err := json.Marshal(metricsContainer)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+
+	metadataContainer.Metadata.Service.Agent.Name = "aws-lambda-extension"
+	metadataContainer.Metadata.Service.Agent.Version = Version
 
 	metadataJson, err := json.Marshal(metadataContainer)
 	if err != nil {

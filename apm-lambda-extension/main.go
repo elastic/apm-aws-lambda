@@ -99,7 +99,7 @@ func main() {
 		}
 	}
 
-	var prevEventID string
+	var prevEvent *extension.NextEventResponse
 
 	for {
 		select {
@@ -115,6 +115,7 @@ func main() {
 				log.Println("Exiting")
 				return
 			}
+			event.Timestamp = time.Now()
 			log.Printf("Received event: %v\n", extension.PrettyPrint(event))
 
 			// Make a channel for signaling that we received the agent flushed signal
@@ -180,8 +181,8 @@ func main() {
 								log.Println("runtimeDone event request id didn't match the current event id")
 							}
 						case logsapi.Report:
-							if logEvent.Record.RequestId == prevEventID {
-								extension.ProcessPlatformReport(client, metadataContainer, logEvent.Time, logEvent.Record.Metrics, config)
+							if logEvent.Record.RequestId == prevEvent.RequestID {
+								extension.ProcessPlatformReport(client, metadataContainer, prevEvent, logEvent, config)
 								log.Println("Received platform report for the previous function invocation")
 							} else {
 								log.Println("report event request id didn't match the previous event id")
@@ -218,7 +219,7 @@ func main() {
 			close(runtimeDoneSignal)
 			close(extension.AgentDoneSignal)
 
-			prevEventID = event.RequestID
+			prevEvent = event
 
 		}
 	}

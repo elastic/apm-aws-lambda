@@ -14,21 +14,21 @@ type Service struct {
 
 	// Agent holds information about the Elastic APM agent tracing this
 	// service's transactions.
-	Agent *Agent `json:"agent,omitempty"`
+	Agent Agent `json:"agent,omitempty"`
 
 	// Framework holds information about the service's framework, if any.
-	Framework *Framework `json:"framework,omitempty"`
+	Framework Framework `json:"framework,omitempty"`
 
 	// Language holds information about the programming language in which
 	// the service is written.
-	Language *Language `json:"language,omitempty"`
+	Language Language `json:"language,omitempty"`
 
 	// Runtime holds information about the programming language runtime
 	// running this service.
-	Runtime *Runtime `json:"runtime,omitempty"`
+	Runtime Runtime `json:"runtime,omitempty"`
 
 	// Node holds unique information about each service node
-	Node *ServiceNode `json:"node,omitempty"`
+	Node ServiceNode `json:"node,omitempty"`
 }
 
 // Agent holds information about the Elastic APM agent.
@@ -87,10 +87,10 @@ type System struct {
 	Platform string `json:"platform,omitempty"`
 
 	// Container describes the container running the service.
-	Container *Container `json:"container,omitempty"`
+	Container Container `json:"container,omitempty"`
 
 	// Kubernetes describes the kubernetes node and pod running the service.
-	Kubernetes *Kubernetes `json:"kubernetes,omitempty"`
+	Kubernetes Kubernetes `json:"kubernetes,omitempty"`
 }
 
 // Process represents an operating system process.
@@ -121,10 +121,10 @@ type Kubernetes struct {
 	Namespace string `json:"namespace,omitempty"`
 
 	// Node describes the Kubernetes node running the service's pod.
-	Node *KubernetesNode `json:"node,omitempty"`
+	Node KubernetesNode `json:"node,omitempty"`
 
 	// Pod describes the Kubernetes pod running the service.
-	Pod *KubernetesPod `json:"pod,omitempty"`
+	Pod KubernetesPod `json:"pod,omitempty"`
 }
 
 // KubernetesNode describes a Kubernetes node.
@@ -154,18 +154,18 @@ type Cloud struct {
 	AvailabilityZone string `json:"availability_zone,omitempty"`
 
 	// Instance holds information about the cloud instance (virtual machine).
-	Instance *CloudInstance `json:"instance,omitempty"`
+	Instance CloudInstance `json:"instance,omitempty"`
 
 	// Machine also holds information about the cloud instance (virtual machine).
-	Machine *CloudMachine `json:"machine,omitempty"`
+	Machine CloudMachine `json:"machine,omitempty"`
 
 	// Account holds information about the cloud account.
-	Account *CloudAccount `json:"account,omitempty"`
+	Account CloudAccount `json:"account,omitempty"`
 
 	// Project holds information about the cloud project.
-	Project *CloudProject `json:"project,omitempty"`
+	Project CloudProject `json:"project,omitempty"`
 
-	Service *CloudService `json:"service,omitempty"`
+	Service CloudService `json:"service,omitempty"`
 }
 
 // CloudInstance holds information about a cloud instance (virtual machine).
@@ -219,10 +219,10 @@ type User struct {
 }
 
 type Metadata struct {
-	Service *Service               `json:"service,omitempty"`
-	User    *User                  `json:"user,omitempty"`
+	Service Service                `json:"service,omitempty"`
+	User    User                   `json:"user,omitempty"`
 	Labels  map[string]interface{} `json:"labels,omitempty"`
-	Process *Process               `json:"process,omitempty"`
-	System  *System                `json:"system,omitempty"`
-	Cloud   *Cloud                 `json:"cloud,omitempty"`
+	Process Process                `json:"process,omitempty"`
+	System  System                 `json:"system,omitempty"`
+	Cloud   Cloud                  `json:"cloud,omitempty"`
 }

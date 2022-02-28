@@ -18,6 +18,7 @@ type MetadataContainer struct {
 
 func ProcessMetadata(data AgentData, container *MetadataContainer) {
 	uncompressedData, err := getUncompressedBytes(data.Data, data.ContentEncoding)
+	log.Println(string(uncompressedData))
 	if err != nil {
 		log.Printf("Error uncompressing agent data for metadata extraction : %v", err)
 	}
