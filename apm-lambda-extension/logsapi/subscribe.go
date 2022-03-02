@@ -48,12 +48,12 @@ type LogEventRecord struct {
 
 // Subscribes to the Logs API
 func subscribe(extensionID string, eventTypes []EventType) error {
-	extensions_api_address, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API")
+	extensionsAPIAddress, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API")
 	if !ok {
 		return errors.New("AWS_LAMBDA_RUNTIME_API is not set")
 	}
 
-	logsAPIBaseUrl := fmt.Sprintf("http://%s", extensions_api_address)
+	logsAPIBaseUrl := fmt.Sprintf("http://%s", extensionsAPIAddress)
 	logsAPIClient, err := NewClient(logsAPIBaseUrl)
 	if err != nil {
 		return err
@@ -66,10 +66,10 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 
 // Starts the HTTP server listening for log events and subscribes to the Logs API
 func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, out chan LogEvent) (err error) {
-	if checkAwsSamLocal() {
+	if checkAWSSamLocal() {
 		return errors.New("Detected sam local environment")
 	}
-	err = startHttpServer(out)
+	err = startHTTPServer(out)
 	if err != nil {
 		return
 	}
@@ -81,7 +81,7 @@ func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, 
 	return nil
 }
 
-func startHttpServer(out chan LogEvent) (err error) {
+func startHTTPServer(out chan LogEvent) (err error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleLogEventsRequest(out))
 
@@ -101,9 +101,9 @@ func startHttpServer(out chan LogEvent) (err error) {
 	return nil
 }
 
-func checkAwsSamLocal() bool {
-	env_aws_local, ok := os.LookupEnv("AWS_SAM_LOCAL")
-	if ok && env_aws_local == "true" {
+func checkAWSSamLocal() bool {
+	envAWSLocal, ok := os.LookupEnv("AWS_SAM_LOCAL")
+	if ok && envAWSLocal == "true" {
 		return true
 	}
 

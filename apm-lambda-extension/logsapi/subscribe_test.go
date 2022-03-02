@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSubscribeWithSamLocalEnv(t *testing.T) {
@@ -43,7 +44,7 @@ func TestSubscribeWithSamLocalEnv(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestSubscribeAwsRequest(t *testing.T) {
+func TestSubscribeAWSRequest(t *testing.T) {
 	listenerHost = "localhost"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -58,9 +59,9 @@ func TestSubscribeAwsRequest(t *testing.T) {
 
 	// Create aws runtime API server and handler
 	awsRuntimeApiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		request_bytes, _ := ioutil.ReadAll(r.Body)
+		requestBytes, _ := ioutil.ReadAll(r.Body)
 		req := SubscribeRequest{}
-		json.Unmarshal(request_bytes, &req)
+		json.Unmarshal(requestBytes, &req)
 		// Validate the subscription request
 		assert.Equal(t, req.BufferingCfg, expectedBufferingCfg)
 		assert.Equal(t, req.EventTypes, expectedTypes)
@@ -96,18 +97,17 @@ func TestSubscribeAwsRequest(t *testing.T) {
 	}
 
 	// Send the request to the logs listener
-	client := &http.Client{}
+	client := http.DefaultClient
 	go func() {
 		_, err = client.Do(req)
+		if err != nil {
+			t.Logf("Error fetching %s, [%v]", url, err)
+			t.Fail()
+		}
 	}()
 
-	if err != nil {
-		t.Logf("Error fetching %s, [%v]", url, err)
-		t.Fail()
-	} else {
-		event := <-out
-		assert.Equal(t, event.Record.RequestId, "6f7f0961f83442118a7af6fe80b88")
-	}
+	event := <-out
+	assert.Equal(t, event.Record.RequestId, "6f7f0961f83442118a7af6fe80b88")
 }
 
 func TestSubscribeWithBadLogsRequest(t *testing.T) {
@@ -142,7 +142,8 @@ func TestSubscribeWithBadLogsRequest(t *testing.T) {
 	}
 
 	// Send the request to the logs listener
-	client := &http.Client{}
-	resp, _ := client.Do(req)
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+	require.NoError(t, err)
 	assert.Equal(t, resp.StatusCode, 500)
 }
