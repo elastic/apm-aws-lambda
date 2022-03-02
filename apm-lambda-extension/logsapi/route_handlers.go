@@ -30,7 +30,6 @@ func handleLogEventsRequest(out chan LogEvent) func(w http.ResponseWriter, r *ht
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
-		defer r.Body.Close()
 		if err != nil {
 			log.Printf("Error reading body of Logs API request: %+v", err)
 			return
