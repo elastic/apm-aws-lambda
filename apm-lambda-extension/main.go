@@ -135,19 +135,19 @@ func main() {
 			// Receive agent data as it comes in and post it to the APM server.
 			// Stop checking for, and sending agent data when the function invocation
 			// has completed, signaled via a channel.
+			backgroundDataSendWg.Add(1)
 			go func() {
+				defer backgroundDataSendWg.Done()
 				for {
 					select {
 					case <-funcDone:
 						log.Println("funcDone signal received, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
-						backgroundDataSendWg.Add(1)
 						err := extension.PostToApmServer(client, agentData, config)
 						if err != nil {
 							log.Printf("Error sending to APM server, skipping: %v", err)
 						}
-						backgroundDataSendWg.Done()
 					}
 				}
 			}()
@@ -194,13 +194,13 @@ func main() {
 				log.Println("Time expired waiting for agent signal or runtimeDone event")
 			}
 
+			close(funcDone)
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
 				// Flush APM data now that the function invocation has completed
 				extension.FlushAPMData(client, agentDataChannel, config)
 			}
 
-			close(funcDone)
 			close(runtimeDoneSignal)
 			close(extension.AgentDoneSignal)
 		}
