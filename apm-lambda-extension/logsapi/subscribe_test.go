@@ -130,7 +130,7 @@ func TestSubscribeWithBadLogsRequest(t *testing.T) {
 	defer logsAPIServer.Close()
 
 	// Create a request to send to the logs listener
-	logEvent := `{"type": "invalid"}`
+	logEvent := `{"invalid": "json"}`
 	body := []byte(`[` + logEvent + `]`)
 	url := "http://" + logsAPIListener.Addr().String()
 	req, err := http.NewRequest("GET", url, bytes.NewReader(body))
