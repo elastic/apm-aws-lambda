@@ -118,7 +118,14 @@ You'll then need to configure your function to use that layer. To add a layer
 4. Enter the Version ARN of the APM Lambda Extension layer in the _Specify an ARN_ text input
 5. Click the _Add_ button
 
-The Node.js agent will wrap your Lambda function handler automatically. You can also use the following syntax to manually wrap the handler.
+Finally, to have the the Node.js automatically wrap your Lambda function handler, just add the following environment variable.
+
+[source]
+---
+NODE_OPTIONS=-r elastic-apm-node/start
+---
+
+You can also use the following syntax to manually wrap the handler.
 
 [source,js]
 ----
