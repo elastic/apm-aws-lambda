@@ -90,11 +90,12 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 type MockEventType string
 
 const (
-	InvokeHang                 MockEventType = "Hang"
-	InvokeStandard             MockEventType = "Standard"
-	InvokeStandardFlush        MockEventType = "Flush"
-	InvokeMultipleTransactions MockEventType = "MultipleTransactions"
-	Shutdown                   MockEventType = "Shutdown"
+	InvokeHang                         MockEventType = "Hang"
+	InvokeStandard                     MockEventType = "Standard"
+	InvokeStandardFlush                MockEventType = "Flush"
+	InvokeWaitgroupsRace               MockEventType = "InvokeWaitgroupsRace"
+	InvokeMultipleTransactionsOverload MockEventType = "MultipleTransactionsOverload"
+	Shutdown                           MockEventType = "Shutdown"
 )
 
 type APMServerBehavior string
@@ -126,13 +127,19 @@ func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events?flushed=true", bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		client.Do(reqData)
-	case InvokeMultipleTransactions:
+	case InvokeWaitgroupsRace:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData0, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		reqData1, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		go client.Do(reqData0)
 		go client.Do(reqData1)
 		time.Sleep(650 * time.Microsecond)
+	case InvokeMultipleTransactionsOverload:
+		for i := 0; i < 200; i++ {
+			time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
+			reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
+			client.Do(reqData)
+		}
 	}
 	sendLogEvent(currId, "platform.runtimeDone")
 }
@@ -257,15 +264,13 @@ func TestFullChannel(t *testing.T) {
 
 	var eventsChain []MockEvent
 	for i := 0; i < 200; i++ {
-		eventsChain = append(eventsChain, MockEvent{Type: InvokeStandard, APMServerBehavior: Crashes, ExecutionDuration: 0.1, Timeout: 5})
+		eventsChain = append(eventsChain, MockEvent{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: Hangs, ExecutionDuration: 0.01, Timeout: 5})
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	main()
 }
 
 // Error parsing the data
-
-// Test full channel
 
 func TestFlush(t *testing.T) {
 	http.DefaultServeMux = new(http.ServeMux)
@@ -295,7 +300,7 @@ func TestWaitGroup(t *testing.T) {
 	defer APMServer.Close()
 
 	eventsChain := []MockEvent{
-		{Type: InvokeMultipleTransactions, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.1, Timeout: 500},
+		{Type: InvokeWaitgroupsRace, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.1, Timeout: 500},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	main()
