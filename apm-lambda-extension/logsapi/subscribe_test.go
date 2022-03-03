@@ -48,7 +48,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 	listenerHost = "localhost"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	out := make(chan LogEvent)
+	out := make(chan LogEvent, 1)
 	// For subscription request
 	expectedTypes := []EventType{Platform}
 	expectedBufferingCfg := BufferingCfg{
@@ -98,14 +98,11 @@ func TestSubscribeAWSRequest(t *testing.T) {
 
 	// Send the request to the logs listener
 	client := http.DefaultClient
-	go func() {
-		_, err = client.Do(req)
-		if err != nil {
-			t.Logf("Error fetching %s, [%v]", url, err)
-			t.Fail()
-		}
-	}()
-
+	_, err = client.Do(req)
+	if err != nil {
+		t.Logf("Error fetching %s, [%v]", url, err)
+		t.Fail()
+	}
 	event := <-out
 	assert.Equal(t, event.Record.RequestId, "6f7f0961f83442118a7af6fe80b88")
 }
