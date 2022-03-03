@@ -81,7 +81,7 @@ func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, 
 	return nil
 }
 
-func startHTTPServer(out chan LogEvent) (err error) {
+func startHTTPServer(out chan LogEvent) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleLogEventsRequest(out))
 
@@ -89,9 +89,9 @@ func startHTTPServer(out chan LogEvent) (err error) {
 		Handler: mux,
 	}
 
-	logsAPIListener, err = net.Listen("tcp", listenerHost+":0")
+	logsAPIListener, err := net.Listen("tcp", listenerHost+":0")
 	if err != nil {
-		return
+		return err
 	}
 
 	go func() {
