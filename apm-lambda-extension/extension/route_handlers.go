@@ -39,6 +39,7 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 		req, err := http.NewRequest(r.Method, apmServerUrl, nil)
 		if err != nil {
 			log.Printf("could not create request object for %s:%s: %v", r.Method, apmServerUrl, err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
