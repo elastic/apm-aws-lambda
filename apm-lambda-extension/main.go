@@ -120,6 +120,7 @@ func main() {
 			// This is usually due to inactivity.
 			if event.EventType == extension.Shutdown {
 				extension.ProcessShutdown()
+				cancel()
 				return
 			}
 
