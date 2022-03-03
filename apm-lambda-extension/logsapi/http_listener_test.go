@@ -20,6 +20,7 @@ package logsapi
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,10 +28,11 @@ import (
 func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
 	jsonBytes := []byte(`
 	{
-		"time": "2021-10-20T08:13:03.278Z",
+		"time": "2021-02-04T20:00:05.123Z",
 		"type": "platform.runtimeDone",
 		"record": {
-			"requestId": "61c0fdeb-f013-4f2a-b627-56278f5666b8"
+		   "requestId":"6f7f0961f83442118a7af6fe80b88",
+		   "status": "success"
 		}
 	}
 	`)
@@ -41,22 +43,20 @@ func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
 		t.Fail()
 	}
 
-	err = le.unmarshalRecord()
-	if err != nil {
-		t.Fail()
-	}
-
-	record := LogEventRecord{RequestId: "61c0fdeb-f013-4f2a-b627-56278f5666b8"}
-	assert.Equal(t, record, le.Record)
+	timeValue, _ := time.Parse(time.RFC3339, "2021-02-04T20:00:05.123Z")
+	assert.Equal(t, timeValue, le.Time)
+	assert.Equal(t, RuntimeDone, le.Type)
+	assert.Equal(t, "6f7f0961f83442118a7af6fe80b88", le.Record.RequestId)
+	assert.Equal(t, "success", le.Record.Status)
 }
 
-func Test_unmarshalFaultRecordString(t *testing.T) {
+func Test_unmarshalRuntimeDoneRecordString(t *testing.T) {
 	jsonBytes := []byte(`
-	{
-		"time": "2021-10-20T08:13:03.278Z",
-		"type": "platform.fault",
-		"record": "Unknown application error occurred"
-	}
+		{
+			"time": "2021-02-04T20:00:05.123Z",
+			"type": "platform.runtimeDone",
+			"record": "Unknown application error occurred"
+		}
 	`)
 
 	var le LogEvent
@@ -65,21 +65,19 @@ func Test_unmarshalFaultRecordString(t *testing.T) {
 		t.Fail()
 	}
 
-	err = le.unmarshalRecord()
-	if err != nil {
-		t.Fail()
-	}
-
-	assert.Equal(t, "\"Unknown application error occurred\"", string(le.RawRecord))
+	timeValue, _ := time.Parse(time.RFC3339, "2021-02-04T20:00:05.123Z")
+	assert.Equal(t, timeValue, le.Time)
+	assert.Equal(t, RuntimeDone, le.Type)
+	assert.Equal(t, "Unknown application error occurred", le.StringRecord)
 }
 
-func Test_unmarshalRecordError(t *testing.T) {
+func Test_unmarshalRuntimeDoneFaultRecordString(t *testing.T) {
 	jsonBytes := []byte(`
-	{
-		"time": "2021-10-20T08:13:03.278Z",
-		"type": "platform.runtimeDone",
-		"record": "Unknown application error occurred"
-	}
+		{
+			"time": "2021-02-04T20:00:05.123Z",
+			"type": "platform.fault",
+			"record": "Unknown application error occurred"
+		}
 	`)
 
 	var le LogEvent
@@ -88,6 +86,8 @@ func Test_unmarshalRecordError(t *testing.T) {
 		t.Fail()
 	}
 
-	err = le.unmarshalRecord()
-	assert.Error(t, err)
+	timeValue, _ := time.Parse(time.RFC3339, "2021-02-04T20:00:05.123Z")
+	assert.Equal(t, timeValue, le.Time)
+	assert.Equal(t, Fault, le.Type)
+	assert.Equal(t, "Unknown application error occurred", le.StringRecord)
 }

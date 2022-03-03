@@ -19,50 +19,58 @@ package logsapi
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
-
-	"github.com/pkg/errors"
+	"time"
 )
 
 func handleLogEventsRequest(out chan LogEvent) func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Printf("Error reading body of Logs API request: %+v", err)
-			return
-		}
-
 		var logEvents []LogEvent
-		err = json.Unmarshal(body, &logEvents)
-		if err != nil {
-			log.Printf("Error unmarshalling log event batch: %+v", err)
+		if err := json.NewDecoder(r.Body).Decode(&logEvents); err != nil {
+			log.Printf("Error unmarshalling log events: %+v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		for idx := range logEvents {
-			err = logEvents[idx].unmarshalRecord()
-			if err != nil {
-				log.Printf("Error unmarshalling log event: %+v", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				continue
-			}
 			out <- logEvents[idx]
 		}
 	}
 }
 
-func (le *LogEvent) unmarshalRecord() error {
-	if SubEventType(le.Type) != Fault {
-		record := LogEventRecord{}
-		err := json.Unmarshal([]byte(le.RawRecord), &record)
-		if err != nil {
-			return errors.New("Could not unmarshal log event raw record into record")
+func (le *LogEvent) UnmarshalJSON(data []byte) error {
+	var temp map[string]interface{}
+	err := json.Unmarshal(data, &temp)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range temp {
+		switch k {
+		case "time":
+			le.Time, err = time.Parse(time.RFC3339, v.(string))
+			if err != nil {
+				return err
+			}
+		case "type":
+			le.Type = SubEventType(v.(string))
+		case "record":
+			rec, ok := v.(map[string]interface{})
+			if ok {
+				for m, n := range rec {
+					switch m {
+					case "requestId":
+						le.Record.RequestId = n.(string)
+					case "status":
+						le.Record.Status = n.(string)
+					}
+				}
+			} else {
+				le.StringRecord = v.(string)
+			}
 		}
-		le.Record = record
 	}
 	return nil
 }

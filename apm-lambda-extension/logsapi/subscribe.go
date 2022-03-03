@@ -19,7 +19,6 @@ package logsapi
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -35,10 +34,10 @@ var logsAPIServer *http.Server
 var logsAPIListener net.Listener
 
 type LogEvent struct {
-	Time      time.Time       `json:"time"`
-	Type      string          `json:"type"`
-	RawRecord json.RawMessage `json:"record"`
-	Record    LogEventRecord
+	Time         time.Time    `json:"time"`
+	Type         SubEventType `json:"type"`
+	StringRecord string
+	Record       LogEventRecord
 }
 
 type LogEventRecord struct {
