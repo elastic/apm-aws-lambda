@@ -22,7 +22,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 )
@@ -110,13 +109,8 @@ func (e *Client) Register(ctx context.Context, filename string) (*RegisterRespon
 	if httpRes.StatusCode != 200 {
 		return nil, fmt.Errorf("extension register request failed with status %s", httpRes.Status)
 	}
-	body, err := ioutil.ReadAll(httpRes.Body)
-	if err != nil {
-		return nil, err
-	}
 	res := RegisterResponse{}
-	err = json.Unmarshal(body, &res)
-	if err != nil {
+	if err := json.NewDecoder(httpRes.Body).Decode(&res); err != nil {
 		return nil, err
 	}
 	e.ExtensionID = httpRes.Header.Get(extensionIdentiferHeader)
@@ -143,13 +137,8 @@ func (e *Client) NextEvent(ctx context.Context) (*NextEventResponse, error) {
 	if httpRes.StatusCode != 200 {
 		return nil, fmt.Errorf("next event request failed with status %s", httpRes.Status)
 	}
-	body, err := ioutil.ReadAll(httpRes.Body)
-	if err != nil {
-		return nil, err
-	}
 	res := NextEventResponse{}
-	err = json.Unmarshal(body, &res)
-	if err != nil {
+	if err := json.NewDecoder(httpRes.Body).Decode(&res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -175,13 +164,8 @@ func (e *Client) InitError(ctx context.Context, errorType string) (*StatusRespon
 	if httpRes.StatusCode != 200 {
 		return nil, fmt.Errorf("initialization error request failed with status %s", httpRes.Status)
 	}
-	body, err := ioutil.ReadAll(httpRes.Body)
-	if err != nil {
-		return nil, err
-	}
 	res := StatusResponse{}
-	err = json.Unmarshal(body, &res)
-	if err != nil {
+	if err := json.NewDecoder(httpRes.Body).Decode(&res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -207,13 +191,8 @@ func (e *Client) ExitError(ctx context.Context, errorType string) (*StatusRespon
 	if httpRes.StatusCode != 200 {
 		return nil, fmt.Errorf("exit error request failed with status %s", httpRes.Status)
 	}
-	body, err := ioutil.ReadAll(httpRes.Body)
-	if err != nil {
-		return nil, err
-	}
 	res := StatusResponse{}
-	err = json.Unmarshal(body, &res)
-	if err != nil {
+	if err := json.NewDecoder(httpRes.Body).Decode(&res); err != nil {
 		return nil, err
 	}
 	return &res, nil
