@@ -58,20 +58,9 @@ func (le *LogEvent) UnmarshalJSON(data []byte) error {
 	le.Time = b.Time
 	le.Type = b.Type
 
-	switch b.Type {
-	case "platform.report":
-		if err := json.Unmarshal(b.Record, &(le.Record)); err != nil {
-			return err
-		}
-	case "platform.fault":
+	if err := json.Unmarshal(b.Record, &(le.Record)); err != nil {
 		if err := json.Unmarshal(b.Record, &(le.StringRecord)); err != nil {
 			return err
-		}
-	case "platform.runtimeDone":
-		if err := json.Unmarshal(b.Record, &(le.Record)); err != nil {
-			if err := json.Unmarshal(b.Record, &(le.StringRecord)); err != nil {
-				return err
-			}
 		}
 	}
 	return nil
