@@ -46,34 +46,31 @@ func handleLogEventsRequest(out chan LogEvent) func(w http.ResponseWriter, r *ht
 }
 
 func (le *LogEvent) UnmarshalJSON(data []byte) error {
-	var temp map[string]interface{}
-	err := json.Unmarshal(data, &temp)
-	if err != nil {
+	b := struct {
+		Time   time.Time       `json:"time"`
+		Type   SubEventType    `json:"type"`
+		Record json.RawMessage `json:"record"`
+	}{}
+
+	if err := json.Unmarshal(data, &b); err != nil {
 		return err
 	}
+	le.Time = b.Time
+	le.Type = b.Type
 
-	for k, v := range temp {
-		switch k {
-		case "time":
-			le.Time, err = time.Parse(time.RFC3339, v.(string))
-			if err != nil {
+	switch b.Type {
+	case "platform.report":
+		if err := json.Unmarshal(b.Record, &(le.Record)); err != nil {
+			return err
+		}
+	case "platform.fault":
+		if err := json.Unmarshal(b.Record, &(le.StringRecord)); err != nil {
+			return err
+		}
+	case "platform.runtimeDone":
+		if err := json.Unmarshal(b.Record, &(le.Record)); err != nil {
+			if err := json.Unmarshal(b.Record, &(le.StringRecord)); err != nil {
 				return err
-			}
-		case "type":
-			le.Type = SubEventType(v.(string))
-		case "record":
-			rec, ok := v.(map[string]interface{})
-			if ok {
-				for m, n := range rec {
-					switch m {
-					case "requestId":
-						le.Record.RequestId = n.(string)
-					case "status":
-						le.Record.Status = n.(string)
-					}
-				}
-			} else {
-				le.StringRecord = v.(string)
 			}
 		}
 	}
