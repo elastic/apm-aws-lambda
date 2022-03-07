@@ -98,8 +98,13 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 				Data:            rawBytes,
 				ContentEncoding: r.Header.Get("Content-Encoding"),
 			}
-			log.Println("Adding agent data to buffer to be sent to apm server")
-			agentDataChan <- agentData
+
+			select {
+			case agentDataChan <- agentData:
+				log.Println("Adding agent data to buffer to be sent to apm server")
+			default:
+				log.Println("Channel full : dropping event")
+			}
 		}
 
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {

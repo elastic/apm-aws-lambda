@@ -59,6 +59,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 	}
 
 	req, err := http.NewRequest("POST", config.apmServerUrl+endpointURI, buf)
+	req.Close = true
 	if err != nil {
 		return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
 	}

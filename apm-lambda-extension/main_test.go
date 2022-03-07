@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -22,9 +23,10 @@ type RegistrationResponse struct {
 	Handler         string `json:"handler"`
 }
 
-func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.Server) {
+func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.Server, chan struct{}) {
 
 	// Mock APM Server
+	hangChan := make(chan struct{})
 	APMServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/intake/v2/events" {
 			decompressedBytes, err := e2e_testing.GetDecompressedBytesFromRequest(r)
@@ -34,8 +36,11 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 			switch APMServerBehavior(decompressedBytes) {
 			case TimelyResponse:
 				w.WriteHeader(http.StatusAccepted)
+			case SlowResponse:
+				time.Sleep(2 * time.Second)
+				w.WriteHeader(http.StatusAccepted)
 			case Hangs:
-				select {}
+				<-hangChan
 			case Crashes:
 				panic("Server crashed")
 			default:
@@ -71,6 +76,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 					Timeout:           0,
 				}
 				w.Write(sendNextEventInfo(currId, finalShutDown))
+				go processMockEvent(currId, finalShutDown, APMServer)
 			}
 		// Logs API subscription request
 		case "/2020-08-15/logs":
@@ -84,7 +90,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 	os.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL)
 	extensionClient = extension.NewClient(os.Getenv("AWS_LAMBDA_RUNTIME_API"))
 
-	return lambdaServer, APMServer
+	return lambdaServer, APMServer, hangChan
 }
 
 type MockEventType string
@@ -102,6 +108,7 @@ type APMServerBehavior string
 
 const (
 	TimelyResponse APMServerBehavior = "TimelyResponse"
+	SlowResponse   APMServerBehavior = "SlowResponse"
 	Hangs          APMServerBehavior = "Hangs"
 	Crashes        APMServerBehavior = "Crashes"
 )
@@ -122,7 +129,8 @@ func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server
 	case InvokeStandard:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		req, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
-		client.Do(req)
+		res, _ := client.Do(req)
+		log.Println(res.StatusCode)
 	case InvokeStandardFlush:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events?flushed=true", bytes.NewBuffer([]byte(event.APMServerBehavior)))
@@ -135,11 +143,20 @@ func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server
 		go client.Do(reqData1)
 		time.Sleep(650 * time.Microsecond)
 	case InvokeMultipleTransactionsOverload:
+		wg := sync.WaitGroup{}
 		for i := 0; i < 200; i++ {
-			time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
-			reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
-			client.Do(reqData)
+			go func() {
+				wg.Add(1)
+				time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
+				reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
+				client.Do(reqData)
+				wg.Done()
+			}()
 		}
+		wg.Wait()
+	case Shutdown:
+		reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
+		client.Do(reqData)
 	}
 	sendLogEvent(currId, "platform.runtimeDone")
 }
@@ -190,7 +207,7 @@ func TestStandardEventsChain(t *testing.T) {
 
 	eventsChannel := make(chan MockEvent, 100)
 	defer close(eventsChannel)
-	lambdaServer, APMServer := initMockServers(eventsChannel)
+	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
 
@@ -207,7 +224,7 @@ func TestAPMServerDown(t *testing.T) {
 
 	eventsChannel := make(chan MockEvent, 100)
 	defer close(eventsChannel)
-	lambdaServer, APMServer := initMockServers(eventsChannel)
+	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	APMServer.Close()
 
@@ -224,7 +241,7 @@ func TestAPMServerHangs(t *testing.T) {
 
 	eventsChannel := make(chan MockEvent, 100)
 	defer close(eventsChannel)
-	lambdaServer, APMServer := initMockServers(eventsChannel)
+	lambdaServer, APMServer, hangChan := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
 
@@ -232,7 +249,10 @@ func TestAPMServerHangs(t *testing.T) {
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
+	start := time.Now()
 	main()
+	log.Printf("Success : test took %s", time.Since(start))
+	hangChan <- struct{}{}
 }
 
 func TestAPMServerCrashesDuringExecution(t *testing.T) {
@@ -241,7 +261,7 @@ func TestAPMServerCrashesDuringExecution(t *testing.T) {
 
 	eventsChannel := make(chan MockEvent, 100)
 	defer close(eventsChannel)
-	lambdaServer, APMServer := initMockServers(eventsChannel)
+	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
 
@@ -258,13 +278,29 @@ func TestFullChannel(t *testing.T) {
 
 	eventsChannel := make(chan MockEvent, 1000)
 	defer close(eventsChannel)
-	lambdaServer, APMServer := initMockServers(eventsChannel)
+	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
 
-	var eventsChain []MockEvent
-	for i := 0; i < 200; i++ {
-		eventsChain = append(eventsChain, MockEvent{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: Hangs, ExecutionDuration: 0.01, Timeout: 5})
+	eventsChain := []MockEvent{
+		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.01, Timeout: 5},
+	}
+	eventQueueGenerator(eventsChain, eventsChannel)
+	main()
+}
+
+func TestFullChannelSlowAPMServer(t *testing.T) {
+	http.DefaultServeMux = new(http.ServeMux)
+	log.Println("AgentData channel is full, and APM server is slow")
+	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
+	eventsChannel := make(chan MockEvent, 1000)
+	defer close(eventsChannel)
+	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
+	defer lambdaServer.Close()
+	defer APMServer.Close()
+
+	eventsChain := []MockEvent{
+		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: SlowResponse, ExecutionDuration: 0.01, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	main()
@@ -278,7 +314,7 @@ func TestFlush(t *testing.T) {
 
 	eventsChannel := make(chan MockEvent, 100)
 	//defer close(eventsChannel)
-	lambdaServer, APMServer := initMockServers(eventsChannel)
+	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
 
@@ -295,7 +331,7 @@ func TestWaitGroup(t *testing.T) {
 
 	eventsChannel := make(chan MockEvent, 100)
 	defer close(eventsChannel)
-	lambdaServer, APMServer := initMockServers(eventsChannel)
+	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
 

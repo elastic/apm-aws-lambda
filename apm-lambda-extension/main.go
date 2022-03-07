@@ -69,6 +69,7 @@ func main() {
 
 	// Create a client to use for sending data to the apm server
 	client := &http.Client{
+		Timeout:   time.Duration(config.DataForwarderTimeoutSeconds) * time.Second,
 		Transport: http.DefaultTransport.(*http.Transport).Clone(),
 	}
 
@@ -121,16 +122,16 @@ func main() {
 			// Make a channel for signaling that the function invocation is complete
 			funcDone := make(chan struct{})
 
-			// Flush any APM data, in case waiting for the agentDone or runtimeDone signals
-			// timed out, the agent data wasn't available yet, and we got to the next event
-			extension.FlushAPMData(client, agentDataChannel, config)
-
 			// A shutdown event indicates the execution environment is shutting down.
 			// This is usually due to inactivity.
 			if event.EventType == extension.Shutdown {
 				extension.ProcessShutdown()
 				return
 			}
+
+			// Flush any APM data, in case waiting for the agentDone or runtimeDone signals
+			// timed out, the agent data wasn't available yet, and we got to the next non-shutdown event
+			extension.FlushAPMData(client, agentDataChannel, config)
 
 			// Receive agent data as it comes in and post it to the APM server.
 			// Stop checking for, and sending agent data when the function invocation
@@ -144,6 +145,7 @@ func main() {
 						log.Println("funcDone signal received, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
+						log.Println("DATA TO SEND TO APM RECEIVED")
 						err := extension.PostToApmServer(client, agentData, config)
 						if err != nil {
 							log.Printf("Error sending to APM server, skipping: %v", err)
