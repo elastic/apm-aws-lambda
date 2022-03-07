@@ -164,7 +164,7 @@ func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server
 func sendNextEventInfo(id string, event MockEvent) []byte {
 	nextEventInfo := extension.NextEventResponse{
 		EventType:          "INVOKE",
-		DeadlineMs:         time.Now().UnixMilli() + int64(event.Timeout*1000),
+		DeadlineMs:         time.Now().UnixNano()/int64(time.Millisecond) + int64(event.Timeout*1000),
 		RequestID:          id,
 		InvokedFunctionArn: "arn:aws:lambda:eu-central-1:627286350134:function:main_unit_test",
 		Tracing:            extension.Tracing{},
