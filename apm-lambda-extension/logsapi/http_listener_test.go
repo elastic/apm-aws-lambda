@@ -18,6 +18,7 @@
 package logsapi
 
 import (
+	"elastic/apm-lambda-extension/extension"
 	"encoding/json"
 	"os"
 	"testing"
@@ -26,6 +27,8 @@ import (
 )
 
 func TestListenOnAddressWithEnvVariable(t *testing.T) {
+	extension.Log = extension.InitLogger()
+
 	os.Setenv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS", "example:3456")
 
 	address := ListenOnAddress()
@@ -38,6 +41,8 @@ func TestListenOnAddressWithEnvVariable(t *testing.T) {
 }
 
 func TestListenOnAddressDefault(t *testing.T) {
+	extension.Log = extension.InitLogger()
+
 	os.Unsetenv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS")
 	address := ListenOnAddress()
 	t.Logf("%v", address)
@@ -49,6 +54,8 @@ func TestListenOnAddressDefault(t *testing.T) {
 }
 
 func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
+	extension.Log = extension.InitLogger()
+
 	jsonBytes := []byte(`
 	{
 		"time": "2021-10-20T08:13:03.278Z",
@@ -75,6 +82,8 @@ func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
 }
 
 func Test_unmarshalFaultRecordString(t *testing.T) {
+	extension.Log = extension.InitLogger()
+
 	jsonBytes := []byte(`
 	{
 		"time": "2021-10-20T08:13:03.278Z",
@@ -98,6 +107,8 @@ func Test_unmarshalFaultRecordString(t *testing.T) {
 }
 
 func Test_unmarshalRecordError(t *testing.T) {
+	extension.Log = extension.InitLogger()
+
 	jsonBytes := []byte(`
 	{
 		"time": "2021-10-20T08:13:03.278Z",

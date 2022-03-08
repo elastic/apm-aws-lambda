@@ -19,28 +19,27 @@ package extension
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 )
 
 func ProcessShutdown() {
-	log.Println("Received SHUTDOWN event")
-	log.Println("Exiting")
+	Log.Info("Received SHUTDOWN event")
+	Log.Info("Exiting")
 	agentDataServer.Close()
 }
 
 func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *extensionConfig) {
-	log.Println("Checking for agent data")
+	Log.Debug("Checking for agent data")
 	for {
 		select {
 		case agentData := <-dataChannel:
-			log.Println("Processing agent data")
+			Log.Debug("Processing agent data")
 			err := PostToApmServer(client, agentData, config)
 			if err != nil {
-				log.Printf("Error sending to APM server, skipping: %v", err)
+				Log.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		default:
-			log.Println("No agent data on buffer")
+			Log.Debug("No agent data on buffer")
 			return
 		}
 	}

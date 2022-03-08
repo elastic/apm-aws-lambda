@@ -31,6 +31,8 @@ import (
 )
 
 func TestInfoProxy(t *testing.T) {
+	Log = InitLogger()
+
 	headers := map[string]string{"Authorization": "test-value"}
 	wantResp := "{\"foo\": \"bar\"}"
 
@@ -85,6 +87,8 @@ func TestInfoProxy(t *testing.T) {
 }
 
 func TestInfoProxyErrorStatusCode(t *testing.T) {
+	Log = InitLogger()
+
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(401)
@@ -125,6 +129,8 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 }
 
 func Test_handleInfoRequest(t *testing.T) {
+	Log = InitLogger()
+
 	headers := map[string]string{"Authorization": "test-value"}
 	// Copied from https://github.com/elastic/apm-server/blob/master/testdata/intake-v2/transactions.ndjson.
 	agentRequestBody := `{"metadata": {"service": {"name": "1234_service-12a3","node": {"configured_name": "node-123"},"version": "5.1.3","environment": "staging","language": {"name": "ecmascript","version": "8"},"runtime": {"name": "node","version": "8.0.0"},"framework": {"name": "Express","version": "1.2.3"},"agent": {"name": "elastic-node","version": "3.14.0"}},"user": {"id": "123user", "username": "bar", "email": "bar@user.com"}, "labels": {"tag0": null, "tag1": "one", "tag2": 2}, "process": {"pid": 1234,"ppid": 6789,"title": "node","argv": ["node","server.js"]},"system": {"hostname": "prod1.example.com","architecture": "x64","platform": "darwin", "container": {"id": "container-id"}, "kubernetes": {"namespace": "namespace1", "pod": {"uid": "pod-uid", "name": "pod-name"}, "node": {"name": "node-name"}}},"cloud":{"account":{"id":"account_id","name":"account_name"},"availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"project":{"id":"project_id","name":"project_name"},"provider":"cloud_provider","region":"cloud_region","service":{"name":"lambda"}}}}
@@ -169,6 +175,8 @@ func Test_handleInfoRequest(t *testing.T) {
 }
 
 func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
+	Log = InitLogger()
+
 	body := []byte(`{"metadata": {}`)
 
 	AgentDoneSignal = make(chan struct{})
@@ -221,6 +229,8 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 }
 
 func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
+	Log = InitLogger()
+
 	body := []byte(`{"metadata": {}`)
 
 	// Create apm server and handler
@@ -260,6 +270,8 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 }
 
 func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
+	Log = InitLogger()
+
 	body := []byte(``)
 
 	AgentDoneSignal = make(chan struct{})

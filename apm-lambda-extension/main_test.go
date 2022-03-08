@@ -7,7 +7,6 @@ import (
 	"elastic/apm-lambda-extension/logsapi"
 	json "encoding/json"
 	"github.com/google/uuid"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -129,8 +128,7 @@ func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server
 	case InvokeStandard:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		req, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
-		res, _ := client.Do(req)
-		log.Println(res.StatusCode)
+		client.Do(req)
 	case InvokeStandardFlush:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events?flushed=true", bytes.NewBuffer([]byte(event.APMServerBehavior)))
@@ -202,8 +200,8 @@ func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
 // TESTS
 
 func TestStandardEventsChain(t *testing.T) {
+	extension.Log = extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("Standard Test")
 
 	eventsChannel := make(chan MockEvent, 100)
 	defer close(eventsChannel)
@@ -219,8 +217,8 @@ func TestStandardEventsChain(t *testing.T) {
 }
 
 func TestAPMServerDown(t *testing.T) {
+	extension.Log = extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("APM Server Down")
 
 	eventsChannel := make(chan MockEvent, 100)
 	defer close(eventsChannel)
@@ -236,8 +234,8 @@ func TestAPMServerDown(t *testing.T) {
 }
 
 func TestAPMServerHangs(t *testing.T) {
+	extension.Log = extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("APM Server Hangs")
 
 	eventsChannel := make(chan MockEvent, 100)
 	defer close(eventsChannel)
@@ -249,15 +247,13 @@ func TestAPMServerHangs(t *testing.T) {
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	start := time.Now()
 	main()
-	log.Printf("Success : test took %s", time.Since(start))
 	hangChan <- struct{}{}
 }
 
 func TestAPMServerCrashesDuringExecution(t *testing.T) {
+	extension.Log = extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("APM Server Crashes during execution")
 
 	eventsChannel := make(chan MockEvent, 100)
 	defer close(eventsChannel)
@@ -273,8 +269,8 @@ func TestAPMServerCrashesDuringExecution(t *testing.T) {
 }
 
 func TestFullChannel(t *testing.T) {
+	extension.Log = extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("AgentData channel is full")
 
 	eventsChannel := make(chan MockEvent, 1000)
 	defer close(eventsChannel)
@@ -290,8 +286,9 @@ func TestFullChannel(t *testing.T) {
 }
 
 func TestFullChannelSlowAPMServer(t *testing.T) {
+	extension.Log = extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("AgentData channel is full, and APM server is slow")
+
 	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
 	eventsChannel := make(chan MockEvent, 1000)
 	defer close(eventsChannel)
@@ -309,8 +306,8 @@ func TestFullChannelSlowAPMServer(t *testing.T) {
 // Error parsing the data
 
 func TestFlush(t *testing.T) {
+	extension.Log = extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("Flush Test")
 
 	eventsChannel := make(chan MockEvent, 100)
 	//defer close(eventsChannel)
@@ -326,8 +323,8 @@ func TestFlush(t *testing.T) {
 }
 
 func TestWaitGroup(t *testing.T) {
+	extension.Log = extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("Multiple transactions")
 
 	eventsChannel := make(chan MockEvent, 100)
 	defer close(eventsChannel)

@@ -6,10 +6,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
+	"elastic/apm-lambda-extension/extension"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -25,11 +25,9 @@ func GetEnvVarValueOrSetDefault(envVarName string, defaultVal string) string {
 	return val
 }
 
-func RunCommandInDir(command string, args []string, dir string, printOutput bool) {
+func RunCommandInDir(command string, args []string, dir string) {
 	e := exec.Command(command, args...)
-	if printOutput {
-		log.Println(e.String())
-	}
+	extension.Log.Tracef(e.String())
 	e.Dir = dir
 	stdout, _ := e.StdoutPipe()
 	stderr, _ := e.StderrPipe()
@@ -37,16 +35,12 @@ func RunCommandInDir(command string, args []string, dir string, printOutput bool
 	scannerOut := bufio.NewScanner(stdout)
 	for scannerOut.Scan() {
 		m := scannerOut.Text()
-		if printOutput {
-			log.Println(m)
-		}
+		extension.Log.Tracef(m)
 	}
 	scannerErr := bufio.NewScanner(stderr)
 	for scannerErr.Scan() {
 		m := scannerErr.Text()
-		if printOutput {
-			log.Println(m)
-		}
+		extension.Log.Tracef(m)
 	}
 	e.Wait()
 
@@ -62,7 +56,7 @@ func FolderExists(path string) bool {
 
 func ProcessError(err error) {
 	if err != nil {
-		log.Panic(err)
+		extension.Log.Error(err)
 	}
 }
 

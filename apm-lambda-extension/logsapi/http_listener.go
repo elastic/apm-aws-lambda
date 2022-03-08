@@ -19,9 +19,9 @@ package logsapi
 
 import (
 	"context"
+	"elastic/apm-lambda-extension/extension"
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -75,13 +75,13 @@ func (s *LogsAPIHttpListener) Start(address string) (bool, error) {
 	s.httpServer = &http.Server{Addr: address}
 	http.HandleFunc("/", s.http_handler)
 	go func() {
-		log.Printf("Server listening for logs data from AWS Logs API on %s", address)
+		extension.Log.Infof("Server listening for logs data from AWS Logs API on %s", address)
 		err := s.httpServer.ListenAndServe()
 		if err != http.ErrServerClosed {
-			log.Printf("Unexpected stop on Logs API Http Server: %v", err)
+			extension.Log.Errorf("Unexpected stop on Logs API Http Server: %v", err)
 			s.Shutdown()
 		} else {
-			log.Printf("Logs API Http Server closed %v", err)
+			extension.Log.Errorf("Logs API Http Server closed %v", err)
 		}
 	}()
 	return true, nil
@@ -95,20 +95,20 @@ func (s *LogsAPIHttpListener) Start(address string) (bool, error) {
 func (h *LogsAPIHttpListener) http_handler(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("Error reading body of Logs API request: %+v", err)
+		extension.Log.Errorf("Error reading body of Logs API request: %+v", err)
 		return
 	}
 
 	var logEvents []LogEvent
 	err = json.Unmarshal(body, &logEvents)
 	if err != nil {
-		log.Println("error unmarshaling log event:", err)
+		extension.Log.Errorf("error unmarshaling log event: %v", err)
 	}
 
 	for idx := range logEvents {
 		err = logEvents[idx].unmarshalRecord()
 		if err != nil {
-			log.Printf("Error unmarshalling log event: %+v", err)
+			extension.Log.Errorf("Error unmarshalling log event: %+v", err)
 			continue
 		}
 		h.logChannel <- logEvents[idx]
@@ -133,7 +133,7 @@ func (s *LogsAPIHttpListener) Shutdown() {
 		defer cancel()
 		err := s.httpServer.Shutdown(ctx)
 		if err != nil {
-			log.Printf("Failed to shutdown Logs API http server gracefully %s", err)
+			extension.Log.Errorf("Failed to shutdown Logs API http server gracefully %s", err)
 		} else {
 			s.httpServer = nil
 		}

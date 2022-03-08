@@ -19,10 +19,10 @@ package logsapi
 
 import (
 	"bytes"
+	"elastic/apm-lambda-extension/extension"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -153,7 +153,7 @@ func (c *Client) Subscribe(types []EventType, bufferingCfg BufferingCfg, destina
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusAccepted {
-		log.Println("Logs API is not supported. Is this extension running in a local sandbox?")
+		extension.Log.Warn("Logs API is not supported. Is this extension running in a local sandbox?")
 		return nil, errors.Errorf("Logs API is not supported in this environment")
 	} else if resp.StatusCode != http.StatusOK {
 		body, err := ioutil.ReadAll(resp.Body)
