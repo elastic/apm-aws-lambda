@@ -64,7 +64,6 @@ publish: validate-layer-name validate-aws-default-region
 		--layer-name "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
 		--description "AWS Lambda Extension Layer for Elastic APM $(ARCHITECTURE)" \
 		--license "Apache-2.0" \
-		--compatible-architectures "$(ARCHITECTURE)" \
 		--zip-file "fileb://./bin/extension.zip"
 
 # Grant public access to the given LAYER in the given AWS region
