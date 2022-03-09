@@ -125,20 +125,6 @@ Finally, to have the Node.js agent automatically wrap your Lambda function handl
 NODE_OPTIONS=-r elastic-apm-node/start
 ---
 
-You can also use the following syntax to manually wrap the handler.
-
-[source,js]
-----
-const apm = require('elastic-apm-node').start({/*...*/})
-exports.handler = apm.lambda(async function handler (event, context) {
-    const response = {
-      statusCode: 200,
-      body: "hello new async."
-    };
-    return response
-})
-----
-
 See the {apm-node-ref}/lambda.html[Node.js agent setup guide] for detailed instructions on setting up the Node.js agent for AWS Lambda.
 
 [discrete]
