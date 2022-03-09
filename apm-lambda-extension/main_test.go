@@ -18,17 +18,11 @@ import (
 	"time"
 )
 
-type RegistrationResponse struct {
-	FunctionName    string `json:"functionName"`
-	FunctionVersion string `json:"functionVersion"`
-	Handler         string `json:"handler"`
-}
-
 func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.Server, chan struct{}) {
 
 	// Mock APM Server
 	hangChan := make(chan struct{})
-	APMServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/intake/v2/events" {
 			decompressedBytes, err := e2e_testing.GetDecompressedBytesFromRequest(r)
 			if err != nil {
@@ -49,7 +43,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 			}
 		}
 	}))
-	os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", APMServer.URL)
+	os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", apmServer.URL)
 	os.Setenv("ELASTIC_APM_SECRET_TOKEN", "none")
 
 	// Mock Lambda Server
@@ -59,26 +53,29 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 		// Extension registration request
 		case "/2020-01-01/extension/register":
 			w.Header().Set("Lambda-Extension-Identifier", "b03a29ec-ee63-44cd-8e53-3987a8e8aa8e")
-			body, _ := json.Marshal(RegistrationResponse{
+			err := json.NewEncoder(w).Encode(extension.RegisterResponse{
 				FunctionName:    "UnitTestingMockLambda",
 				FunctionVersion: "$LATEST",
 				Handler:         "main_test.mock_lambda",
 			})
-			w.Write(body)
+			if err != nil {
+				log.Printf("Could not encode registration response : %v", err)
+				return
+			}
 		case "/2020-01-01/extension/event/next":
 			currId := uuid.New().String()
 			select {
 			case nextEvent := <-eventsChannel:
-				w.Write(sendNextEventInfo(currId, nextEvent))
-				go processMockEvent(currId, nextEvent, APMServer)
+				sendNextEventInfo(w, currId, nextEvent)
+				go processMockEvent(currId, nextEvent, apmServer)
 			default:
 				finalShutDown := MockEvent{
 					Type:              Shutdown,
 					ExecutionDuration: 0,
 					Timeout:           0,
 				}
-				w.Write(sendNextEventInfo(currId, finalShutDown))
-				go processMockEvent(currId, finalShutDown, APMServer)
+				sendNextEventInfo(w, currId, finalShutDown)
+				go processMockEvent(currId, finalShutDown, apmServer)
 			}
 		// Logs API subscription request
 		case "/2020-08-15/logs":
@@ -91,7 +88,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 	os.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL)
 	extensionClient = extension.NewClient(os.Getenv("AWS_LAMBDA_RUNTIME_API"))
 
-	return lambdaServer, APMServer, hangChan
+	return lambdaServer, apmServer, hangChan
 }
 
 type MockEventType string
@@ -162,7 +159,7 @@ func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server
 	sendLogEvent(currId, "platform.runtimeDone")
 }
 
-func sendNextEventInfo(id string, event MockEvent) []byte {
+func sendNextEventInfo(w http.ResponseWriter, id string, event MockEvent) {
 	nextEventInfo := extension.NextEventResponse{
 		EventType:          "INVOKE",
 		DeadlineMs:         time.Now().UnixNano()/int64(time.Millisecond) + int64(event.Timeout*1000),
@@ -174,8 +171,10 @@ func sendNextEventInfo(id string, event MockEvent) []byte {
 		nextEventInfo.EventType = "SHUTDOWN"
 	}
 
-	out, _ := json.Marshal(nextEventInfo)
-	return out
+	err := json.NewEncoder(w).Encode(nextEventInfo)
+	if err != nil {
+		log.Printf("Could not encode event : %v", err)
+	}
 }
 
 func sendLogEvent(requestId string, logEventType logsapi.SubEventType) {
@@ -187,13 +186,31 @@ func sendLogEvent(requestId string, logEventType logsapi.SubEventType) {
 		Type:   logEventType,
 		Record: record,
 	}
-	jsonRecord, _ := json.Marshal(logEvent.Record)
-	logEvent.StringRecord = string(jsonRecord)
-	body, _ := json.Marshal([]logsapi.LogEvent{logEvent})
+
+	// Convert record to JSON (string)
+	bufRecord := new(bytes.Buffer)
+	err := json.NewEncoder(bufRecord).Encode(record)
+	if err != nil {
+		log.Printf("Could not encode record : %v", err)
+		return
+	}
+	logEvent.StringRecord = string(bufRecord.Bytes())
+
+	// Convert full log event to JSON
+	bufLogEvent := new(bytes.Buffer)
+	err = json.NewEncoder(bufLogEvent).Encode([]logsapi.LogEvent{logEvent})
+	if err != nil {
+		log.Printf("Could not encode record : %v", err)
+		return
+	}
 	host, port, _ := net.SplitHostPort(logsapi.Listener.Addr().String())
-	req, _ := http.NewRequest("POST", "http://"+host+":"+port, bytes.NewBuffer(body))
+	req, _ := http.NewRequest("POST", "http://"+host+":"+port, bufLogEvent)
 	client := http.Client{}
-	client.Do(req)
+	_, err = client.Do(req)
+	if err != nil {
+		log.Printf("Could not send log event : %v", err)
+		return
+	}
 }
 
 func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
@@ -209,7 +226,6 @@ func TestStandardEventsChain(t *testing.T) {
 	log.Println("Standard Test")
 
 	eventsChannel := make(chan MockEvent, 100)
-	defer close(eventsChannel)
 	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
@@ -226,7 +242,6 @@ func TestAPMServerDown(t *testing.T) {
 	log.Println("APM Server Down")
 
 	eventsChannel := make(chan MockEvent, 100)
-	defer close(eventsChannel)
 	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	APMServer.Close()
@@ -243,7 +258,6 @@ func TestAPMServerHangs(t *testing.T) {
 	log.Println("APM Server Hangs")
 
 	eventsChannel := make(chan MockEvent, 100)
-	defer close(eventsChannel)
 	lambdaServer, APMServer, hangChan := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
@@ -263,7 +277,6 @@ func TestAPMServerCrashesDuringExecution(t *testing.T) {
 	log.Println("APM Server Crashes during execution")
 
 	eventsChannel := make(chan MockEvent, 100)
-	defer close(eventsChannel)
 	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
@@ -280,7 +293,6 @@ func TestFullChannel(t *testing.T) {
 	log.Println("AgentData channel is full")
 
 	eventsChannel := make(chan MockEvent, 1000)
-	defer close(eventsChannel)
 	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
@@ -297,7 +309,6 @@ func TestFullChannelSlowAPMServer(t *testing.T) {
 	log.Println("AgentData channel is full, and APM server is slow")
 	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
 	eventsChannel := make(chan MockEvent, 1000)
-	defer close(eventsChannel)
 	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
@@ -316,7 +327,6 @@ func TestFlush(t *testing.T) {
 	log.Println("Flush Test")
 
 	eventsChannel := make(chan MockEvent, 100)
-	//defer close(eventsChannel)
 	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
@@ -333,7 +343,6 @@ func TestWaitGroup(t *testing.T) {
 	log.Println("Multiple transactions")
 
 	eventsChannel := make(chan MockEvent, 100)
-	defer close(eventsChannel)
 	lambdaServer, APMServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer APMServer.Close()
