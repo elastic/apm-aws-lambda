@@ -41,15 +41,11 @@ var (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// pulls ELASTIC_ env variable into globals for easy access
-	config := extension.ProcessEnv()
-
 	// setup logger
 	if extension.Log == nil {
 		extension.Log = extension.InitLogger()
 	}
-	extension.Log.SetLevel(config.LogLevel)
-
+	
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
@@ -58,6 +54,10 @@ func main() {
 		extension.Log.Infof("Received %v\n", s)
 		extension.Log.Info("Exiting")
 	}()
+
+	// pulls ELASTIC_ env variable into globals for easy access
+	config := extension.ProcessEnv()
+	extension.Log.SetLevel(config.LogLevel)
 
 	// register extension with AWS Extension API
 	res, err := extensionClient.Register(ctx, extensionName)
