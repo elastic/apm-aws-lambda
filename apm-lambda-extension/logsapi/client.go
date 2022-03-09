@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -130,8 +129,18 @@ type SubscribeResponse struct {
 }
 
 // Subscribe calls the Logs API to subscribe for the log events.
-func (c *Client) Subscribe(types []EventType, bufferingCfg BufferingCfg, destination Destination, extensionId string) (*SubscribeResponse, error) {
-
+func (c *Client) Subscribe(types []EventType, destinationURI URI, extensionId string) (*SubscribeResponse, error) {
+	bufferingCfg := BufferingCfg{
+		MaxItems:  10000,
+		MaxBytes:  262144,
+		TimeoutMS: 25,
+	}
+	destination := Destination{
+		Protocol:   HttpProto,
+		URI:        destinationURI,
+		HttpMethod: HttpPost,
+		Encoding:   JSON,
+	}
 	data, err := json.Marshal(
 		&SubscribeRequest{
 			SchemaVersion: SchemaVersionLatest,
@@ -153,7 +162,6 @@ func (c *Client) Subscribe(types []EventType, bufferingCfg BufferingCfg, destina
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusAccepted {
-		log.Println("Logs API is not supported. Is this extension running in a local sandbox?")
 		return nil, errors.Errorf("Logs API is not supported in this environment")
 	} else if resp.StatusCode != http.StatusOK {
 		body, err := ioutil.ReadAll(resp.Body)
