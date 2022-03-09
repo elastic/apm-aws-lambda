@@ -105,7 +105,7 @@ Once you've installed the extension, there's one last step to take. You'll need 
 [[aws-lambda-nodejs]]
 ==== Node.js
 
-To install the Node.js agent in Lambda you'll use a second layer.  You'll need to https://github.com/elastic/apm-agent-nodejs/releases[pick the right ARN from the agent release table]. The ARN has the pattern `arn:aws:lambda:<AWS_REGION_KEY>:267093732750:layer:elastic-apm-node-ver-<APM_EXTENSION_VERSION>-0:<LAYER_VERSION>` and depends on:
+To install the Node.js agent in Lambda you'll use a second layer.  You'll need to https://github.com/elastic/apm-agent-nodejs/releases[pick the right ARN from the agent release table]. The ARN has the pattern `arn:aws:lambda:<AWS_REGION_KEY>:267093732750:layer:elastic-apm-node-ver-<APM_EXTENSION_VERSION>:<LAYER_VERSION>` and depends on:
 
 * The AWS region your Lambda function runs in. The APM Lambda Extension layer needs to be in the same region as your Lambda function.
 * The version of the APM Lambda Extension you would like to use.
