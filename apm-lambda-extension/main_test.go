@@ -8,6 +8,7 @@ import (
 	json "encoding/json"
 	"github.com/google/uuid"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -52,6 +53,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 	os.Setenv("ELASTIC_APM_SECRET_TOKEN", "none")
 
 	// Mock Lambda Server
+	logsapi.ListenerHost = "localhost"
 	lambdaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.RequestURI {
 		// Extension registration request
@@ -81,7 +83,6 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 		// Logs API subscription request
 		case "/2020-08-15/logs":
 			w.WriteHeader(http.StatusOK)
-			os.Setenv("ELASTIC_APM_LAMBDA_LOGS_LISTENER_ADDRESS", "localhost:8205")
 		}
 	}))
 
@@ -130,7 +131,7 @@ func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		req, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		res, _ := client.Do(req)
-		log.Println(res.StatusCode)
+		log.Printf("Response seen by the agent : %d", res.StatusCode)
 	case InvokeStandardFlush:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events?flushed=true", bytes.NewBuffer([]byte(event.APMServerBehavior)))
@@ -177,7 +178,7 @@ func sendNextEventInfo(id string, event MockEvent) []byte {
 	return out
 }
 
-func sendLogEvent(requestId string, logEventType string) {
+func sendLogEvent(requestId string, logEventType logsapi.SubEventType) {
 	record := logsapi.LogEventRecord{
 		RequestId: requestId,
 	}
@@ -186,9 +187,11 @@ func sendLogEvent(requestId string, logEventType string) {
 		Type:   logEventType,
 		Record: record,
 	}
-	logEvent.RawRecord, _ = json.Marshal(logEvent.Record)
+	jsonRecord, _ := json.Marshal(logEvent.Record)
+	logEvent.StringRecord = string(jsonRecord)
 	body, _ := json.Marshal([]logsapi.LogEvent{logEvent})
-	req, _ := http.NewRequest("POST", "http://localhost:8205", bytes.NewBuffer(body))
+	host, port, _ := net.SplitHostPort(logsapi.Listener.Addr().String())
+	req, _ := http.NewRequest("POST", "http://"+host+":"+port, bytes.NewBuffer(body))
 	client := http.Client{}
 	client.Do(req)
 }

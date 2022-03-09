@@ -157,7 +157,7 @@ func main() {
 						log.Printf("Received log event %v\n", logEvent.Type)
 						// Check the logEvent for runtimeDone and compare the RequestID
 						// to the id that came in via the Next API
-						if logsapi.SubEventType(logEvent.Type) == logsapi.RuntimeDone {
+						if logEvent.Type == logsapi.RuntimeDone {
 							if logEvent.Record.RequestId == event.RequestID {
 								log.Println("Received runtimeDone event for this function invocation")
 								runtimeDoneSignal <- struct{}{}
