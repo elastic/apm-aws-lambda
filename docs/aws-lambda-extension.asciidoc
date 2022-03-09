@@ -98,7 +98,7 @@ For a _minimal configuration_ you need to specify the `ELASTIC_APM_LAMBDA_APM_SE
 [[aws-lambda-handler]]
 === Configuring the Agent and Lambda Function handler
 
-Once you've installed the extension, there's one last step to take. You'll need to install the correct language agent and wrap the Lambda function handler.
+After the extension has been installed, install the relevant language agent and wrap the Lambda function handler.
 
 
 [discrete]
