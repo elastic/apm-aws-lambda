@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -59,9 +58,9 @@ func TestSubscribeAWSRequest(t *testing.T) {
 
 	// Create aws runtime API server and handler
 	awsRuntimeApiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestBytes, _ := ioutil.ReadAll(r.Body)
 		req := SubscribeRequest{}
-		json.Unmarshal(requestBytes, &req)
+		err := json.NewDecoder(r.Body).Decode(&req)
+		require.NoError(t, err)
 		// Validate the subscription request
 		assert.Equal(t, req.BufferingCfg, expectedBufferingCfg)
 		assert.Equal(t, req.EventTypes, expectedTypes)
