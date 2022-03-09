@@ -37,16 +37,18 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 		client := &http.Client{}
 
 		req, err := http.NewRequest(r.Method, apmServerUrl, nil)
+		if err != nil {
+			log.Printf("could not create request object for %s:%s: %v", r.Method, apmServerUrl, err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
 		//forward every header received
 		for name, values := range r.Header {
 			// Loop over all values for the name.
 			for _, value := range values {
 				req.Header.Set(name, value)
 			}
-		}
-		if err != nil {
-			log.Printf("could not create request object for %s:%s: %v", r.Method, apmServerUrl, err)
-			return
 		}
 
 		// Send request to apm server
@@ -55,6 +57,7 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 			log.Printf("error forwarding info request (`/`) to APM Server: %v", err)
 			return
 		}
+		defer serverResp.Body.Close()
 
 		// If WriteHeader is not called explicitly, the first call to Write
 		// will trigger an implicit WriteHeader(http.StatusOK).
@@ -83,13 +86,11 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusAccepted)
-		w.Write([]byte("ok"))
-
 		rawBytes, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {
 			log.Printf("Could not read agent intake request body: %v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
@@ -105,5 +106,8 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {
 			AgentDoneSignal <- struct{}{}
 		}
+
+		w.WriteHeader(http.StatusAccepted)
+		w.Write([]byte("ok"))
 	}
 }
