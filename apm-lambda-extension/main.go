@@ -145,7 +145,6 @@ func main() {
 						log.Println("funcDone signal received, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
-						log.Println("DATA TO SEND TO APM RECEIVED")
 						err := extension.PostToApmServer(client, agentData, config)
 						if err != nil {
 							log.Printf("Error sending to APM server, skipping: %v", err)
