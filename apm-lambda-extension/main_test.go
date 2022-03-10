@@ -321,7 +321,7 @@ func TestFullChannel(t *testing.T) {
 	defer apmServer.Close()
 
 	eventsChain := []MockEvent{
-		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.01, Timeout: 5},
+		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
