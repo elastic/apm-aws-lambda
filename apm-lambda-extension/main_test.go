@@ -349,22 +349,22 @@ func TestFullChannel(t *testing.T) {
 //}
 
 // Test if the flushed param does not cause a panic or an unexpected behavior
-func TestFlush(t *testing.T) {
-	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("Flush Test")
-
-	eventsChannel := make(chan MockEvent, 100)
-	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
-	defer lambdaServer.Close()
-	defer apmServer.Close()
-
-	eventsChain := []MockEvent{
-		{Type: InvokeStandardFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
-	}
-	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
-}
+//func TestFlush(t *testing.T) {
+//	http.DefaultServeMux = new(http.ServeMux)
+//	log.Println("Flush Test")
+//
+//	eventsChannel := make(chan MockEvent, 100)
+//	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
+//	defer lambdaServer.Close()
+//	defer apmServer.Close()
+//
+//	eventsChain := []MockEvent{
+//		{Type: InvokeStandardFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+//	}
+//	eventQueueGenerator(eventsChain, eventsChannel)
+//	assert.NotPanics(t, main)
+//	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
+//}
 
 // Test if there is no race condition between waitgroups (issue #128)
 //func TestWaitGroup(t *testing.T) {
