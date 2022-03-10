@@ -312,22 +312,22 @@ func TestAPMServerCrashesDuringExecution(t *testing.T) {
 }
 
 // Test what happens when the APM Data channel is full
-func TestFullChannel(t *testing.T) {
-	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("AgentData channel is full")
-
-	eventsChannel := make(chan MockEvent, 1000)
-	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
-	defer lambdaServer.Close()
-	defer apmServer.Close()
-
-	eventsChain := []MockEvent{
-		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.1, Timeout: 5},
-	}
-	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
-}
+//func TestFullChannel(t *testing.T) {
+//	http.DefaultServeMux = new(http.ServeMux)
+//	log.Println("AgentData channel is full")
+//
+//	eventsChannel := make(chan MockEvent, 1000)
+//	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
+//	defer lambdaServer.Close()
+//	defer apmServer.Close()
+//
+//	eventsChain := []MockEvent{
+//		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.1, Timeout: 5},
+//	}
+//	eventQueueGenerator(eventsChain, eventsChannel)
+//	assert.NotPanics(t, main)
+//	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
+//}
 
 // Test what happens when the APM Data channel is full and the APM server slow (send strategy : background)
 func TestFullChannelSlowAPMServer(t *testing.T) {
