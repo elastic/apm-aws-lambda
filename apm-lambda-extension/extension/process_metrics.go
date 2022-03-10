@@ -38,7 +38,7 @@ func ProcessPlatformReport(client *http.Client, metadataContainer MetadataContai
 
 	// APM Spec Fields
 	// Timestamp
-	metricsContainer.Metrics.Timestamp = platformReport.Time.UnixMicro()
+	metricsContainer.Metrics.Timestamp = platformReport.Time.UnixNano() / 1e3
 	// FaaS Fields
 	metricsContainer.Metrics.Labels = make(map[string]interface{})
 	metricsContainer.Metrics.Labels["faas.execution"] = platformReport.Record.RequestId
@@ -54,12 +54,12 @@ func ProcessPlatformReport(client *http.Client, metadataContainer MetadataContai
 
 	// Raw Metrics
 	// AWS uses binary multiples to compute memory : https://aws.amazon.com/about-aws/whats-new/2020/12/aws-lambda-supports-10gb-memory-6-vcpu-cores-lambda-functions/
-	metricsContainer.Add("aws.lambda.metrics.TotalMemory", nil, float64(platformReportMetrics.MemorySizeMB)*convMB2Bytes)                                // Unit : Bytes
-	metricsContainer.Add("aws.lambda.metrics.UsedMemory", nil, float64(platformReportMetrics.MaxMemoryUsedMB)*convMB2Bytes)                              // Unit : Bytes
-	metricsContainer.Add("aws.lambda.metrics.Duration", nil, float64(platformReportMetrics.DurationMs))                                                  // Unit : Milliseconds
-	metricsContainer.Add("aws.lambda.metrics.BilledDuration", nil, float64(platformReportMetrics.BilledDurationMs))                                      // Unit : Milliseconds
-	metricsContainer.Add("aws.lambda.metrics.ColdStartDuration", nil, float64(platformReportMetrics.InitDurationMs))                                     // Unit : Milliseconds
-	metricsContainer.Add("aws.lambda.metrics.Timeout", nil, math.Ceil(float64(functionData.DeadlineMs-functionData.Timestamp.UnixNano()/1e6)/1000)*1000) // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.TotalMemory", nil, float64(platformReportMetrics.MemorySizeMB)*convMB2Bytes)                              // Unit : Bytes
+	metricsContainer.Add("aws.lambda.metrics.UsedMemory", nil, float64(platformReportMetrics.MaxMemoryUsedMB)*convMB2Bytes)                            // Unit : Bytes
+	metricsContainer.Add("aws.lambda.metrics.Duration", nil, float64(platformReportMetrics.DurationMs))                                                // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.BilledDuration", nil, float64(platformReportMetrics.BilledDurationMs))                                    // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.ColdStartDuration", nil, float64(platformReportMetrics.InitDurationMs))                                   // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.Timeout", nil, math.Ceil(float64(functionData.DeadlineMs-functionData.Timestamp.UnixNano()/1e6)/1e3)*1e3) // Unit : Milliseconds
 
 	metricsJson, err := json.Marshal(metricsContainer)
 	if err != nil {
