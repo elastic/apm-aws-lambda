@@ -32,7 +32,6 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 			}
 			switch APMServerBehavior(decompressedBytes) {
 			case TimelyResponse:
-				log.Printf("Behavior SlowResponse with data: %s", string(decompressedBytes))
 				apmServerLog.Data += string(decompressedBytes)
 				w.WriteHeader(http.StatusAccepted)
 			case SlowResponse:
@@ -142,7 +141,6 @@ func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events?flushed=true", bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		client.Do(reqData)
-		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second) // Provide some time to flush in case the channel is full due to parallel tests
 	case InvokeWaitgroupsRace:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData0, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
@@ -168,7 +166,6 @@ func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server
 			}()
 		}
 		wg.Wait()
-		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 	case Shutdown:
 		reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		client.Do(reqData)
@@ -355,7 +352,7 @@ func TestFullChannel(t *testing.T) {
 	log.Println("AgentData channel is full")
 
 	eventsChannel := make(chan MockEvent, 1000)
-	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
+	lambdaServer, apmServer, _, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer apmServer.Close()
 
@@ -364,7 +361,6 @@ func TestFullChannel(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
-	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
 }
 
 // Test what happens when the APM Data channel is full and the APM server slow (send strategy : background)
