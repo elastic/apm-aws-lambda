@@ -19,7 +19,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -66,19 +65,6 @@ func main() {
 		return
 	}
 	log.Printf("Register response: %v\n", extension.PrettyPrint(res))
-
-	/////////////// USED FOR DEMONSTRATION PURPOSES - TO BE REMOVED /////////////////////
-	if os.Getenv("ELASTIC_APM_LAMBDA_CRASH_SIM") == "init" {
-		status, errRuntime := extensionClient.InitError(ctx, "Extension.InitError")
-		if errRuntime != nil {
-			panic(errRuntime)
-		}
-		log.Printf("Error: %s", fmt.Errorf("extension init crash simulation"))
-		log.Printf("Init error signal sent to runtime : %s", status)
-		log.Println("Exiting")
-		return
-	}
-	/////////////// USED FOR DEMONSTRATION PURPOSES - TO BE REMOVED /////////////////////
 
 	// pulls ELASTIC_ env variable into globals for easy access
 	config := extension.ProcessEnv()
@@ -150,19 +136,6 @@ func main() {
 				cancel()
 				return
 			}
-
-			/////////////// USED FOR DEMONSTRATION PURPOSES - TO BE REMOVED /////////////////////
-			if os.Getenv("ELASTIC_APM_LAMBDA_CRASH_SIM") == "event" {
-				status, err := extensionClient.ExitError(ctx, "Extension.UnknownError")
-				if err != nil {
-					panic(err)
-				}
-				log.Printf("Error: %s", fmt.Errorf("extension event crash simulation"))
-				log.Printf("Exit error signal sent to runtime : %s", status)
-				log.Println("Exiting")
-				return
-			}
-			/////////////// USED FOR DEMONSTRATION PURPOSES - TO BE REMOVED /////////////////////
 
 			// Receive agent data as it comes in and post it to the APM server.
 			// Stop checking for, and sending agent data when the function invocation
