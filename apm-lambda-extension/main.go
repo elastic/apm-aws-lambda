@@ -80,23 +80,14 @@ func main() {
 	// completes before signaling that the extension is ready for the next invocation.
 	var backgroundDataSendWg sync.WaitGroup
 
-	// Subscribe to the Logs API
 	err = logsapi.Subscribe(
+		ctx,
 		extensionClient.ExtensionID,
-		[]logsapi.EventType{logsapi.Platform})
+		[]logsapi.EventType{logsapi.Platform},
+		logsChannel,
+	)
 	if err != nil {
-		log.Printf("Could not subscribe to the logs API.")
-	} else {
-		logsAPIListener, err := logsapi.NewLogsAPIHttpListener(logsChannel)
-		if err != nil {
-			log.Printf("Error while creating Logs API listener: %v", err)
-		}
-
-		// Start the logs HTTP server
-		_, err = logsAPIListener.Start(logsapi.ListenOnAddress())
-		if err != nil {
-			log.Printf("Error while starting Logs API listener: %v", err)
-		}
+		log.Printf("Error while subscribing to the Logs API: %v", err)
 	}
 
 	var prevEvent *extension.NextEventResponse
@@ -133,20 +124,22 @@ func main() {
 			// This is usually due to inactivity.
 			if event.EventType == extension.Shutdown {
 				extension.ProcessShutdown()
+				cancel()
 				return
 			}
 
 			// Receive agent data as it comes in and post it to the APM server.
 			// Stop checking for, and sending agent data when the function invocation
 			// has completed, signaled via a channel.
+			backgroundDataSendWg.Add(1)
 			go func() {
+				defer backgroundDataSendWg.Done()
 				for {
 					select {
 					case <-funcDone:
 						log.Println("funcDone signal received, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
-						backgroundDataSendWg.Add(1)
 						if metadataContainer.Metadata == nil {
 							extension.ProcessMetadata(agentData, &metadataContainer)
 						}
@@ -154,7 +147,6 @@ func main() {
 						if err != nil {
 							log.Printf("Error sending to APM server, skipping: %v", err)
 						}
-						backgroundDataSendWg.Done()
 					}
 				}
 			}()
@@ -209,18 +201,13 @@ func main() {
 				log.Println("Time expired waiting for agent signal or runtimeDone event")
 			}
 
+			close(funcDone)
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
 				// Flush APM data now that the function invocation has completed
 				extension.FlushAPMData(client, agentDataChannel, config)
 			}
-
-			close(funcDone)
-			close(runtimeDoneSignal)
-			close(extension.AgentDoneSignal)
-
 			prevEvent = event
-
 		}
 	}
 }
