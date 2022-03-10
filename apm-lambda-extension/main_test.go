@@ -237,116 +237,116 @@ func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
 // TESTS
 
 // Test a nominal sequence of events (fast APM server, only one standard event)
-func TestStandardEventsChain(t *testing.T) {
-	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("Standard Test")
+//func TestStandardEventsChain(t *testing.T) {
+//	http.DefaultServeMux = new(http.ServeMux)
+//	log.Println("Standard Test")
+//
+//	eventsChannel := make(chan MockEvent, 100)
+//	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
+//	defer lambdaServer.Close()
+//	defer apmServer.Close()
+//
+//	eventsChain := []MockEvent{
+//		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+//	}
+//	eventQueueGenerator(eventsChain, eventsChannel)
+//	assert.NotPanics(t, main)
+//	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
+//}
+//
+//// Test what happens when the APM is down (timeout)
+//func TestAPMServerDown(t *testing.T) {
+//	http.DefaultServeMux = new(http.ServeMux)
+//	log.Println("APM Server Down")
+//
+//	eventsChannel := make(chan MockEvent, 100)
+//	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
+//	defer lambdaServer.Close()
+//	apmServer.Close()
+//
+//	eventsChain := []MockEvent{
+//		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+//	}
+//	eventQueueGenerator(eventsChain, eventsChannel)
+//	assert.NotPanics(t, main)
+//	assert.False(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
+//}
+//
+//// Test what happens when the APM hangs (timeout)
+//func TestAPMServerHangs(t *testing.T) {
+//	http.DefaultServeMux = new(http.ServeMux)
+//	log.Println("APM Server Hangs")
+//
+//	eventsChannel := make(chan MockEvent, 100)
+//	lambdaServer, apmServer, apmServerLog, hangChan := initMockServers(eventsChannel)
+//	defer lambdaServer.Close()
+//	defer apmServer.Close()
+//
+//	eventsChain := []MockEvent{
+//		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
+//	}
+//	eventQueueGenerator(eventsChain, eventsChannel)
+//	start := time.Now()
+//	assert.NotPanics(t, main)
+//	assert.False(t, strings.Contains(apmServerLog.Data, string(Hangs)))
+//	log.Printf("Success : test took %s", time.Since(start))
+//	hangChan <- struct{}{}
+//}
+//
+//// Test what happens when the APM crashes unexpectedly
+//func TestAPMServerCrashesDuringExecution(t *testing.T) {
+//	http.DefaultServeMux = new(http.ServeMux)
+//	log.Println("APM Server Crashes during execution")
+//
+//	eventsChannel := make(chan MockEvent, 100)
+//	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
+//	defer lambdaServer.Close()
+//	defer apmServer.Close()
+//
+//	eventsChain := []MockEvent{
+//		{Type: InvokeStandard, APMServerBehavior: Crashes, ExecutionDuration: 1, Timeout: 5},
+//	}
+//	eventQueueGenerator(eventsChain, eventsChannel)
+//	assert.NotPanics(t, main)
+//	assert.False(t, strings.Contains(apmServerLog.Data, string(Crashes)))
+//}
 
-	eventsChannel := make(chan MockEvent, 100)
+// Test what happens when the APM Data channel is full
+func TestFullChannel(t *testing.T) {
+	http.DefaultServeMux = new(http.ServeMux)
+	log.Println("AgentData channel is full")
+
+	eventsChannel := make(chan MockEvent, 1000)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer apmServer.Close()
 
 	eventsChain := []MockEvent{
-		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
 	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
 }
 
-// Test what happens when the APM is down (timeout)
-func TestAPMServerDown(t *testing.T) {
-	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("APM Server Down")
-
-	eventsChannel := make(chan MockEvent, 100)
-	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
-	defer lambdaServer.Close()
-	apmServer.Close()
-
-	eventsChain := []MockEvent{
-		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
-	}
-	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.False(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
-}
-
-// Test what happens when the APM hangs (timeout)
-func TestAPMServerHangs(t *testing.T) {
-	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("APM Server Hangs")
-
-	eventsChannel := make(chan MockEvent, 100)
-	lambdaServer, apmServer, apmServerLog, hangChan := initMockServers(eventsChannel)
-	defer lambdaServer.Close()
-	defer apmServer.Close()
-
-	eventsChain := []MockEvent{
-		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
-	}
-	eventQueueGenerator(eventsChain, eventsChannel)
-	start := time.Now()
-	assert.NotPanics(t, main)
-	assert.False(t, strings.Contains(apmServerLog.Data, string(Hangs)))
-	log.Printf("Success : test took %s", time.Since(start))
-	hangChan <- struct{}{}
-}
-
-// Test what happens when the APM crashes unexpectedly
-func TestAPMServerCrashesDuringExecution(t *testing.T) {
-	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("APM Server Crashes during execution")
-
-	eventsChannel := make(chan MockEvent, 100)
-	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
-	defer lambdaServer.Close()
-	defer apmServer.Close()
-
-	eventsChain := []MockEvent{
-		{Type: InvokeStandard, APMServerBehavior: Crashes, ExecutionDuration: 1, Timeout: 5},
-	}
-	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.False(t, strings.Contains(apmServerLog.Data, string(Crashes)))
-}
-
-// Test what happens when the APM Data channel is full
-//func TestFullChannel(t *testing.T) {
+// Test what happens when the APM Data channel is full and the APM server slow (send strategy : background)
+//func TestFullChannelSlowAPMServer(t *testing.T) {
 //	http.DefaultServeMux = new(http.ServeMux)
-//	log.Println("AgentData channel is full")
-//
+//	log.Println("AgentData channel is full, and APM server is slow")
+//	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
 //	eventsChannel := make(chan MockEvent, 1000)
-//	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
+//	lambdaServer, apmServer, _, _ := initMockServers(eventsChannel)
 //	defer lambdaServer.Close()
 //	defer apmServer.Close()
 //
 //	eventsChain := []MockEvent{
-//		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.1, Timeout: 5},
+//		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: SlowResponse, ExecutionDuration: 0.01, Timeout: 5},
 //	}
 //	eventQueueGenerator(eventsChain, eventsChannel)
 //	assert.NotPanics(t, main)
-//	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
+//	// The test should not hang
+//	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "syncflush")
 //}
-
-// Test what happens when the APM Data channel is full and the APM server slow (send strategy : background)
-func TestFullChannelSlowAPMServer(t *testing.T) {
-	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("AgentData channel is full, and APM server is slow")
-	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
-	eventsChannel := make(chan MockEvent, 1000)
-	lambdaServer, apmServer, _, _ := initMockServers(eventsChannel)
-	defer lambdaServer.Close()
-	defer apmServer.Close()
-
-	eventsChain := []MockEvent{
-		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: SlowResponse, ExecutionDuration: 0.01, Timeout: 5},
-	}
-	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	// The test should not hang
-	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "syncflush")
-}
 
 // Test if the flushed param does not cause a panic or an unexpected behavior
 func TestFlush(t *testing.T) {
@@ -367,19 +367,19 @@ func TestFlush(t *testing.T) {
 }
 
 // Test if there is no race condition between waitgroups (issue #128)
-func TestWaitGroup(t *testing.T) {
-	http.DefaultServeMux = new(http.ServeMux)
-	log.Println("Multiple transactions")
-
-	eventsChannel := make(chan MockEvent, 100)
-	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
-	defer lambdaServer.Close()
-	defer apmServer.Close()
-
-	eventsChain := []MockEvent{
-		{Type: InvokeWaitgroupsRace, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 500},
-	}
-	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
-}
+//func TestWaitGroup(t *testing.T) {
+//	http.DefaultServeMux = new(http.ServeMux)
+//	log.Println("Multiple transactions")
+//
+//	eventsChannel := make(chan MockEvent, 100)
+//	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
+//	defer lambdaServer.Close()
+//	defer apmServer.Close()
+//
+//	eventsChain := []MockEvent{
+//		{Type: InvokeWaitgroupsRace, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 500},
+//	}
+//	eventQueueGenerator(eventsChain, eventsChannel)
+//	assert.NotPanics(t, main)
+//	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
+//}
