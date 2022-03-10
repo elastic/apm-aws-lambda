@@ -19,6 +19,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -40,6 +41,7 @@ var (
 /* --- elastic vars  --- */
 
 func main() {
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	sigs := make(chan os.Signal, 1)
@@ -54,9 +56,29 @@ func main() {
 	// register extension with AWS Extension API
 	res, err := extensionClient.Register(ctx, extensionName)
 	if err != nil {
-		panic(err)
+		status, errRuntime := extensionClient.InitError(ctx, err.Error())
+		if errRuntime != nil {
+			panic(errRuntime)
+		}
+		log.Printf("Error: %v\n", err)
+		log.Printf("Init error signal sent to runtime : %v\n", status)
+		log.Println("Exiting")
+		return
 	}
 	log.Printf("Register response: %v\n", extension.PrettyPrint(res))
+
+	/////////////// USED FOR DEMONSTRATION PURPOSES - TO BE REMOVED /////////////////////
+	if os.Getenv("ELASTIC_APM_LAMBDA_CRASH_SIM") == "init" {
+		status, errRuntime := extensionClient.InitError(ctx, "Extension.InitError")
+		if errRuntime != nil {
+			panic(errRuntime)
+		}
+		log.Printf("Error: %v\n", fmt.Errorf("extension init crash simulation"))
+		log.Printf("Init error signal sent to runtime : %v\n", status)
+		log.Println("Exiting")
+		return
+	}
+	/////////////// USED FOR DEMONSTRATION PURPOSES - TO BE REMOVED /////////////////////
 
 	// pulls ELASTIC_ env variable into globals for easy access
 	config := extension.ProcessEnv()
@@ -99,7 +121,12 @@ func main() {
 			log.Println("Waiting for next event...")
 			event, err := extensionClient.NextEvent(ctx)
 			if err != nil {
+				status, err := extensionClient.ExitError(ctx, err.Error())
+				if err != nil {
+					panic(err)
+				}
 				log.Printf("Error: %v\n", err)
+				log.Printf("Exit signal sent to runtime : %v\n", status)
 				log.Println("Exiting")
 				return
 			}
@@ -124,6 +151,19 @@ func main() {
 				return
 			}
 
+			/////////////// USED FOR DEMONSTRATION PURPOSES - TO BE REMOVED /////////////////////
+			if os.Getenv("ELASTIC_APM_LAMBDA_CRASH_SIM") == "event" {
+				status, err := extensionClient.ExitError(ctx, "Extension.UnknownError")
+				if err != nil {
+					panic(err)
+				}
+				log.Printf("Error: %v\n", fmt.Errorf("extension event crash simulation"))
+				log.Printf("Exit error signal sent to runtime : %v\n", status)
+				log.Println("Exiting")
+				return
+			}
+			/////////////// USED FOR DEMONSTRATION PURPOSES - TO BE REMOVED /////////////////////
+
 			// Receive agent data as it comes in and post it to the APM server.
 			// Stop checking for, and sending agent data when the function invocation
 			// has completed, signaled via a channel.
@@ -136,6 +176,19 @@ func main() {
 						log.Println("funcDone signal received, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
+
+						/////////////// USED FOR DEMONSTRATION PURPOSES - TO BE REMOVED /////////////////////
+						if os.Getenv("ELASTIC_APM_LAMBDA_CRASH_SIM") == "apm" {
+							status, err := extensionClient.ExitError(ctx, "Extension.UnknownError")
+							if err != nil {
+								panic(err)
+							}
+							log.Printf("Error: %v\n", fmt.Errorf("extension apm crash simulation"))
+							log.Printf("Exit error signal sent to runtime : %v\n", status)
+							return
+						}
+						/////////////// USED FOR DEMONSTRATION PURPOSES - TO BE REMOVED /////////////////////
+
 						err := extension.PostToApmServer(client, agentData, config)
 						if err != nil {
 							log.Printf("Error sending to APM server, skipping: %v", err)

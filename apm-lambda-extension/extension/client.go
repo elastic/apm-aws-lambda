@@ -161,7 +161,7 @@ func (e *Client) InitError(ctx context.Context, errorType string) (*StatusRespon
 	}
 	defer httpRes.Body.Close()
 
-	if httpRes.StatusCode != 200 {
+	if httpRes.StatusCode != 202 {
 		return nil, fmt.Errorf("initialization error request failed with status %s", httpRes.Status)
 	}
 	res := StatusResponse{}
@@ -188,7 +188,7 @@ func (e *Client) ExitError(ctx context.Context, errorType string) (*StatusRespon
 	}
 	defer httpRes.Body.Close()
 
-	if httpRes.StatusCode != 200 {
+	if httpRes.StatusCode != 202 {
 		return nil, fmt.Errorf("exit error request failed with status %s", httpRes.Status)
 	}
 	res := StatusResponse{}
