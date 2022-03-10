@@ -167,6 +167,7 @@ func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server
 			}()
 		}
 		wg.Wait()
+		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 	case Shutdown:
 		reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		client.Do(reqData)
