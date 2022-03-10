@@ -42,7 +42,7 @@ func Test_processPlatformReport(t *testing.T) {
 	event := NextEventResponse{
 		Timestamp:          timestamp,
 		EventType:          Invoke,
-		DeadlineMs:         timestamp.UnixMilli() + 4584,
+		DeadlineMs:         timestamp.UnixNano()/1e6 + 4584, // Milliseconds
 		RequestID:          "8476a536-e9f4-11e8-9739-2dfe598c3fcd",
 		InvokedFunctionArn: "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime",
 		Tracing: Tracing{
