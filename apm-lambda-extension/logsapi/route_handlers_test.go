@@ -32,11 +32,11 @@ func TestLogEventUnmarshalReport(t *testing.T) {
 		    "time": "2020-08-20T12:31:32.123Z",
 		    "type": "platform.report",
 		    "record": {"requestId": "6f7f0961f83442118a7af6fe80b88d56",
-			"metrics": {"durationMs": 101.51,
-			    "billedDurationMs": 300,
-			    "memorySizeMB": 512,
-			    "maxMemoryUsedMB": 33,
-			    "initDurationMs": 116.67
+			"metrics": {"durationMs": 182.43,
+			    "billedDurationMs": 183,
+			    "memorySizeMB": 128,
+			    "maxMemoryUsedMB": 76,
+			    "initDurationMs": 422.97
 			}
 		    }
 		}`)
@@ -48,6 +48,13 @@ func TestLogEventUnmarshalReport(t *testing.T) {
 	rec := LogEventRecord{
 		RequestId: "6f7f0961f83442118a7af6fe80b88d56",
 		Status:    "", // no status was given in sample json
+		Metrics: PlatformMetrics{
+			DurationMs:       182.43,
+			BilledDurationMs: 183,
+			MemorySizeMB:     128,
+			MaxMemoryUsedMB:  76,
+			InitDurationMs:   422.97,
+		},
 	}
 	assert.Equal(t, rec, le.Record)
 

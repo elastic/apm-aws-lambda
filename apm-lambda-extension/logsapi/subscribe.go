@@ -41,8 +41,17 @@ type LogEvent struct {
 }
 
 type LogEventRecord struct {
-	RequestId string `json:"requestId"`
-	Status    string `json:"status"`
+	RequestId string          `json:"requestId"`
+	Status    string          `json:"status"`
+	Metrics   PlatformMetrics `json:"metrics"`
+}
+
+type PlatformMetrics struct {
+	DurationMs       float32 `json:"durationMs"`
+	BilledDurationMs int32   `json:"billedDurationMs"`
+	MemorySizeMB     int32   `json:"memorySizeMB"`
+	MaxMemoryUsedMB  int32   `json:"maxMemoryUsedMB"`
+	InitDurationMs   float32 `json:"initDurationMs"`
 }
 
 // Subscribes to the Logs API

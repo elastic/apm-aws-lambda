@@ -3,7 +3,6 @@ package extension
 import (
 	"elastic/apm-lambda-extension/logsapi"
 	"elastic/apm-lambda-extension/model"
-	"encoding/json"
 	"fmt"
 	"gotest.tools/assert"
 	"io/ioutil"
@@ -34,10 +33,10 @@ func Test_processPlatformReport(t *testing.T) {
 	}
 
 	logEvent := logsapi.LogEvent{
-		Time:      timestamp,
-		Type:      "platform.report",
-		RawRecord: json.RawMessage{},
-		Record:    logEventRecord,
+		Time:         timestamp,
+		Type:         "platform.report",
+		StringRecord: "",
+		Record:       logEventRecord,
 	}
 
 	event := NextEventResponse{
