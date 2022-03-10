@@ -60,8 +60,8 @@ func main() {
 		if errRuntime != nil {
 			panic(errRuntime)
 		}
-		log.Printf("Error: %v\n", err)
-		log.Printf("Init error signal sent to runtime : %v\n", status)
+		log.Printf("Error: %s", err)
+		log.Printf("Init error signal sent to runtime : %s", status)
 		log.Println("Exiting")
 		return
 	}
@@ -73,8 +73,8 @@ func main() {
 		if errRuntime != nil {
 			panic(errRuntime)
 		}
-		log.Printf("Error: %v\n", fmt.Errorf("extension init crash simulation"))
-		log.Printf("Init error signal sent to runtime : %v\n", status)
+		log.Printf("Error: %s", fmt.Errorf("extension init crash simulation"))
+		log.Printf("Init error signal sent to runtime : %s", status)
 		log.Println("Exiting")
 		return
 	}
@@ -125,8 +125,8 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				log.Printf("Error: %v\n", err)
-				log.Printf("Exit signal sent to runtime : %v\n", status)
+				log.Printf("Error: %s", err)
+				log.Printf("Exit signal sent to runtime : %s", status)
 				log.Println("Exiting")
 				return
 			}
@@ -157,8 +157,8 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				log.Printf("Error: %v\n", fmt.Errorf("extension event crash simulation"))
-				log.Printf("Exit error signal sent to runtime : %v\n", status)
+				log.Printf("Error: %s", fmt.Errorf("extension event crash simulation"))
+				log.Printf("Exit error signal sent to runtime : %s", status)
 				log.Println("Exiting")
 				return
 			}
@@ -176,19 +176,6 @@ func main() {
 						log.Println("funcDone signal received, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
-
-						/////////////// USED FOR DEMONSTRATION PURPOSES - TO BE REMOVED /////////////////////
-						if os.Getenv("ELASTIC_APM_LAMBDA_CRASH_SIM") == "apm" {
-							status, err := extensionClient.ExitError(ctx, "Extension.UnknownError")
-							if err != nil {
-								panic(err)
-							}
-							log.Printf("Error: %v\n", fmt.Errorf("extension apm crash simulation"))
-							log.Printf("Exit error signal sent to runtime : %v\n", status)
-							return
-						}
-						/////////////// USED FOR DEMONSTRATION PURPOSES - TO BE REMOVED /////////////////////
-
 						err := extension.PostToApmServer(client, agentData, config)
 						if err != nil {
 							log.Printf("Error sending to APM server, skipping: %v", err)
