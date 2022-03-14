@@ -20,6 +20,7 @@ package extension
 import (
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
@@ -103,7 +104,7 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 			case agentDataChan <- agentData:
 				Log.Info("Adding agent data to buffer to be sent to apm server")
 			default:
-				Log.Info("Channel full : dropping event")
+				log.Println("Channel full: dropping event")
 			}
 		}
 

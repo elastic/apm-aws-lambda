@@ -18,10 +18,12 @@
 package extension
 
 import (
-	"github.com/sirupsen/logrus"
+	"log"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type extensionConfig struct {
@@ -47,6 +49,9 @@ const (
 	// flush remaining buffered agent data when it receives a signal that the
 	// function is complete
 	SyncFlush SendStrategy = "syncflush"
+
+	defaultDataReceiverTimeoutSeconds  int = 15
+	defaultDataForwarderTimeoutSeconds int = 3
 )
 
 func getIntFromEnv(name string) (int, error) {
@@ -62,14 +67,14 @@ func getIntFromEnv(name string) (int, error) {
 func ProcessEnv() *extensionConfig {
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
-		dataReceiverTimeoutSeconds = 15
-		Log.Warnf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to %d: %v\n", dataReceiverTimeoutSeconds, err)
+		dataReceiverTimeoutSeconds = defaultDataReceiverTimeoutSeconds
+		log.Printf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to %d: %v\n", dataReceiverTimeoutSeconds, err)
 	}
 
 	dataForwarderTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS")
 	if err != nil {
-		dataForwarderTimeoutSeconds = 3
-		Log.Warnf("Could not read ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS, defaulting to %d: %v\n", dataForwarderTimeoutSeconds, err)
+		dataForwarderTimeoutSeconds = defaultDataForwarderTimeoutSeconds
+		log.Printf("Could not read ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS, defaulting to %d: %v\n", dataForwarderTimeoutSeconds, err)
 	}
 
 	// add trailing slash to server name if missing
