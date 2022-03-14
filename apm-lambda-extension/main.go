@@ -85,23 +85,14 @@ func main() {
 	// completes before signaling that the extension is ready for the next invocation.
 	var backgroundDataSendWg sync.WaitGroup
 
-	// Subscribe to the Logs API
 	err = logsapi.Subscribe(
+		ctx,
 		extensionClient.ExtensionID,
-		[]logsapi.EventType{logsapi.Platform})
+		[]logsapi.EventType{logsapi.Platform},
+		logsChannel,
+	)
 	if err != nil {
-		extension.Log.Errorf("Could not subscribe to the logs API : %v", err)
-	} else {
-		logsAPIListener, err := logsapi.NewLogsAPIHttpListener(logsChannel)
-		if err != nil {
-			extension.Log.Errorf("Error while creating Logs API listener: %v", err)
-		}
-
-		// Start the logs HTTP server
-		_, err = logsAPIListener.Start(logsapi.ListenOnAddress())
-		if err != nil {
-			extension.Log.Errorf("Error while starting Logs API listener: %v", err)
-		}
+		log.Printf("Error while subscribing to the Logs API: %v", err)
 	}
 
 	for {
@@ -131,6 +122,7 @@ func main() {
 			// This is usually due to inactivity.
 			if event.EventType == extension.Shutdown {
 				extension.ProcessShutdown()
+				cancel()
 				return
 			}
 
@@ -206,9 +198,6 @@ func main() {
 				// Flush APM data now that the function invocation has completed
 				extension.FlushAPMData(client, agentDataChannel, config)
 			}
-
-			close(runtimeDoneSignal)
-			close(extension.AgentDoneSignal)
 		}
 	}
 }

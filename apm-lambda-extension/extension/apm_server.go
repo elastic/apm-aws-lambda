@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"sync"
@@ -35,14 +36,17 @@ var bufferPool = sync.Pool{New: func() interface{} {
 func PostToApmServer(client *http.Client, agentData AgentData, config *extensionConfig) error {
 	endpointURI := "intake/v2/events"
 	encoding := agentData.ContentEncoding
-	buf := bufferPool.Get().(*bytes.Buffer)
-	defer func() {
-		buf.Reset()
-		bufferPool.Put(buf)
-	}()
 
-	if agentData.ContentEncoding == "" {
+	var r io.Reader
+	if agentData.ContentEncoding != "" {
+		r = bytes.NewReader(agentData.Data)
+	} else {
 		encoding = "gzip"
+		buf := bufferPool.Get().(*bytes.Buffer)
+		defer func() {
+			buf.Reset()
+			bufferPool.Put(buf)
+		}()
 		gw, err := gzip.NewWriterLevel(buf, gzip.BestSpeed)
 		if err != nil {
 			return err
@@ -53,12 +57,10 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 		if err := gw.Close(); err != nil {
 			Log.Errorf("Failed write compressed data to buffer: %v", err)
 		}
-	} else {
-		buf.Write(agentData.Data)
+		r = buf
 	}
 
-	req, err := http.NewRequest("POST", config.apmServerUrl+endpointURI, buf)
-	req.Close = true
+	req, err := http.NewRequest("POST", config.apmServerUrl+endpointURI, r)
 	if err != nil {
 		return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
 	}
