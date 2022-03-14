@@ -18,7 +18,6 @@
 package extension
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -68,13 +67,13 @@ func ProcessEnv() *extensionConfig {
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
 		dataReceiverTimeoutSeconds = defaultDataReceiverTimeoutSeconds
-		log.Printf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to %d: %v\n", dataReceiverTimeoutSeconds, err)
+		Log.Warnf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to %d: %v\n", dataReceiverTimeoutSeconds, err)
 	}
 
 	dataForwarderTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS")
 	if err != nil {
 		dataForwarderTimeoutSeconds = defaultDataForwarderTimeoutSeconds
-		log.Printf("Could not read ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS, defaulting to %d: %v\n", dataForwarderTimeoutSeconds, err)
+		Log.Warnf("Could not read ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS, defaulting to %d: %v\n", dataForwarderTimeoutSeconds, err)
 	}
 
 	// add trailing slash to server name if missing

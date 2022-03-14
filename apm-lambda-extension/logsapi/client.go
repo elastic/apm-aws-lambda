@@ -19,7 +19,6 @@ package logsapi
 
 import (
 	"bytes"
-	"elastic/apm-lambda-extension/extension"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"

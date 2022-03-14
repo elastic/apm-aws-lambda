@@ -20,7 +20,6 @@ package extension
 import (
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 )
 
@@ -38,7 +37,7 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 
 		req, err := http.NewRequest(r.Method, apmServerUrl, nil)
 		if err != nil {
-			log.Printf("could not create request object for %s:%s: %v", r.Method, apmServerUrl, err)
+			Log.Errorf("could not create request object for %s:%s: %v", r.Method, apmServerUrl, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -89,7 +88,7 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 		rawBytes, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {
-			log.Printf("Could not read agent intake request body: %v\n", err)
+			Log.Errorf("Could not read agent intake request body: %v\n", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -104,7 +103,7 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 			case agentDataChan <- agentData:
 				Log.Info("Adding agent data to buffer to be sent to apm server")
 			default:
-				log.Println("Channel full: dropping event")
+				Log.Warnf("Channel full: dropping event")
 			}
 		}
 

@@ -45,7 +45,7 @@ func main() {
 	if extension.Log == nil {
 		extension.Log = extension.InitLogger()
 	}
-	
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
@@ -92,7 +92,7 @@ func main() {
 		logsChannel,
 	)
 	if err != nil {
-		log.Printf("Error while subscribing to the Logs API: %v", err)
+		extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
 	}
 
 	for {
