@@ -175,8 +175,6 @@ func processMockEvent(currId string, event MockEvent, extensionPort string) {
 		}
 		wg.Wait()
 	case Shutdown:
-		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
-		client.Do(reqData)
 	}
 	sendLogEvent(currId, "platform.runtimeDone")
 }
