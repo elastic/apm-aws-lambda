@@ -42,9 +42,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// setup logger
-	if extension.Log == nil {
-		extension.Log = extension.InitLogger()
-	}
+	extension.InitLogger()
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)

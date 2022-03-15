@@ -32,7 +32,7 @@ import (
 )
 
 func TestInfoProxy(t *testing.T) {
-	Log = InitLogger()
+	InitLogger()
 
 	headers := map[string]string{"Authorization": "test-value"}
 	wantResp := "{\"foo\": \"bar\"}"
@@ -88,7 +88,7 @@ func TestInfoProxy(t *testing.T) {
 }
 
 func TestInfoProxyErrorStatusCode(t *testing.T) {
-	Log = InitLogger()
+	InitLogger()
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +130,7 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 }
 
 func Test_handleInfoRequest(t *testing.T) {
-	Log = InitLogger()
+	InitLogger()
 
 	headers := map[string]string{"Authorization": "test-value"}
 	// Copied from https://github.com/elastic/apm-server/blob/master/testdata/intake-v2/transactions.ndjson.
@@ -182,6 +182,7 @@ func (errReader) Read(_ []byte) (int, error) {
 }
 
 func Test_handleInfoRequestInvalidBody(t *testing.T) {
+	InitLogger()
 	testChan := make(chan AgentData)
 	mux := http.NewServeMux()
 	urlPath := "/intake/v2/events"
@@ -194,7 +195,7 @@ func Test_handleInfoRequestInvalidBody(t *testing.T) {
 }
 
 func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
-	Log = InitLogger()
+	InitLogger()
 
 	body := []byte(`{"metadata": {}`)
 
@@ -248,7 +249,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 }
 
 func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
-	Log = InitLogger()
+	InitLogger()
 
 	body := []byte(`{"metadata": {}`)
 
@@ -289,7 +290,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 }
 
 func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
-	Log = InitLogger()
+	InitLogger()
 
 	body := []byte(``)
 

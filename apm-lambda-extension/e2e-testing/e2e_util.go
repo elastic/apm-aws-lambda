@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -64,7 +63,7 @@ func FolderExists(path string) bool {
 // This should only be used for showstopping errors.
 func ProcessError(err error) {
 	if err != nil {
-		log.Panic(err)
+		extension.Log.Panic(err)
 	}
 }
 

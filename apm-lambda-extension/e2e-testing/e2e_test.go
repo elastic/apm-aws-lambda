@@ -32,7 +32,7 @@ func TestEndToEnd(t *testing.T) {
 		panic("No config file")
 	}
 
-	extension.Log = extension.InitLogger()
+	extension.InitLogger()
 	if os.Getenv("ELASTIC_APM_LOG_LEVEL") != "" {
 		logLevel, _ := logrus.ParseLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
 		extension.Log.SetLevel(logLevel)

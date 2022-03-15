@@ -7,7 +7,6 @@ import (
 	"elastic/apm-lambda-extension/logsapi"
 	json "encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -16,9 +15,6 @@ import (
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -100,7 +96,8 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 	// Find unused port for the extension to listen to
 	extensionPort, err := e2e_testing.GetFreePort()
 	if err != nil {
-		log.Printf("Could not find free port for the extension to listen on : %v", err)
+		extension.Log.Errorf("Could not find free port for the extension to listen on : %v", err)
+		extensionPort = 8200
 	}
 	os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort))
 
@@ -148,7 +145,7 @@ func processMockEvent(currId string, event MockEvent, extensionPort string) {
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		res, _ := client.Do(req)
-		log.Printf("Response seen by the agent : %d", res.StatusCode)
+		extension.Log.Tracef("Response seen by the agent : %d", res.StatusCode)
 	case InvokeStandardFlush:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
@@ -159,11 +156,11 @@ func processMockEvent(currId string, event MockEvent, extensionPort string) {
 		reqData1, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		_, err := client.Do(reqData0)
 		if err != nil {
-			log.Println(err)
+			extension.Log.Errorln(err)
 		}
 		_, err = client.Do(reqData1)
 		if err != nil {
-			log.Println(err)
+			extension.Log.Errorln(err)
 		}
 		time.Sleep(650 * time.Microsecond)
 	case InvokeMultipleTransactionsOverload:
@@ -247,7 +244,7 @@ func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
 
 // Test a nominal sequence of events (fast APM server, only one standard event)
 func TestStandardEventsChain(t *testing.T) {
-	extension.Log = extension.InitLogger()
+	extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
 
 	eventsChannel := make(chan MockEvent, 100)
@@ -265,9 +262,8 @@ func TestStandardEventsChain(t *testing.T) {
 
 // Test if the flushed param does not cause a panic or an unexpected behavior
 func TestFlush(t *testing.T) {
-	extension.Log = extension.InitLogger()
+	extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
-	extension.Log.Println("Flush Test")
 
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
@@ -284,9 +280,8 @@ func TestFlush(t *testing.T) {
 
 // Test if there is no race condition between waitgroups (issue #128)
 func TestWaitGroup(t *testing.T) {
-	extension.Log = extension.InitLogger()
+	extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
-	extension.Log.Println("Multiple transactions")
 
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
@@ -303,7 +298,7 @@ func TestWaitGroup(t *testing.T) {
 
 // Test what happens when the APM is down (timeout)
 func TestAPMServerDown(t *testing.T) {
-	extension.Log = extension.InitLogger()
+	extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
 
 	eventsChannel := make(chan MockEvent, 100)
@@ -321,7 +316,7 @@ func TestAPMServerDown(t *testing.T) {
 
 // Test what happens when the APM hangs (timeout)
 func TestAPMServerHangs(t *testing.T) {
-	extension.Log = extension.InitLogger()
+	extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
 
 	eventsChannel := make(chan MockEvent, 100)
@@ -342,7 +337,7 @@ func TestAPMServerHangs(t *testing.T) {
 
 // Test what happens when the APM crashes unexpectedly
 func TestAPMServerCrashesDuringExecution(t *testing.T) {
-	extension.Log = extension.InitLogger()
+	extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
 
 	eventsChannel := make(chan MockEvent, 100)
@@ -360,7 +355,7 @@ func TestAPMServerCrashesDuringExecution(t *testing.T) {
 
 // Test what happens when the APM Data channel is full
 func TestFullChannel(t *testing.T) {
-	extension.Log = extension.InitLogger()
+	extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
 
 	eventsChannel := make(chan MockEvent, 1000)
@@ -378,7 +373,7 @@ func TestFullChannel(t *testing.T) {
 
 // Test what happens when the APM Data channel is full and the APM server slow (send strategy : background)
 func TestFullChannelSlowAPMServer(t *testing.T) {
-	extension.Log = extension.InitLogger()
+	extension.InitLogger()
 	http.DefaultServeMux = new(http.ServeMux)
 
 	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")

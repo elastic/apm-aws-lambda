@@ -24,7 +24,7 @@ import (
 )
 
 func TestProcessEnv(t *testing.T) {
-	Log = InitLogger()
+	InitLogger()
 
 	os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "bar.example.com/")
 	os.Setenv("ELASTIC_APM_SECRET_TOKEN", "foo")

@@ -7,9 +7,11 @@ import (
 
 var Log *logrus.Logger
 
-func InitLogger() *logrus.Logger {
-	newLogger := logrus.New()
-	newLogger.SetFormatter(&ecslogrus.Formatter{})
-	newLogger.SetLevel(logrus.TraceLevel)
-	return newLogger
+func InitLogger() {
+	if Log == nil {
+		newLogger := logrus.New()
+		newLogger.SetFormatter(&ecslogrus.Formatter{})
+		newLogger.SetLevel(logrus.TraceLevel)
+		Log = newLogger
+	}
 }
