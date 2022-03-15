@@ -18,6 +18,8 @@ import (
 	"strings"
 )
 
+// GetEnvVarValueOrSetDefault retrieves the environment variable envVarName.
+// If the desired variable is not defined, defaultVal is returned.
 func GetEnvVarValueOrSetDefault(envVarName string, defaultVal string) string {
 	val := os.Getenv(envVarName)
 	if val == "" {
@@ -26,6 +28,8 @@ func GetEnvVarValueOrSetDefault(envVarName string, defaultVal string) string {
 	return val
 }
 
+// RunCommandInDir runs a shell command with a given set of args in a specified folder.
+// The stderr and stdout can be enabled or disabled.
 func RunCommandInDir(command string, args []string, dir string, printOutput bool) {
 	e := exec.Command(command, args...)
 	if printOutput {
@@ -53,6 +57,7 @@ func RunCommandInDir(command string, args []string, dir string, printOutput bool
 
 }
 
+// FolderExists returns true if the specified folder exists, and false else.
 func FolderExists(path string) bool {
 	_, err := os.Stat(path)
 	if err == nil {
@@ -61,12 +66,15 @@ func FolderExists(path string) bool {
 	return false
 }
 
+// ProcessError is a shorthand function to handle fatal errors, the idiomatic Go way.
+// This should only be used for showstopping errors.
 func ProcessError(err error) {
 	if err != nil {
 		log.Panic(err)
 	}
 }
 
+// Unzip is a utility function that unzips a specified zip archive to a specified destination.
 func Unzip(archivePath string, destinationFolderPath string) {
 
 	openedArchive, err := zip.OpenReader(archivePath)
@@ -114,6 +122,7 @@ func Unzip(archivePath string, destinationFolderPath string) {
 	}
 }
 
+// IsStringInSlice is a utility function that checks if a slice of strings contains a specific string.
 func IsStringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
@@ -123,6 +132,8 @@ func IsStringInSlice(a string, list []string) bool {
 	return false
 }
 
+// GetDecompressedBytesFromRequest takes a HTTP request in argument and return the raw (decompressed) bytes of the body.
+// The byte array can then be converted into a string for debugging / testing purposes.
 func GetDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 	var rawBytes []byte
 	if req.Body != nil {
@@ -157,6 +168,7 @@ func GetDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 	}
 }
 
+// GetFreePort is a function that queries the kernel and obtains an unused port.
 func GetFreePort() (int, error) {
 	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
 	if err != nil {
