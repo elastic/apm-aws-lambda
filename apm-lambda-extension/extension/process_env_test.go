@@ -103,20 +103,6 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "10")
-	config = ProcessEnv()
-	if config.DataForwarderTimeoutSeconds != 10 {
-		t.Log("Timeout not set correctly")
-		t.Fail()
-	}
-
-	os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "foo")
-	config = ProcessEnv()
-	if config.DataForwarderTimeoutSeconds != 3 {
-		t.Log("Timeout not set correctly")
-		t.Fail()
-	}
-
 	os.Setenv("ELASTIC_APM_API_KEY", "foo")
 	config = ProcessEnv()
 	if config.apmServerApiKey != "foo" {
