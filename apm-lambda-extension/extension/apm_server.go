@@ -24,13 +24,32 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
+	"math/rand"
 	"net/http"
 	"sync"
+	"time"
 )
 
 var bufferPool = sync.Pool{New: func() interface{} {
 	return &bytes.Buffer{}
 }}
+
+type APMServerTransportStatusType string
+
+const (
+	failure               APMServerTransportStatusType = "failure"
+	waitingForNextAttempt APMServerTransportStatusType = "waitingForNextAttempt"
+	nominal               APMServerTransportStatusType = "nominal"
+)
+
+var apmServerTransportStatus APMServerTransportStatusType
+var apmServerReconnectionCount int
+var apmServerBackoffTimer *time.Timer
+
+func InitApmServerTransportStatus() {
+	apmServerTransportStatus = nominal
+}
 
 // todo: can this be a streaming or streaming style call that keeps the
 //       connection open across invocations?
@@ -75,6 +94,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 
 	resp, err := client.Do(req)
 	if err != nil {
+		enterBackoff()
 		return fmt.Errorf("failed to post to APM server: %v", err)
 	}
 
@@ -82,10 +102,54 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		enterBackoff()
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
 	log.Printf("APM server response body: %v\n", string(body))
 	log.Printf("APM server response status code: %v\n", resp.StatusCode)
+	apmServerTransportStatus = nominal
 	return nil
+}
+
+func EnqueueAPMData(agentDataChannel chan AgentData, agentData AgentData) {
+	select {
+	case agentDataChannel <- agentData:
+		log.Println("Adding agent data to buffer to be sent to apm server")
+	default:
+		log.Println("Channel full: dropping event")
+	}
+}
+
+func CheckTransportStatus() bool {
+	return apmServerTransportStatus != failure
+}
+
+func enterBackoff() {
+	if apmServerTransportStatus == nominal {
+		apmServerReconnectionCount = 0
+	} else {
+		apmServerReconnectionCount++
+	}
+	apmServerTransportStatus = failure
+	apmServerBackoffTimer = time.NewTimer(computeGracePeriod())
+	go waitForGracePeriod()
+}
+
+func waitForGracePeriod() {
+	<-apmServerBackoffTimer.C
+	apmServerTransportStatus = waitingForNextAttempt
+}
+
+// ComputeGracePeriod https://github.com/elastic/apm/blob/main/specs/agents/transport.md#transport-errors
+func computeGracePeriod() time.Duration {
+	var thresholdReconnectionCount float64
+	if apmServerReconnectionCount <= 6 {
+		thresholdReconnectionCount = 6
+	} else {
+		thresholdReconnectionCount = 6
+	}
+	gracePeriodWithoutJitter := math.Pow(thresholdReconnectionCount, 2)
+	jitter := rand.Float64()/5 - 0.1
+	return time.Duration(gracePeriodWithoutJitter+jitter*gracePeriodWithoutJitter) * time.Second
 }
