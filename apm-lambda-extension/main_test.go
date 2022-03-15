@@ -6,6 +6,7 @@ import (
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/logsapi"
 	json "encoding/json"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"log"
@@ -71,7 +72,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 			select {
 			case nextEvent := <-eventsChannel:
 				sendNextEventInfo(w, currId, nextEvent)
-				go processMockEvent(currId, nextEvent, apmServer)
+				go processMockEvent(currId, nextEvent, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"))
 			default:
 				finalShutDown := MockEvent{
 					Type:              Shutdown,
@@ -79,7 +80,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 					Timeout:           0,
 				}
 				sendNextEventInfo(w, currId, finalShutDown)
-				go processMockEvent(currId, finalShutDown, apmServer)
+				go processMockEvent(currId, finalShutDown, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"))
 			}
 		// Logs API subscription request
 		case "/2020-08-15/logs":
@@ -91,6 +92,13 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 	strippedLambdaURL := slicedLambdaURL[1]
 	os.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL)
 	extensionClient = extension.NewClient(os.Getenv("AWS_LAMBDA_RUNTIME_API"))
+
+	// Find unused port for the extension to listen to
+	extensionPort, err := e2e_testing.GetFreePort()
+	if err != nil {
+		log.Printf("Could not find free port for the extension to listen on : %v", err)
+	}
+	os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort))
 
 	return lambdaServer, apmServer, &apmServerLog, hangChan
 }
@@ -126,7 +134,7 @@ type MockEvent struct {
 	Timeout           float64
 }
 
-func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server) {
+func processMockEvent(currId string, event MockEvent, extensionPort string) {
 	sendLogEvent(currId, "platform.start")
 	client := http.Client{}
 	switch event.Type {
@@ -134,17 +142,17 @@ func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server
 		time.Sleep(time.Duration(event.Timeout) * time.Second)
 	case InvokeStandard:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
-		req, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
+		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		res, _ := client.Do(req)
 		log.Printf("Response seen by the agent : %d", res.StatusCode)
 	case InvokeStandardFlush:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
-		reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events?flushed=true", bytes.NewBuffer([]byte(event.APMServerBehavior)))
+		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		client.Do(reqData)
 	case InvokeWaitgroupsRace:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
-		reqData0, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
-		reqData1, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
+		reqData0, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
+		reqData1, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		_, err := client.Do(reqData0)
 		if err != nil {
 			log.Println(err)
@@ -160,14 +168,14 @@ func processMockEvent(currId string, event MockEvent, APMServer *httptest.Server
 			go func() {
 				wg.Add(1)
 				time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
-				reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
+				reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 				client.Do(reqData)
 				wg.Done()
 			}()
 		}
 		wg.Wait()
 	case Shutdown:
-		reqData, _ := http.NewRequest("POST", "http://localhost:8200/intake/v2/events", bytes.NewBuffer([]byte(event.APMServerBehavior)))
+		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		client.Do(reqData)
 	}
 	sendLogEvent(currId, "platform.runtimeDone")
@@ -352,7 +360,7 @@ func TestFullChannel(t *testing.T) {
 	log.Println("AgentData channel is full")
 
 	eventsChannel := make(chan MockEvent, 1000)
-	lambdaServer, apmServer, _, _ := initMockServers(eventsChannel)
+	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
 	defer apmServer.Close()
 
@@ -361,6 +369,7 @@ func TestFullChannel(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
+	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
 }
 
 // Test what happens when the APM Data channel is full and the APM server slow (send strategy : background)

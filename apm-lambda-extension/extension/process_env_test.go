@@ -65,7 +65,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", ":8201")
+	os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", "8201")
 	config = ProcessEnv()
 	if config.dataReceiverServerPort != ":8201" {
 		t.Log("Env port not set correctly")
