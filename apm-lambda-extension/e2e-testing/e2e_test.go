@@ -5,10 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -18,6 +14,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 var rebuildPtr = flag.Bool("rebuild", false, "rebuild lambda functions")
@@ -36,7 +37,6 @@ func TestEndToEnd(t *testing.T) {
 		logLevel, _ := logrus.ParseLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
 		extension.Log.SetLevel(logLevel)
 	}
-
 	if GetEnvVarValueOrSetDefault("RUN_E2E_TESTS", "false") != "true" {
 		t.Skip("Skipping E2E tests. Please set the env. variable RUN_E2E_TESTS=true if you want to run them.")
 	}

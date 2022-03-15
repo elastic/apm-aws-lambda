@@ -18,6 +18,7 @@
 package extension
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -99,14 +100,14 @@ func ProcessEnv() *extensionConfig {
 		apmServerUrl:                normalizedApmLambdaServer,
 		apmServerSecretToken:        os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
 		apmServerApiKey:             os.Getenv("ELASTIC_APM_API_KEY"),
-		dataReceiverServerPort:      os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"),
+		dataReceiverServerPort:      fmt.Sprintf(":%s", os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT")),
 		SendStrategy:                normalizedSendStrategy,
 		dataReceiverTimeoutSeconds:  dataReceiverTimeoutSeconds,
 		DataForwarderTimeoutSeconds: dataForwarderTimeoutSeconds,
 		LogLevel:                    logLevel,
 	}
 
-	if config.dataReceiverServerPort == "" {
+	if config.dataReceiverServerPort == ":" {
 		config.dataReceiverServerPort = ":8200"
 	}
 	if config.apmServerUrl == "" {
