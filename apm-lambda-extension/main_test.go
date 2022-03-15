@@ -165,8 +165,8 @@ func processMockEvent(currId string, event MockEvent, extensionPort string) {
 	case InvokeMultipleTransactionsOverload:
 		wg := sync.WaitGroup{}
 		for i := 0; i < 200; i++ {
+			wg.Add(1)
 			go func() {
-				wg.Add(1)
 				time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 				reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 				client.Do(reqData)
