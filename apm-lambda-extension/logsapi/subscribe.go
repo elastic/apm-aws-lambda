@@ -29,9 +29,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-var listenerHost = "sandbox"
-var logsAPIServer *http.Server
-var logsAPIListener net.Listener
+var ListenerHost = "sandbox"
+var Server *http.Server
+var Listener net.Listener
 
 type LogEvent struct {
 	Time         time.Time    `json:"time"`
@@ -58,8 +58,8 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 		return err
 	}
 
-	_, port, _ := net.SplitHostPort(logsAPIListener.Addr().String())
-	_, err = logsAPIClient.Subscribe(eventTypes, URI("http://"+listenerHost+":"+port), extensionID)
+	_, port, _ := net.SplitHostPort(Listener.Addr().String())
+	_, err = logsAPIClient.Subscribe(eventTypes, URI("http://"+ListenerHost+":"+port), extensionID)
 	return err
 }
 
@@ -85,18 +85,18 @@ func startHTTPServer(out chan LogEvent) error {
 	mux.HandleFunc("/", handleLogEventsRequest(out))
 	var err error
 
-	logsAPIServer = &http.Server{
+	Server = &http.Server{
 		Handler: mux,
 	}
 
-	logsAPIListener, err = net.Listen("tcp", listenerHost+":0")
+	Listener, err = net.Listen("tcp", ListenerHost+":0")
 	if err != nil {
 		return err
 	}
 
 	go func() {
-		log.Printf("Extension listening for logsAPI events on %s", logsAPIListener.Addr().String())
-		logsAPIServer.Serve(logsAPIListener)
+		log.Printf("Extension listening for logsAPI events on %s", Listener.Addr().String())
+		Server.Serve(Listener)
 	}()
 	return nil
 }

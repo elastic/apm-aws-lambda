@@ -18,6 +18,7 @@
 package extension
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -25,12 +26,13 @@ import (
 )
 
 type extensionConfig struct {
-	apmServerUrl               string
-	apmServerSecretToken       string
-	apmServerApiKey            string
-	dataReceiverServerPort     string
-	SendStrategy               SendStrategy
-	dataReceiverTimeoutSeconds int
+	apmServerUrl                string
+	apmServerSecretToken        string
+	apmServerApiKey             string
+	dataReceiverServerPort      string
+	SendStrategy                SendStrategy
+	dataReceiverTimeoutSeconds  int
+	DataForwarderTimeoutSeconds int
 }
 
 // SendStrategy represents the type of sending strategy the extension uses
@@ -45,6 +47,9 @@ const (
 	// flush remaining buffered agent data when it receives a signal that the
 	// function is complete
 	SyncFlush SendStrategy = "syncflush"
+
+	defaultDataReceiverTimeoutSeconds  int = 15
+	defaultDataForwarderTimeoutSeconds int = 3
 )
 
 func getIntFromEnv(name string) (int, error) {
@@ -60,8 +65,14 @@ func getIntFromEnv(name string) (int, error) {
 func ProcessEnv() *extensionConfig {
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
-		log.Printf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to 15: %v\n", err)
-		dataReceiverTimeoutSeconds = 15
+		dataReceiverTimeoutSeconds = defaultDataReceiverTimeoutSeconds
+		log.Printf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to %d: %v\n", dataReceiverTimeoutSeconds, err)
+	}
+
+	dataForwarderTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS")
+	if err != nil {
+		dataForwarderTimeoutSeconds = defaultDataForwarderTimeoutSeconds
+		log.Printf("Could not read ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS, defaulting to %d: %v\n", dataForwarderTimeoutSeconds, err)
 	}
 
 	// add trailing slash to server name if missing
@@ -78,15 +89,16 @@ func ProcessEnv() *extensionConfig {
 	}
 
 	config := &extensionConfig{
-		apmServerUrl:               normalizedApmLambdaServer,
-		apmServerSecretToken:       os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
-		apmServerApiKey:            os.Getenv("ELASTIC_APM_API_KEY"),
-		dataReceiverServerPort:     os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"),
-		SendStrategy:               normalizedSendStrategy,
-		dataReceiverTimeoutSeconds: dataReceiverTimeoutSeconds,
+		apmServerUrl:                normalizedApmLambdaServer,
+		apmServerSecretToken:        os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
+		apmServerApiKey:             os.Getenv("ELASTIC_APM_API_KEY"),
+		dataReceiverServerPort:      fmt.Sprintf(":%s", os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT")),
+		SendStrategy:                normalizedSendStrategy,
+		dataReceiverTimeoutSeconds:  dataReceiverTimeoutSeconds,
+		DataForwarderTimeoutSeconds: dataForwarderTimeoutSeconds,
 	}
 
-	if config.dataReceiverServerPort == "" {
+	if config.dataReceiverServerPort == ":" {
 		config.dataReceiverServerPort = ":8200"
 	}
 	if config.apmServerUrl == "" {
