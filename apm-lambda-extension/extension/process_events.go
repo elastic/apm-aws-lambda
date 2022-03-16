@@ -34,6 +34,9 @@ func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *exten
 	for {
 		select {
 		case agentData := <-dataChannel:
+			if !IsTransportStatusHealthy() {
+				return
+			}
 			log.Println("Processing agent data")
 			err := PostToApmServer(client, agentData, config)
 			if err != nil {

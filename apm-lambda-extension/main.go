@@ -137,15 +137,14 @@ func main() {
 						log.Println("funcDone signal received, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
-						if extension.CheckTransportStatus() {
-							err := extension.PostToApmServer(client, agentData, config)
-							if err != nil {
-								log.Printf("Error sending to APM server, queueing data  : %v", err)
-								extension.EnqueueAPMData(agentDataChannel, agentData)
-							}
-						} else {
-							log.Println("Waiting for backoff grace period")
-							extension.EnqueueAPMData(agentDataChannel, agentData)
+						if !extension.IsTransportStatusHealthy() {
+							extension.WaitForGracePeriod()
+						}
+						err := extension.PostToApmServer(client, agentData, config)
+						if err != nil {
+							log.Printf("Error sending to APM server, skipping  : %v", err)
+							// todo : figure out a way to keep data without being locked in the loop
+							//extension.EnqueueAPMData(agentDataChannel, agentData)
 						}
 					}
 				}
@@ -196,12 +195,6 @@ func main() {
 			close(funcDone)
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
-				// Flush APM data now that the function invocation has completed
-				for {
-					if extension.CheckTransportStatus() {
-						break
-					}
-				}
 				extension.FlushAPMData(client, agentDataChannel, config)
 			}
 		}
