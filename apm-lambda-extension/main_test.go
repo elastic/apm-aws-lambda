@@ -241,12 +241,15 @@ func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
 }
 
 // TESTS
+func TestMain(m *testing.M) {
+	extension.InitLogger()
+	http.DefaultServeMux = new(http.ServeMux)
+	code := m.Run()
+	os.Exit(code)
+}
 
 // Test a nominal sequence of events (fast APM server, only one standard event)
 func TestStandardEventsChain(t *testing.T) {
-	extension.InitLogger()
-	http.DefaultServeMux = new(http.ServeMux)
-
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -262,9 +265,6 @@ func TestStandardEventsChain(t *testing.T) {
 
 // Test if the flushed param does not cause a panic or an unexpected behavior
 func TestFlush(t *testing.T) {
-	extension.InitLogger()
-	http.DefaultServeMux = new(http.ServeMux)
-
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -280,9 +280,6 @@ func TestFlush(t *testing.T) {
 
 // Test if there is no race condition between waitgroups (issue #128)
 func TestWaitGroup(t *testing.T) {
-	extension.InitLogger()
-	http.DefaultServeMux = new(http.ServeMux)
-
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -298,9 +295,6 @@ func TestWaitGroup(t *testing.T) {
 
 // Test what happens when the APM is down (timeout)
 func TestAPMServerDown(t *testing.T) {
-	extension.InitLogger()
-	http.DefaultServeMux = new(http.ServeMux)
-
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -316,9 +310,6 @@ func TestAPMServerDown(t *testing.T) {
 
 // Test what happens when the APM hangs (timeout)
 func TestAPMServerHangs(t *testing.T) {
-	extension.InitLogger()
-	http.DefaultServeMux = new(http.ServeMux)
-
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, hangChan := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -337,9 +328,6 @@ func TestAPMServerHangs(t *testing.T) {
 
 // Test what happens when the APM crashes unexpectedly
 func TestAPMServerCrashesDuringExecution(t *testing.T) {
-	extension.InitLogger()
-	http.DefaultServeMux = new(http.ServeMux)
-
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -355,9 +343,6 @@ func TestAPMServerCrashesDuringExecution(t *testing.T) {
 
 // Test what happens when the APM Data channel is full
 func TestFullChannel(t *testing.T) {
-	extension.InitLogger()
-	http.DefaultServeMux = new(http.ServeMux)
-
 	eventsChannel := make(chan MockEvent, 1000)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -373,9 +358,6 @@ func TestFullChannel(t *testing.T) {
 
 // Test what happens when the APM Data channel is full and the APM server slow (send strategy : background)
 func TestFullChannelSlowAPMServer(t *testing.T) {
-	extension.InitLogger()
-	http.DefaultServeMux = new(http.ServeMux)
-
 	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
 	eventsChannel := make(chan MockEvent, 1000)
 	lambdaServer, apmServer, _, _ := initMockServers(eventsChannel)
