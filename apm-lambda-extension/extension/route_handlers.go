@@ -101,9 +101,9 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 
 			select {
 			case agentDataChan <- agentData:
-				Log.Info("Adding agent data to buffer to be sent to apm server")
+				Log.Debug("Adding agent data to buffer to be sent to apm server")
 			default:
-				Log.Warnf("Channel full: dropping event")
+				Log.Warn("Channel full: dropping event")
 			}
 		}
 

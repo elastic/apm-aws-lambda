@@ -95,7 +95,7 @@ func startHTTPServer(out chan LogEvent) error {
 	}
 
 	go func() {
-		extension.Log.Infof("Extension listening for logsAPI events on %s", Listener.Addr().String())
+		extension.Log.Infof("Extension listening for Lambda Logs API events on %s", Listener.Addr().String())
 		Server.Serve(Listener)
 	}()
 	return nil

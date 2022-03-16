@@ -23,8 +23,7 @@ import (
 )
 
 func ProcessShutdown() {
-	Log.Info("Received SHUTDOWN event")
-	Log.Info("Exiting")
+	Log.Info("Received SHUTDOWN event, exiting")
 	agentDataServer.Close()
 }
 

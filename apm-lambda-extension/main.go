@@ -49,8 +49,7 @@ func main() {
 	go func() {
 		s := <-sigs
 		cancel()
-		extension.Log.Infof("Received %v\n", s)
-		extension.Log.Info("Exiting")
+		extension.Log.Infof("Received %v\n, exiting", s)
 	}()
 
 	// pulls ELASTIC_ env variable into globals for easy access
@@ -62,7 +61,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	extension.Log.Tracef("Register response: %v\n", extension.PrettyPrint(res))
+	extension.Log.Debugf("Register response: %v\n", extension.PrettyPrint(res))
 
 	// Create a channel to buffer apm agent data
 	agentDataChannel := make(chan extension.AgentData, 100)
@@ -106,8 +105,8 @@ func main() {
 				extension.Log.Errorf("Error: %v\n. Exiting.", err)
 				return
 			}
-			extension.Log.Info("Received event.")
-			extension.Log.Tracef("%v\n", extension.PrettyPrint(event))
+			extension.Log.Debug("Received event.")
+			extension.Log.Debugf("%v\n", extension.PrettyPrint(event))
 
 			// Make a channel for signaling that we received the agent flushed signal
 			extension.AgentDoneSignal = make(chan struct{})
@@ -137,7 +136,7 @@ func main() {
 				for {
 					select {
 					case <-funcDone:
-						extension.Log.Info("funcDone signal received, not processing any more agent data")
+						extension.Log.Debug("Received signal that function has completed, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
 						err := extension.PostToApmServer(client, agentData, config)
@@ -154,10 +153,10 @@ func main() {
 				for {
 					select {
 					case <-funcDone:
-						extension.Log.Info("funcDone signal received, not processing any more log events")
+						extension.Log.Debug("Received signal that function has completed, not processing any more log events")
 						return
 					case logEvent := <-logsChannel:
-						extension.Log.Infof("Received log event %v\n", logEvent.Type)
+						extension.Log.Debugf("Received log event %v\n", logEvent.Type)
 						// Check the logEvent for runtimeDone and compare the RequestID
 						// to the id that came in via the Next API
 						if logEvent.Type == logsapi.RuntimeDone {
@@ -166,7 +165,7 @@ func main() {
 								runtimeDoneSignal <- struct{}{}
 								return
 							} else {
-								extension.Log.Info("Log API runtimeDone event request id didn't match")
+								extension.Log.Debug("Log API runtimeDone event request id didn't match")
 							}
 						}
 					}
@@ -183,9 +182,9 @@ func main() {
 
 			select {
 			case <-extension.AgentDoneSignal:
-				extension.Log.Info("Received agent done signal")
+				extension.Log.Debug("Received agent done signal")
 			case <-runtimeDoneSignal:
-				extension.Log.Info("Received runtimeDone signal")
+				extension.Log.Debug("Received runtimeDone signal")
 			case <-timer.C:
 				extension.Log.Info("Time expired waiting for agent signal or runtimeDone event")
 			}

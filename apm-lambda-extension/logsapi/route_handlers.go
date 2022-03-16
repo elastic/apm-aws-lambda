@@ -36,7 +36,7 @@ func handleLogEventsRequest(out chan LogEvent) func(w http.ResponseWriter, r *ht
 
 		for idx := range logEvents {
 			if logEvents[idx].Type == "" {
-				extension.Log.Errorf("Error unmarshalling log event: %+v", logEvents[idx])
+				extension.Log.Errorf("Error reading log event: %+v", logEvents[idx])
 				w.WriteHeader(http.StatusInternalServerError)
 				continue
 			}

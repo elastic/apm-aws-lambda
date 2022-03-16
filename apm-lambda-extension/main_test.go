@@ -331,7 +331,7 @@ func TestAPMServerHangs(t *testing.T) {
 	start := time.Now()
 	assert.NotPanics(t, main)
 	assert.False(t, strings.Contains(apmServerLog.Data, string(Hangs)))
-	extension.Log.Printf("Success : test took %s", time.Since(start))
+	extension.Log.Infof("Success : test took %s", time.Since(start))
 	hangChan <- struct{}{}
 }
 
