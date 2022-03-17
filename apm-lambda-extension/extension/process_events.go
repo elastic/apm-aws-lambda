@@ -31,12 +31,12 @@ func ProcessShutdown() {
 
 func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *extensionConfig) {
 	log.Println("Checking for agent data")
+	if !IsTransportStatusHealthy() {
+		return
+	}
 	for {
 		select {
 		case agentData := <-dataChannel:
-			if !IsTransportStatusHealthy() {
-				return
-			}
 			log.Println("Processing agent data")
 			err := PostToApmServer(client, agentData, config)
 			if err != nil {

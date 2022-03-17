@@ -72,6 +72,7 @@ func main() {
 		Timeout:   time.Duration(config.DataForwarderTimeoutSeconds) * time.Second,
 		Transport: http.DefaultTransport.(*http.Transport).Clone(),
 	}
+	extension.InitApmServerTransportStatus()
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	logsChannel := make(chan logsapi.LogEvent)
@@ -131,6 +132,9 @@ func main() {
 			backgroundDataSendWg.Add(1)
 			go func() {
 				defer backgroundDataSendWg.Done()
+				if !extension.IsTransportStatusHealthy() {
+					return
+				}
 				for {
 					select {
 					case <-funcDone:
@@ -138,13 +142,14 @@ func main() {
 						return
 					case agentData := <-agentDataChannel:
 						if !extension.IsTransportStatusHealthy() {
-							extension.WaitForGracePeriod()
+							extension.EnqueueAPMData(agentDataChannel, agentData)
+							return
 						}
 						err := extension.PostToApmServer(client, agentData, config)
 						if err != nil {
 							log.Printf("Error sending to APM server, skipping  : %v", err)
-							// todo : figure out a way to keep data without being locked in the loop
-							//extension.EnqueueAPMData(agentDataChannel, agentData)
+							extension.EnqueueAPMData(agentDataChannel, agentData)
+							return
 						}
 					}
 				}

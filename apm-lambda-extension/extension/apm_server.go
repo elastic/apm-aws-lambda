@@ -20,6 +20,7 @@ package extension
 import (
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -35,24 +36,21 @@ var bufferPool = sync.Pool{New: func() interface{} {
 	return &bytes.Buffer{}
 }}
 
-type APMServerTransportStatusType string
-
-const (
-	failure APMServerTransportStatusType = "failing"
-	healthy APMServerTransportStatusType = "healthy"
-)
-
-var apmServerTransportStatus APMServerTransportStatusType
+var apmServerTransportFailing bool
 var apmServerReconnectionCount int
 var apmServerBackoffTimer *time.Timer
 
 func InitApmServerTransportStatus() {
-	apmServerTransportStatus = healthy
+	apmServerTransportFailing = false
 }
 
 // todo: can this be a streaming or streaming style call that keeps the
 //       connection open across invocations?
 func PostToApmServer(client *http.Client, agentData AgentData, config *extensionConfig) error {
+	if !IsTransportStatusHealthy() {
+		return errors.New("transport status is unhealthy")
+	}
+
 	endpointURI := "intake/v2/events"
 	encoding := agentData.ContentEncoding
 
@@ -107,7 +105,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 
 	log.Printf("APM server response body: %v\n", string(body))
 	log.Printf("APM server response status code: %v\n", resp.StatusCode)
-	apmServerTransportStatus = healthy
+	apmServerTransportFailing = false
 	return nil
 }
 
@@ -121,21 +119,28 @@ func EnqueueAPMData(agentDataChannel chan AgentData, agentData AgentData) {
 }
 
 func IsTransportStatusHealthy() bool {
-	return apmServerTransportStatus != failure
+	return apmServerTransportFailing != true
 }
 
 func WaitForGracePeriod() {
-	apmServerBackoffTimer = time.NewTimer(computeGracePeriod())
+	if apmServerBackoffTimer == nil {
+		return
+	}
 	<-apmServerBackoffTimer.C
 }
 
 func enterBackoff() {
-	if apmServerTransportStatus == healthy {
+	if !apmServerTransportFailing {
 		apmServerReconnectionCount = 0
 	} else {
 		apmServerReconnectionCount++
 	}
-	apmServerTransportStatus = failure
+	apmServerTransportFailing = true
+	apmServerBackoffTimer = time.NewTimer(computeGracePeriod())
+	go func() {
+		WaitForGracePeriod()
+		apmServerTransportFailing = false
+	}()
 }
 
 // ComputeGracePeriod https://github.com/elastic/apm/blob/main/specs/agents/transport.md#transport-errors
