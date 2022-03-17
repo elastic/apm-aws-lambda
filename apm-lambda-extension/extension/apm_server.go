@@ -36,12 +36,21 @@ var bufferPool = sync.Pool{New: func() interface{} {
 	return &bytes.Buffer{}
 }}
 
-var apmServerTransportFailing bool
+type ApmServerTransportStatusType string
+
+const (
+	failing ApmServerTransportStatusType = "failing"
+	pending ApmServerTransportStatusType = "pending"
+	healthy ApmServerTransportStatusType = "healthy"
+)
+
+var apmServerTransportStatus ApmServerTransportStatusType
 var apmServerReconnectionCount int
 var apmServerBackoffTimer *time.Timer
 
 func InitApmServerTransportStatus() {
-	apmServerTransportFailing = false
+	apmServerTransportStatus = healthy
+	apmServerReconnectionCount = 0
 }
 
 // todo: can this be a streaming or streaming style call that keeps the
@@ -105,7 +114,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 
 	log.Printf("APM server response body: %v\n", string(body))
 	log.Printf("APM server response status code: %v\n", resp.StatusCode)
-	apmServerTransportFailing = false
+	apmServerTransportStatus = healthy
 	return nil
 }
 
@@ -119,7 +128,7 @@ func EnqueueAPMData(agentDataChannel chan AgentData, agentData AgentData) {
 }
 
 func IsTransportStatusHealthy() bool {
-	return apmServerTransportFailing != true
+	return apmServerTransportStatus != failing
 }
 
 func WaitForGracePeriod() {
@@ -130,16 +139,16 @@ func WaitForGracePeriod() {
 }
 
 func enterBackoff() {
-	if !apmServerTransportFailing {
+	if apmServerTransportStatus == healthy {
 		apmServerReconnectionCount = 0
 	} else {
 		apmServerReconnectionCount++
 	}
-	apmServerTransportFailing = true
+	apmServerTransportStatus = failing
 	apmServerBackoffTimer = time.NewTimer(computeGracePeriod())
 	go func() {
 		WaitForGracePeriod()
-		apmServerTransportFailing = false
+		apmServerTransportStatus = pending
 	}()
 }
 
@@ -147,5 +156,5 @@ func enterBackoff() {
 func computeGracePeriod() time.Duration {
 	gracePeriodWithoutJitter := math.Pow(math.Min(float64(apmServerReconnectionCount), 6), 2)
 	jitter := rand.Float64()/5 - 0.1
-	return time.Duration(gracePeriodWithoutJitter+jitter*gracePeriodWithoutJitter) * time.Second
+	return time.Duration((gracePeriodWithoutJitter + jitter*gracePeriodWithoutJitter) * float64(time.Second))
 }
