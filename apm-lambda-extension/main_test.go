@@ -41,6 +41,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 				w.WriteHeader(http.StatusAccepted)
 			case Hangs:
 				<-hangChan
+				apmServerLog.Data += string(decompressedBytes)
 			case Crashes:
 				panic("Server crashed")
 			default:
@@ -324,6 +325,29 @@ func TestAPMServerHangs(t *testing.T) {
 	assert.False(t, strings.Contains(apmServerLog.Data, string(Hangs)))
 	extension.Log.Infof("Success : test took %s", time.Since(start))
 	hangChan <- struct{}{}
+}
+
+// Test what happens when the APM hangs (timeout)
+func TestAPMServerRecovery(t *testing.T) {
+	eventsChannel := make(chan MockEvent, 100)
+	lambdaServer, apmServer, apmServerLog, hangChan := initMockServers(eventsChannel)
+	defer lambdaServer.Close()
+	defer apmServer.Close()
+
+	eventsChain := []MockEvent{
+		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
+		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+	}
+	eventQueueGenerator(eventsChain, eventsChannel)
+	go func() {
+		time.Sleep(5 * time.Second)
+		hangChan <- struct{}{}
+		hangChan <- struct{}{}
+	}()
+	assert.NotPanics(t, main)
+	assert.True(t, strings.Contains(apmServerLog.Data, string(Hangs)))
+	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
+
 }
 
 // Test what happens when the APM crashes unexpectedly
