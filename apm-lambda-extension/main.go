@@ -61,7 +61,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	extension.Log.Debugf("Register response: %v\n", extension.PrettyPrint(res))
+	extension.Log.Debugf("Register response: %v", extension.PrettyPrint(res))
 
 	// Create a channel to buffer apm agent data
 	agentDataChannel := make(chan extension.AgentData, 100)
@@ -106,7 +106,7 @@ func main() {
 				return
 			}
 			extension.Log.Debug("Received event.")
-			extension.Log.Debugf("%v\n", extension.PrettyPrint(event))
+			extension.Log.Debugf("%v", extension.PrettyPrint(event))
 
 			// Make a channel for signaling that we received the agent flushed signal
 			extension.AgentDoneSignal = make(chan struct{})
@@ -156,7 +156,7 @@ func main() {
 						extension.Log.Debug("Received signal that function has completed, not processing any more log events")
 						return
 					case logEvent := <-logsChannel:
-						extension.Log.Debugf("Received log event %v\n", logEvent.Type)
+						extension.Log.Debugf("Received log event %v", logEvent.Type)
 						// Check the logEvent for runtimeDone and compare the RequestID
 						// to the id that came in via the Next API
 						if logEvent.Type == logsapi.RuntimeDone {

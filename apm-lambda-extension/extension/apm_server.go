@@ -84,7 +84,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
-	Log.Debugf("APM server response body: %v\n", string(body))
-	Log.Debugf("APM server response status code: %v\n", resp.StatusCode)
+	Log.Debugf("APM server response body: %v", string(body))
+	Log.Debugf("APM server response status code: %v", resp.StatusCode)
 	return nil
 }
