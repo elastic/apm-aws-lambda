@@ -68,13 +68,13 @@ func ProcessEnv() *extensionConfig {
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
 		dataReceiverTimeoutSeconds = defaultDataReceiverTimeoutSeconds
-		Log.Warnf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to %d: %v\n", dataReceiverTimeoutSeconds, err)
+		Log.Warnf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to %d: %v", dataReceiverTimeoutSeconds, err)
 	}
 
 	dataForwarderTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS")
 	if err != nil {
 		dataForwarderTimeoutSeconds = defaultDataForwarderTimeoutSeconds
-		Log.Warnf("Could not read ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS, defaulting to %d: %v\n", dataForwarderTimeoutSeconds, err)
+		Log.Warnf("Could not read ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS, defaulting to %d: %v", dataForwarderTimeoutSeconds, err)
 	}
 
 	// add trailing slash to server name if missing
@@ -86,7 +86,7 @@ func ProcessEnv() *extensionConfig {
 	logLevel, err := logrus.ParseLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
 	if err != nil {
 		logLevel = logrus.InfoLevel
-		Log.Warnf("Could not read ELASTIC_APM_LOG_LEVEL, defaulting to %s: %v\n", logLevel, err)
+		Log.Warnf("Could not read ELASTIC_APM_LOG_LEVEL, defaulting to %s: %v", logLevel, err)
 	}
 
 	// Get the send strategy, convert to lowercase
