@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"sync"
 )
@@ -53,10 +52,10 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 			return err
 		}
 		if _, err := gw.Write(agentData.Data); err != nil {
-			log.Printf("Failed to compress data: %v", err)
+			Log.Errorf("Failed to compress data: %v", err)
 		}
 		if err := gw.Close(); err != nil {
-			log.Printf("Failed write compressed data to buffer: %v", err)
+			Log.Errorf("Failed write compressed data to buffer: %v", err)
 		}
 		r = buf
 	}
@@ -85,7 +84,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
-	log.Printf("APM server response body: %v\n", string(body))
-	log.Printf("APM server response status code: %v\n", resp.StatusCode)
+	Log.Debugf("APM server response body: %v\n", string(body))
+	Log.Debugf("APM server response status code: %v\n", resp.StatusCode)
 	return nil
 }

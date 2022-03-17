@@ -6,10 +6,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
+	"elastic/apm-lambda-extension/extension"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -30,11 +30,8 @@ func GetEnvVarValueOrSetDefault(envVarName string, defaultVal string) string {
 
 // RunCommandInDir runs a shell command with a given set of args in a specified folder.
 // The stderr and stdout can be enabled or disabled.
-func RunCommandInDir(command string, args []string, dir string, printOutput bool) {
+func RunCommandInDir(command string, args []string, dir string) {
 	e := exec.Command(command, args...)
-	if printOutput {
-		log.Println(e.String())
-	}
 	e.Dir = dir
 	stdout, _ := e.StdoutPipe()
 	stderr, _ := e.StderrPipe()
@@ -42,16 +39,12 @@ func RunCommandInDir(command string, args []string, dir string, printOutput bool
 	scannerOut := bufio.NewScanner(stdout)
 	for scannerOut.Scan() {
 		m := scannerOut.Text()
-		if printOutput {
-			log.Println(m)
-		}
+		extension.Log.Tracef(m)
 	}
 	scannerErr := bufio.NewScanner(stderr)
 	for scannerErr.Scan() {
 		m := scannerErr.Text()
-		if printOutput {
-			log.Println(m)
-		}
+		extension.Log.Tracef(m)
 	}
 	e.Wait()
 
@@ -70,7 +63,7 @@ func FolderExists(path string) bool {
 // This should only be used for showstopping errors.
 func ProcessError(err error) {
 	if err != nil {
-		log.Panic(err)
+		extension.Log.Panic(err)
 	}
 }
 
