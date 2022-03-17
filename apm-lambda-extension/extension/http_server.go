@@ -18,7 +18,6 @@
 package extension
 
 import (
-	"log"
 	"net"
 	"net/http"
 	"time"
@@ -45,7 +44,7 @@ func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) (err
 	}
 
 	go func() {
-		log.Printf("Extension listening for apm data on %s", agentDataServer.Addr)
+		Log.Infof("Extension listening for apm data on %s", agentDataServer.Addr)
 		agentDataServer.Serve(ln)
 	}()
 	return nil

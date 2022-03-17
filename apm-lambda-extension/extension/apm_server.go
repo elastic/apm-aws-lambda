@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"math"
 	"math/rand"
 	"net/http"
@@ -78,10 +77,10 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 			return err
 		}
 		if _, err := gw.Write(agentData.Data); err != nil {
-			log.Printf("Failed to compress data: %v", err)
+			Log.Errorf("Failed to compress data: %v", err)
 		}
 		if err := gw.Close(); err != nil {
-			log.Printf("Failed write compressed data to buffer: %v", err)
+			Log.Errorf("Failed write compressed data to buffer: %v", err)
 		}
 		r = buf
 	}
@@ -112,18 +111,18 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
-	log.Printf("APM server response body: %v\n", string(body))
-	log.Printf("APM server response status code: %v\n", resp.StatusCode)
 	apmServerTransportStatus = healthy
+	Log.Debugf("APM server response body: %v\n", string(body))
+	Log.Debugf("APM server response status code: %v\n", resp.StatusCode)
 	return nil
 }
 
 func EnqueueAPMData(agentDataChannel chan AgentData, agentData AgentData) {
 	select {
 	case agentDataChannel <- agentData:
-		log.Println("Adding agent data to buffer to be sent to apm server")
+		Log.Debug("Adding agent data to buffer to be sent to apm server")
 	default:
-		log.Println("Channel full: dropping event")
+		Log.Warn("Channel full: dropping a subset of agent request data")
 	}
 }
 

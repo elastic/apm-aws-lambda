@@ -18,8 +18,8 @@
 package logsapi
 
 import (
+	"elastic/apm-lambda-extension/extension"
 	"encoding/json"
-	"log"
 	"net/http"
 	"time"
 )
@@ -29,14 +29,14 @@ func handleLogEventsRequest(out chan LogEvent) func(w http.ResponseWriter, r *ht
 	return func(w http.ResponseWriter, r *http.Request) {
 		var logEvents []LogEvent
 		if err := json.NewDecoder(r.Body).Decode(&logEvents); err != nil {
-			log.Printf("Error unmarshalling log events: %+v", err)
+			extension.Log.Errorf("Error unmarshalling log events: %+v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		for idx := range logEvents {
 			if logEvents[idx].Type == "" {
-				log.Printf("Error unmarshalling log event: %+v", logEvents[idx])
+				extension.Log.Errorf("Error reading log event: %+v", logEvents[idx])
 				w.WriteHeader(http.StatusInternalServerError)
 				continue
 			}
