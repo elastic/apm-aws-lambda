@@ -23,7 +23,7 @@ import (
 func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.Server, *APMServerLog, chan struct{}) {
 
 	// Mock APM Server
-	hangChan := make(chan struct{})
+	hangChan := make(chan struct{}, 1)
 	var apmServerLog APMServerLog
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/intake/v2/events" {
@@ -42,6 +42,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 			case Hangs:
 				<-hangChan
 				apmServerLog.Data += string(decompressedBytes)
+				extension.Log.Info("END HANG")
 			case Crashes:
 				panic("Server crashed")
 			default:
@@ -243,7 +244,7 @@ func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
 
 // TESTS
 func TestMain(m *testing.M) {
-	extension.InitLogger()
+	extension.InitApmServerTransportStatus()
 	http.DefaultServeMux = new(http.ServeMux)
 	code := m.Run()
 	os.Exit(code)
@@ -324,6 +325,7 @@ func TestAPMServerHangs(t *testing.T) {
 	assert.NotPanics(t, main)
 	assert.False(t, strings.Contains(apmServerLog.Data, string(Hangs)))
 	extension.Log.Infof("Success : test took %s", time.Since(start))
+	hangChan <- struct{}{}
 	hangChan <- struct{}{}
 }
 

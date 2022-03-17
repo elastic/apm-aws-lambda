@@ -41,9 +41,6 @@ var (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// setup logger
-	extension.InitLogger()
-
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
@@ -124,10 +121,6 @@ func main() {
 				return
 			}
 
-			// Flush any APM data, in case waiting for the agentDone or runtimeDone signals
-			// timed out, the agent data wasn't available yet, and we got to the next non-shutdown event
-			extension.FlushAPMData(client, agentDataChannel, config)
-
 			// Receive agent data as it comes in and post it to the APM server.
 			// Stop checking for, and sending agent data when the function invocation
 			// has completed, signaled via a channel.
@@ -143,10 +136,6 @@ func main() {
 						extension.Log.Debug("Received signal that function has completed, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
-						if !extension.IsTransportStatusHealthy() {
-							extension.EnqueueAPMData(agentDataChannel, agentData)
-							return
-						}
 						err := extension.PostToApmServer(client, agentData, config)
 						if err != nil {
 							extension.Log.Errorf("Error sending to APM server, skipping: %v", err)

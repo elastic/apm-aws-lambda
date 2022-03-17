@@ -43,9 +43,8 @@ const (
 	healthy ApmServerTransportStatusType = "healthy"
 )
 
-var apmServerTransportStatus ApmServerTransportStatusType
-var apmServerReconnectionCount int
-var apmServerBackoffTimer *time.Timer
+var apmServerTransportStatus = healthy
+var apmServerReconnectionCount = 0
 
 func InitApmServerTransportStatus() {
 	apmServerTransportStatus = healthy
@@ -131,10 +130,7 @@ func IsTransportStatusHealthy() bool {
 }
 
 func WaitForGracePeriod() {
-	if apmServerBackoffTimer == nil {
-		return
-	}
-	<-apmServerBackoffTimer.C
+	time.Sleep(computeGracePeriod())
 }
 
 func enterBackoff() {
@@ -144,7 +140,6 @@ func enterBackoff() {
 		apmServerReconnectionCount++
 	}
 	apmServerTransportStatus = failing
-	apmServerBackoffTimer = time.NewTimer(computeGracePeriod())
 	go func() {
 		WaitForGracePeriod()
 		apmServerTransportStatus = pending

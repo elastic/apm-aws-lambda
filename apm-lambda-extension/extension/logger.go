@@ -7,7 +7,7 @@ import (
 
 var Log *logrus.Entry
 
-func InitLogger() {
+func init() {
 
 	if Log == nil {
 		newLogger := logrus.New()

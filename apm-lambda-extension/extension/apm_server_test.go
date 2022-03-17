@@ -28,8 +28,6 @@ import (
 )
 
 func TestPostToApmServerDataCompressed(t *testing.T) {
-	InitLogger()
-
 	s := "A long time ago in a galaxy far, far away..."
 
 	// Compress the data
@@ -63,8 +61,6 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 }
 
 func TestPostToApmServerDataNotCompressed(t *testing.T) {
-	InitLogger()
-
 	s := "A long time ago in a galaxy far, far away..."
 	body := []byte(s)
 	agentData := AgentData{Data: body, ContentEncoding: ""}
@@ -133,7 +129,6 @@ func TestGracePeriod(t *testing.T) {
 
 func TestEnterBackoffFromNominal(t *testing.T) {
 	InitApmServerTransportStatus()
-
 	// Compress the data
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
@@ -168,7 +163,6 @@ func TestEnterBackoffFromNominal(t *testing.T) {
 func TestEnterBackoffFromFailing(t *testing.T) {
 	InitApmServerTransportStatus()
 	enterBackoff()
-
 	for {
 		if IsTransportStatusHealthy() {
 			break
@@ -209,13 +203,11 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 func TestAPMServerRecovery(t *testing.T) {
 	InitApmServerTransportStatus()
 	enterBackoff()
-
 	for {
 		if IsTransportStatusHealthy() {
 			break
 		}
 	}
-
 	assert.Equal(t, apmServerTransportStatus, pending)
 
 	// Compress the data
@@ -295,8 +287,6 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 }
 
 func BenchmarkPostToAPM(b *testing.B) {
-	InitLogger()
-
 	// Copied from https://github.com/elastic/apm-server/blob/master/testdata/intake-v2/transactions.ndjson.
 	benchBody := []byte(`{"metadata": {"service": {"name": "1234_service-12a3","node": {"configured_name": "node-123"},"version": "5.1.3","environment": "staging","language": {"name": "ecmascript","version": "8"},"runtime": {"name": "node","version": "8.0.0"},"framework": {"name": "Express","version": "1.2.3"},"agent": {"name": "elastic-node","version": "3.14.0"}},"user": {"id": "123user", "username": "bar", "email": "bar@user.com"}, "labels": {"tag0": null, "tag1": "one", "tag2": 2}, "process": {"pid": 1234,"ppid": 6789,"title": "node","argv": ["node","server.js"]},"system": {"hostname": "prod1.example.com","architecture": "x64","platform": "darwin", "container": {"id": "container-id"}, "kubernetes": {"namespace": "namespace1", "pod": {"uid": "pod-uid", "name": "pod-name"}, "node": {"name": "node-name"}}},"cloud":{"account":{"id":"account_id","name":"account_name"},"availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"project":{"id":"project_id","name":"project_name"},"provider":"cloud_provider","region":"cloud_region","service":{"name":"lambda"}}}}
 {"transaction": { "id": "945254c567a5417e", "trace_id": "0123456789abcdef0123456789abcdef", "parent_id": "abcdefabcdef01234567", "type": "request", "duration": 32.592981,  "span_count": { "started": 43 }}}

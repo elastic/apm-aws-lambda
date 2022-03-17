@@ -18,7 +18,6 @@
 package logsapi
 
 import (
-	"elastic/apm-lambda-extension/extension"
 	"encoding/json"
 	"testing"
 	"time"
@@ -28,7 +27,6 @@ import (
 )
 
 func TestLogEventUnmarshalReport(t *testing.T) {
-	extension.InitLogger()
 	le := new(LogEvent)
 	reportJSON := []byte(`{
 		    "time": "2020-08-20T12:31:32.123Z",
@@ -56,7 +54,6 @@ func TestLogEventUnmarshalReport(t *testing.T) {
 }
 
 func TestLogEventUnmarshalFault(t *testing.T) {
-	extension.InitLogger()
 	le := new(LogEvent)
 	reportJSON := []byte(` {
 		    "time": "2020-08-20T12:31:32.123Z",
@@ -74,7 +71,6 @@ func TestLogEventUnmarshalFault(t *testing.T) {
 }
 
 func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
-	extension.InitLogger()
 	le := new(LogEvent)
 	jsonBytes := []byte(`
 	{
@@ -99,7 +95,6 @@ func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
 }
 
 func Test_unmarshalRuntimeDoneRecordString(t *testing.T) {
-	extension.InitLogger()
 	le := new(LogEvent)
 	jsonBytes := []byte(`
 	{
@@ -117,7 +112,6 @@ func Test_unmarshalRuntimeDoneRecordString(t *testing.T) {
 }
 
 func Test_unmarshalRuntimeDoneFaultRecordString(t *testing.T) {
-	extension.InitLogger()
 	jsonBytes := []byte(`
 		{
 			"time": "2021-02-04T20:00:05.123Z",

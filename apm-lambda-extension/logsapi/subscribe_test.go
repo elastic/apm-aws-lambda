@@ -20,7 +20,6 @@ package logsapi
 import (
 	"bytes"
 	"context"
-	"elastic/apm-lambda-extension/extension"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -34,7 +33,6 @@ import (
 func TestSubscribeWithSamLocalEnv(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	extension.InitLogger()
 	os.Setenv("AWS_SAM_LOCAL", "true")
 	t.Cleanup(func() {
 		os.Unsetenv("AWS_SAM_LOCAL")
@@ -49,7 +47,6 @@ func TestSubscribeAWSRequest(t *testing.T) {
 	ListenerHost = "localhost"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	extension.InitLogger()
 	out := make(chan LogEvent, 1)
 	// For subscription request
 	expectedTypes := []EventType{Platform}
@@ -113,7 +110,6 @@ func TestSubscribeWithBadLogsRequest(t *testing.T) {
 	ListenerHost = "localhost"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	extension.InitLogger()
 	out := make(chan LogEvent)
 
 	// Create aws runtime API server and handler

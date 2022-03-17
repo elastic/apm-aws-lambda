@@ -31,7 +31,6 @@ import (
 func TestRegister(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	InitLogger()
 	extensionName := "helloWorld"
 	expectedRequest := `{"events":["INVOKE","SHUTDOWN"]}`
 	response := []byte(`
@@ -60,7 +59,6 @@ func TestRegister(t *testing.T) {
 func TestNextEvent(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	InitLogger()
 	response := []byte(`
 		{
 			"eventType": "INVOKE",
