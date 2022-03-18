@@ -88,7 +88,7 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 		rawBytes, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {
-			Log.Errorf("Could not read agent intake request body: %v\n", err)
+			Log.Errorf("Could not read agent intake request body: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

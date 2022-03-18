@@ -111,8 +111,8 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 	}
 
 	apmServerTransportStatus = healthy
-	Log.Debugf("APM server response body: %v\n", string(body))
-	Log.Debugf("APM server response status code: %v\n", resp.StatusCode)
+	Log.Debugf("APM server response body: %v", string(body))
+	Log.Debugf("APM server response status code: %v", resp.StatusCode)
 	return nil
 }
 
