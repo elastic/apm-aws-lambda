@@ -343,7 +343,6 @@ func TestAPMServerHangs(t *testing.T) {
 // The default forwarder timeout is 3 seconds, so we wait 5 seconds until we unlock that hanging state.
 // Hence, the APM server is waked up just in time to process the TimelyResponse data frame.
 func TestAPMServerRecovery(t *testing.T) {
-	os.Setenv("ELASTIC_APM_LOG_LEVEL", "trace")
 	extension.SetApmServerTransportStatus(extension.TransportHealthy, 0)
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerInternals := initMockServers(eventsChannel)
