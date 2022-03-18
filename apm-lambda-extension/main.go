@@ -195,6 +195,7 @@ func main() {
 			close(funcDone)
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
+				// Flush APM data now that the function invocation has completed
 				extension.FlushAPMData(client, agentDataChannel, config, ctx)
 			}
 		}

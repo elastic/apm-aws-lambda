@@ -23,7 +23,7 @@ import (
 func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.Server, *APMServerLog, chan struct{}) {
 
 	// Mock APM Server
-	hangChan := make(chan struct{}, 1)
+	hangChan := make(chan struct{})
 	var apmServerLog APMServerLog
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/intake/v2/events" {
@@ -31,18 +31,22 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 			}
+			extension.Log.Debugf("Event type received by mock APM server : %s", string(decompressedBytes))
 			switch APMServerBehavior(decompressedBytes) {
 			case TimelyResponse:
+				extension.Log.Debug("Timely response received")
 				apmServerLog.Data += string(decompressedBytes)
 				w.WriteHeader(http.StatusAccepted)
+				extension.Log.Debug("Timely response processed")
 			case SlowResponse:
 				apmServerLog.Data += string(decompressedBytes)
 				time.Sleep(2 * time.Second)
 				w.WriteHeader(http.StatusAccepted)
 			case Hangs:
+				extension.Log.Debug("Hang signal recieved")
 				<-hangChan
 				apmServerLog.Data += string(decompressedBytes)
-				extension.Log.Info("END HANG")
+				extension.Log.Debug("Hang signal processed")
 			case Crashes:
 				panic("Server crashed")
 			default:
@@ -325,7 +329,6 @@ func TestAPMServerHangs(t *testing.T) {
 	assert.NotPanics(t, main)
 	assert.False(t, strings.Contains(apmServerLog.Data, string(Hangs)))
 	extension.Log.Infof("Success : test took %s", time.Since(start))
-	hangChan <- struct{}{}
 	hangChan <- struct{}{}
 }
 

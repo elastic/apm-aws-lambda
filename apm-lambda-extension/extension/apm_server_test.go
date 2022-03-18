@@ -163,6 +163,7 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 
 func TestEnterBackoffFromFailing(t *testing.T) {
 	SetApmServerTransportStatus(TransportHealthy, 0)
+	enterBackoff(context.Background())
 	for {
 		if IsTransportStatusHealthy() {
 			break

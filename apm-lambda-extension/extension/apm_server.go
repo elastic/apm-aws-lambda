@@ -100,6 +100,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 		req.Header.Add("Authorization", "Bearer "+config.apmServerSecretToken)
 	}
 
+	Log.Debug("Sending data chunk to APM Server")
 	resp, err := client.Do(req)
 	if err != nil {
 		enterBackoff(ctx)
@@ -115,6 +116,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 	}
 
 	apmServerTransportStatus = TransportHealthy
+	Log.Debug("Transport status set to healthy")
 	Log.Debugf("APM server response body: %v", string(body))
 	Log.Debugf("APM server response status code: %v", resp.StatusCode)
 	return nil
@@ -136,10 +138,10 @@ func IsTransportStatusHealthy() bool {
 func WaitForGracePeriod(ctx context.Context) {
 	select {
 	case <-apmServerGracePeriodTimer.C:
-		Log.Info("Grace period over - timer timed out")
+		Log.Debug("Grace period over - timer timed out")
 		return
 	case <-ctx.Done():
-		Log.Info("Grace period over - context done")
+		Log.Debug("Grace period over - context done")
 		return
 	}
 
@@ -153,11 +155,12 @@ func enterBackoff(ctx context.Context) {
 		apmServerReconnectionCount++
 	}
 	apmServerTransportStatus = TransportFailing
-	Log.Info("Setting transport to failing")
+	Log.Debug("Transport status set to failing")
 	apmServerGracePeriodTimer = time.NewTimer(computeGracePeriod())
 	go func() {
 		WaitForGracePeriod(ctx)
 		apmServerTransportStatus = TransportPending
+		Log.Debug("Transport status set to pending")
 	}()
 }
 

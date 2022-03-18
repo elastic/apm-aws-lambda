@@ -30,19 +30,20 @@ func ProcessShutdown() {
 
 func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *extensionConfig, ctx context.Context) {
 	if !IsTransportStatusHealthy() {
+		Log.Debug("Flush skipped - Transport unhealthy")
 		return
 	}
-	Log.Debug("Checking for agent data")
+	Log.Debug("Flush started - Checking for agent data")
 	for {
 		select {
 		case agentData := <-dataChannel:
-			Log.Debug("Processing agent data")
+			Log.Debug("Flush in progress - Processing agent data")
 			err := PostToApmServer(client, agentData, config, ctx)
 			if err != nil {
 				Log.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		default:
-			Log.Debug("No agent data on buffer")
+			Log.Debug("Flush ended - No agent data on buffer")
 			return
 		}
 	}
