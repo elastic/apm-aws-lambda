@@ -20,6 +20,7 @@ package extension
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -35,25 +36,28 @@ var bufferPool = sync.Pool{New: func() interface{} {
 	return &bytes.Buffer{}
 }}
 
+var ApmServerContext, _ = context.WithCancel(context.Background())
+
 type ApmServerTransportStatusType string
 
 const (
-	failing ApmServerTransportStatusType = "failing"
-	pending ApmServerTransportStatusType = "pending"
-	healthy ApmServerTransportStatusType = "healthy"
+	TransportFailing ApmServerTransportStatusType = "TransportFailing"
+	TransportPending ApmServerTransportStatusType = "TransportPending"
+	TransportHealthy ApmServerTransportStatusType = "TransportHealthy"
 )
 
-var apmServerTransportStatus = healthy
+var apmServerTransportStatus = TransportHealthy
 var apmServerReconnectionCount = 0
+var apmServerGracePeriodTimer *time.Timer
 
-func InitApmServerTransportStatus() {
-	apmServerTransportStatus = healthy
-	apmServerReconnectionCount = 0
+func SetApmServerTransportStatus(status ApmServerTransportStatusType, reconnectionCount int) {
+	apmServerTransportStatus = status
+	apmServerReconnectionCount = reconnectionCount
 }
 
 // todo: can this be a streaming or streaming style call that keeps the
 //       connection open across invocations?
-func PostToApmServer(client *http.Client, agentData AgentData, config *extensionConfig) error {
+func PostToApmServer(client *http.Client, agentData AgentData, config *extensionConfig, ctx context.Context) error {
 	if !IsTransportStatusHealthy() {
 		return errors.New("transport status is unhealthy")
 	}
@@ -98,7 +102,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 
 	resp, err := client.Do(req)
 	if err != nil {
-		enterBackoff()
+		enterBackoff(ctx)
 		return fmt.Errorf("failed to post to APM server: %v", err)
 	}
 
@@ -106,11 +110,11 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		enterBackoff()
+		enterBackoff(ctx)
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
-	apmServerTransportStatus = healthy
+	apmServerTransportStatus = TransportHealthy
 	Log.Debugf("APM server response body: %v", string(body))
 	Log.Debugf("APM server response status code: %v", resp.StatusCode)
 	return nil
@@ -126,23 +130,34 @@ func EnqueueAPMData(agentDataChannel chan AgentData, agentData AgentData) {
 }
 
 func IsTransportStatusHealthy() bool {
-	return apmServerTransportStatus != failing
+	return apmServerTransportStatus != TransportFailing
 }
 
-func WaitForGracePeriod() {
-	time.Sleep(computeGracePeriod())
+func WaitForGracePeriod(ctx context.Context) {
+	select {
+	case <-apmServerGracePeriodTimer.C:
+		Log.Info("Grace period over - timer timed out")
+		return
+	case <-ctx.Done():
+		Log.Info("Grace period over - context done")
+		return
+	}
+
 }
 
-func enterBackoff() {
-	if apmServerTransportStatus == healthy {
+func enterBackoff(ctx context.Context) {
+	Log.Info("Entering backoff")
+	if apmServerTransportStatus == TransportHealthy {
 		apmServerReconnectionCount = 0
 	} else {
 		apmServerReconnectionCount++
 	}
-	apmServerTransportStatus = failing
+	apmServerTransportStatus = TransportFailing
+	Log.Info("Setting transport to failing")
+	apmServerGracePeriodTimer = time.NewTimer(computeGracePeriod())
 	go func() {
-		WaitForGracePeriod()
-		apmServerTransportStatus = pending
+		WaitForGracePeriod(ctx)
+		apmServerTransportStatus = TransportPending
 	}()
 }
 

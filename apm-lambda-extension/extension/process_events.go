@@ -18,6 +18,7 @@
 package extension
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 )
@@ -27,7 +28,7 @@ func ProcessShutdown() {
 	agentDataServer.Close()
 }
 
-func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *extensionConfig) {
+func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *extensionConfig, ctx context.Context) {
 	if !IsTransportStatusHealthy() {
 		return
 	}
@@ -36,7 +37,7 @@ func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *exten
 		select {
 		case agentData := <-dataChannel:
 			Log.Debug("Processing agent data")
-			err := PostToApmServer(client, agentData, config)
+			err := PostToApmServer(client, agentData, config, ctx)
 			if err != nil {
 				Log.Errorf("Error sending to APM server, skipping: %v", err)
 			}

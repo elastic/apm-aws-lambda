@@ -19,6 +19,7 @@ package extension
 
 import (
 	"compress/gzip"
+	"context"
 	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
@@ -56,7 +57,7 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	err := PostToApmServer(apmServer.Client(), agentData, &config)
+	err := PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
 	assert.Equal(t, nil, err)
 }
 
@@ -89,7 +90,7 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	err := PostToApmServer(apmServer.Client(), agentData, &config)
+	err := PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
 	assert.Equal(t, nil, err)
 }
 
@@ -127,8 +128,8 @@ func TestGracePeriod(t *testing.T) {
 	assert.InDelta(t, val7, float64(36), 0.1*36)
 }
 
-func TestEnterBackoffFromNominal(t *testing.T) {
-	InitApmServerTransportStatus()
+func TestEnterBackoffFromHealthy(t *testing.T) {
+	SetApmServerTransportStatus(TransportHealthy, 0)
 	// Compress the data
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
@@ -155,14 +156,13 @@ func TestEnterBackoffFromNominal(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	PostToApmServer(apmServer.Client(), agentData, &config)
-	assert.Equal(t, apmServerTransportStatus, failing)
+	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
+	assert.Equal(t, apmServerTransportStatus, TransportFailing)
 	assert.Equal(t, apmServerReconnectionCount, 0)
 }
 
 func TestEnterBackoffFromFailing(t *testing.T) {
-	InitApmServerTransportStatus()
-	enterBackoff()
+	SetApmServerTransportStatus(TransportHealthy, 0)
 	for {
 		if IsTransportStatusHealthy() {
 			break
@@ -195,20 +195,20 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	PostToApmServer(apmServer.Client(), agentData, &config)
-	assert.Equal(t, apmServerTransportStatus, failing)
+	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
+	assert.Equal(t, apmServerTransportStatus, TransportFailing)
 	assert.Equal(t, apmServerReconnectionCount, 1)
 }
 
 func TestAPMServerRecovery(t *testing.T) {
-	InitApmServerTransportStatus()
-	enterBackoff()
+	SetApmServerTransportStatus(TransportHealthy, 0)
+	enterBackoff(context.Background())
 	for {
 		if IsTransportStatusHealthy() {
 			break
 		}
 	}
-	assert.Equal(t, apmServerTransportStatus, pending)
+	assert.Equal(t, apmServerTransportStatus, TransportPending)
 
 	// Compress the data
 	pr, pw := io.Pipe()
@@ -236,15 +236,15 @@ func TestAPMServerRecovery(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	PostToApmServer(apmServer.Client(), agentData, &config)
+	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
 
-	assert.Equal(t, apmServerTransportStatus, healthy)
+	assert.Equal(t, apmServerTransportStatus, TransportHealthy)
 	assert.Equal(t, apmServerReconnectionCount, 0)
 }
 
 func TestContinuedAPMServerFailure(t *testing.T) {
-	InitApmServerTransportStatus()
-	enterBackoff()
+	SetApmServerTransportStatus(TransportHealthy, 0)
+	enterBackoff(context.Background())
 
 	for {
 		if IsTransportStatusHealthy() {
@@ -252,7 +252,7 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, apmServerTransportStatus, pending)
+	assert.Equal(t, apmServerTransportStatus, TransportPending)
 
 	// Compress the data
 	pr, pw := io.Pipe()
@@ -280,9 +280,9 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	PostToApmServer(apmServer.Client(), agentData, &config)
+	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
 
-	assert.Equal(t, apmServerTransportStatus, failing)
+	assert.Equal(t, apmServerTransportStatus, TransportFailing)
 	assert.Equal(t, apmServerReconnectionCount, 1)
 }
 
@@ -313,7 +313,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := PostToApmServer(client, agentData, &config)
+		err := PostToApmServer(client, agentData, &config, context.Background())
 		if err != nil {
 			b.Fatal(err)
 		}

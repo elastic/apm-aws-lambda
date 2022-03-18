@@ -244,13 +244,12 @@ func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
 
 // TESTS
 func TestMain(m *testing.M) {
-	extension.InitApmServerTransportStatus()
 	http.DefaultServeMux = new(http.ServeMux)
 	code := m.Run()
 	os.Exit(code)
 }
 
-// Test a nominal sequence of events (fast APM server, only one standard event)
+// TestStandardEventsChain checks a nominal sequence of events (fast APM server, only one standard event)
 func TestStandardEventsChain(t *testing.T) {
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
@@ -265,7 +264,7 @@ func TestStandardEventsChain(t *testing.T) {
 	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
 }
 
-// Test if the flushed param does not cause a panic or an unexpected behavior
+// TestFlush checks if the flushed param does not cause a panic or an unexpected behavior
 func TestFlush(t *testing.T) {
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
@@ -280,7 +279,7 @@ func TestFlush(t *testing.T) {
 	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
 }
 
-// Test if there is no race condition between waitgroups (issue #128)
+// TestWaitGroup checks if there is no race condition between the main waitgroups (issue #128)
 func TestWaitGroup(t *testing.T) {
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
@@ -295,7 +294,7 @@ func TestWaitGroup(t *testing.T) {
 	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
 }
 
-// Test what happens when the APM is down (timeout)
+// TestAPMServerDown tests that main does not panic nor runs indefinitely when the APM server is inactive.
 func TestAPMServerDown(t *testing.T) {
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
@@ -310,8 +309,9 @@ func TestAPMServerDown(t *testing.T) {
 	assert.False(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
 }
 
-// Test what happens when the APM hangs (timeout)
+// TestAPMServerHangs tests that main does not panic nor runs indefinitely when the APM server does not respond.
 func TestAPMServerHangs(t *testing.T) {
+	extension.SetApmServerTransportStatus(extension.TransportHealthy, 0)
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, hangChan := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -329,8 +329,11 @@ func TestAPMServerHangs(t *testing.T) {
 	hangChan <- struct{}{}
 }
 
-// Test what happens when the APM hangs (timeout)
+// TestAPMServerRecovery tests a scenario where the APM server recovers after hanging.
+// The default forwarder timeout is 3 seconds, so we wait 5 seconds until we unlock that hanging state.
+// Hence, the APM server is waked up just in time to process the TimelyResponse data frame.
 func TestAPMServerRecovery(t *testing.T) {
+	extension.SetApmServerTransportStatus(extension.TransportHealthy, 0)
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, hangChan := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -352,7 +355,28 @@ func TestAPMServerRecovery(t *testing.T) {
 
 }
 
-// Test what happens when the APM crashes unexpectedly
+// TestGracePeriodHangs verifies that the WaitforGracePeriod goroutine ends when main() ends.
+// This can be checked by asserting that apmTransportStatus is pending after the execution of main.
+func TestGracePeriodHangs(t *testing.T) {
+	extension.SetApmServerTransportStatus(extension.TransportPending, 100)
+	eventsChannel := make(chan MockEvent, 100)
+	lambdaServer, apmServer, _, hangChan := initMockServers(eventsChannel)
+	defer lambdaServer.Close()
+	defer apmServer.Close()
+
+	eventsChain := []MockEvent{
+		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
+	}
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
+
+	time.Sleep(100 * time.Millisecond)
+	hangChan <- struct{}{}
+	defer assert.Equal(t, extension.IsTransportStatusHealthy(), true)
+}
+
+// TestAPMServerCrashesDuringExecution tests that main does not panic nor runs indefinitely when the APM server crashes
+// during execution.
 func TestAPMServerCrashesDuringExecution(t *testing.T) {
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
@@ -367,7 +391,8 @@ func TestAPMServerCrashesDuringExecution(t *testing.T) {
 	assert.False(t, strings.Contains(apmServerLog.Data, string(Crashes)))
 }
 
-// Test what happens when the APM Data channel is full
+// TestFullChannel checks that an overload of APM data chunks is handled correctly, events dropped beyond the 100th one
+// if no space left in channel, no panic, no infinite hanging.
 func TestFullChannel(t *testing.T) {
 	eventsChannel := make(chan MockEvent, 1000)
 	lambdaServer, apmServer, apmServerLog, _ := initMockServers(eventsChannel)
@@ -382,7 +407,8 @@ func TestFullChannel(t *testing.T) {
 	assert.True(t, strings.Contains(apmServerLog.Data, string(TimelyResponse)))
 }
 
-// Test what happens when the APM Data channel is full and the APM server slow (send strategy : background)
+// TestFullChannelSlowAPMServer tests what happens when the APM Data channel is full and the APM server is slow
+// (send strategy : background)
 func TestFullChannelSlowAPMServer(t *testing.T) {
 	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
 	eventsChannel := make(chan MockEvent, 1000)

@@ -41,6 +41,9 @@ var (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// Trigger ctx.Done() in all relevant goroutines when main ends
+	defer cancel()
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
@@ -71,7 +74,8 @@ func main() {
 		Timeout:   time.Duration(config.DataForwarderTimeoutSeconds) * time.Second,
 		Transport: http.DefaultTransport.(*http.Transport).Clone(),
 	}
-	extension.InitApmServerTransportStatus()
+
+	// Create a channel used
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	logsChannel := make(chan logsapi.LogEvent)
@@ -136,7 +140,7 @@ func main() {
 						extension.Log.Debug("Received signal that function has completed, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
-						err := extension.PostToApmServer(client, agentData, config)
+						err := extension.PostToApmServer(client, agentData, config, ctx)
 						if err != nil {
 							extension.Log.Errorf("Error sending to APM server, skipping: %v", err)
 							extension.EnqueueAPMData(agentDataChannel, agentData)
@@ -191,7 +195,7 @@ func main() {
 			close(funcDone)
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
-				extension.FlushAPMData(client, agentDataChannel, config)
+				extension.FlushAPMData(client, agentDataChannel, config, ctx)
 			}
 		}
 	}
