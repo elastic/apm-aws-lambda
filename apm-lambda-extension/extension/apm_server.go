@@ -153,8 +153,10 @@ func enterBackoff(ctx context.Context) {
 	Log.Info("Entering backoff")
 	if apmServerTransportStatus == TransportHealthy {
 		apmServerReconnectionCount = 0
+		Log.Debug("Entered backoff as healthy : reconnection count set to 0")
 	} else {
 		apmServerReconnectionCount++
+		Log.Debugf("Entered backoff as pending : reconnection count set to %d", apmServerReconnectionCount)
 	}
 	apmServerTransportStatus = TransportFailing
 	Log.Debug("Transport status set to failing")
