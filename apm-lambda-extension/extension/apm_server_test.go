@@ -150,7 +150,7 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		w.Write([]byte(`{"foo": "bar"}`))
 	}))
-	apmServer.Close()
+	apmServer.Close() // Close the APM server early so that POST requests fail and that backoff is enabled
 
 	config := extensionConfig{
 		apmServerUrl: apmServer.URL + "/",
@@ -165,7 +165,7 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	SetApmServerTransportStatus(TransportHealthy, 0)
 	enterBackoff(context.Background())
 	for {
-		if IsTransportStatusHealthy() {
+		if IsTransportStatusHealthyOrPending() {
 			break
 		}
 	}
@@ -190,7 +190,7 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		w.Write([]byte(`{"foo": "bar"}`))
 	}))
-	apmServer.Close()
+	apmServer.Close() // Close the APM server early so that POST requests fail and that backoff is enabled
 
 	config := extensionConfig{
 		apmServerUrl: apmServer.URL + "/",
@@ -205,7 +205,7 @@ func TestAPMServerRecovery(t *testing.T) {
 	SetApmServerTransportStatus(TransportHealthy, 0)
 	enterBackoff(context.Background())
 	for {
-		if IsTransportStatusHealthy() {
+		if IsTransportStatusHealthyOrPending() {
 			break
 		}
 	}
@@ -248,7 +248,7 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 	enterBackoff(context.Background())
 
 	for {
-		if IsTransportStatusHealthy() {
+		if IsTransportStatusHealthyOrPending() {
 			break
 		}
 	}
@@ -275,7 +275,7 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		w.Write([]byte(`{"foo": "bar"}`))
 	}))
-	apmServer.Close()
+	apmServer.Close() // Close the APM server early so that POST requests fail and that backoff is enabled
 
 	config := extensionConfig{
 		apmServerUrl: apmServer.URL + "/",

@@ -29,7 +29,7 @@ func ProcessShutdown() {
 }
 
 func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *extensionConfig, ctx context.Context) {
-	if !IsTransportStatusHealthy() {
+	if !IsTransportStatusHealthyOrPending() {
 		Log.Debug("Flush skipped - Transport unhealthy")
 		return
 	}

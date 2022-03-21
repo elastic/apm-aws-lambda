@@ -383,7 +383,7 @@ func TestGracePeriodHangs(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 	apmServerInternals.UnlockSignalChannel <- struct{}{}
-	defer assert.Equal(t, extension.IsTransportStatusHealthy(), true)
+	defer assert.Equal(t, extension.IsTransportStatusHealthyOrPending(), true)
 }
 
 // TestAPMServerCrashesDuringExecution tests that main does not panic nor runs indefinitely when the APM server crashes

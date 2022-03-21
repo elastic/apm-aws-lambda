@@ -131,7 +131,7 @@ func main() {
 			backgroundDataSendWg.Add(1)
 			go func() {
 				defer backgroundDataSendWg.Done()
-				if !extension.IsTransportStatusHealthy() {
+				if !extension.IsTransportStatusHealthyOrPending() {
 					return
 				}
 				for {

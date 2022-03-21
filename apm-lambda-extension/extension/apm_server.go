@@ -58,7 +58,7 @@ func SetApmServerTransportStatus(status ApmServerTransportStatusType, reconnecti
 // todo: can this be a streaming or streaming style call that keeps the
 //       connection open across invocations?
 func PostToApmServer(client *http.Client, agentData AgentData, config *extensionConfig, ctx context.Context) error {
-	if !IsTransportStatusHealthy() {
+	if !IsTransportStatusHealthyOrPending() {
 		return errors.New("transport status is unhealthy")
 	}
 
@@ -127,11 +127,11 @@ func EnqueueAPMData(agentDataChannel chan AgentData, agentData AgentData) {
 	case agentDataChannel <- agentData:
 		Log.Debug("Adding agent data to buffer to be sent to apm server")
 	default:
-		Log.Warn("Channel full: dropping a subset of agent request data")
+		Log.Warn("Channel full: dropping a subset of agent data")
 	}
 }
 
-func IsTransportStatusHealthy() bool {
+func IsTransportStatusHealthyOrPending() bool {
 	return apmServerTransportStatus != TransportFailing
 }
 
