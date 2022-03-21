@@ -95,41 +95,41 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 }
 
 func TestGracePeriod(t *testing.T) {
-	apmServerReconnectionCount = 0
+	apmServerTransportState.ReconnectionCount = 0
 	val0 := computeGracePeriod().Seconds()
 	assert.Equal(t, val0, float64(0))
 
-	apmServerReconnectionCount = 1
+	apmServerTransportState.ReconnectionCount = 1
 	val1 := computeGracePeriod().Seconds()
 	assert.InDelta(t, val1, float64(1), 0.1*1)
 
-	apmServerReconnectionCount = 2
+	apmServerTransportState.ReconnectionCount = 2
 	val2 := computeGracePeriod().Seconds()
 	assert.InDelta(t, val2, float64(4), 0.1*4)
 
-	apmServerReconnectionCount = 3
+	apmServerTransportState.ReconnectionCount = 3
 	val3 := computeGracePeriod().Seconds()
 	assert.InDelta(t, val3, float64(9), 0.1*9)
 
-	apmServerReconnectionCount = 4
+	apmServerTransportState.ReconnectionCount = 4
 	val4 := computeGracePeriod().Seconds()
 	assert.InDelta(t, val4, float64(16), 0.1*16)
 
-	apmServerReconnectionCount = 5
+	apmServerTransportState.ReconnectionCount = 5
 	val5 := computeGracePeriod().Seconds()
 	assert.InDelta(t, val5, float64(25), 0.1*25)
 
-	apmServerReconnectionCount = 6
+	apmServerTransportState.ReconnectionCount = 6
 	val6 := computeGracePeriod().Seconds()
 	assert.InDelta(t, val6, float64(36), 0.1*36)
 
-	apmServerReconnectionCount = 7
+	apmServerTransportState.ReconnectionCount = 7
 	val7 := computeGracePeriod().Seconds()
 	assert.InDelta(t, val7, float64(36), 0.1*36)
 }
 
 func TestEnterBackoffFromHealthy(t *testing.T) {
-	SetApmServerTransportStatus(TransportHealthy, 0)
+	SetApmServerTransportStatus(Healthy, 0)
 	// Compress the data
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
@@ -158,19 +158,19 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 
 	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
 	// No way to know for sure if failing or pending (0 sec grace period)
-	assert.True(t, apmServerTransportStatus != TransportHealthy)
-	assert.Equal(t, apmServerReconnectionCount, 0)
+	assert.True(t, apmServerTransportState.Status != Healthy)
+	assert.Equal(t, apmServerTransportState.ReconnectionCount, 0)
 }
 
 func TestEnterBackoffFromFailing(t *testing.T) {
-	SetApmServerTransportStatus(TransportHealthy, 0)
+	SetApmServerTransportStatus(Healthy, 0)
 	enterBackoff(context.Background())
 	for {
 		if IsTransportStatusHealthyOrPending() {
 			break
 		}
 	}
-	assert.Equal(t, apmServerTransportStatus, TransportPending)
+	assert.Equal(t, apmServerTransportState.Status, Pending)
 
 	// Compress the data
 	pr, pw := io.Pipe()
@@ -199,19 +199,19 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	}
 
 	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
-	assert.Equal(t, apmServerTransportStatus, TransportFailing)
-	assert.Equal(t, apmServerReconnectionCount, 1)
+	assert.Equal(t, apmServerTransportState.Status, Failing)
+	assert.Equal(t, apmServerTransportState.ReconnectionCount, 1)
 }
 
 func TestAPMServerRecovery(t *testing.T) {
-	SetApmServerTransportStatus(TransportHealthy, 0)
+	SetApmServerTransportStatus(Healthy, 0)
 	enterBackoff(context.Background())
 	for {
 		if IsTransportStatusHealthyOrPending() {
 			break
 		}
 	}
-	assert.Equal(t, apmServerTransportStatus, TransportPending)
+	assert.Equal(t, apmServerTransportState.Status, Pending)
 
 	// Compress the data
 	pr, pw := io.Pipe()
@@ -241,19 +241,19 @@ func TestAPMServerRecovery(t *testing.T) {
 
 	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
 
-	assert.Equal(t, apmServerTransportStatus, TransportHealthy)
-	assert.Equal(t, apmServerReconnectionCount, 0)
+	assert.Equal(t, apmServerTransportState.Status, Healthy)
+	assert.Equal(t, apmServerTransportState.ReconnectionCount, 0)
 }
 
 func TestContinuedAPMServerFailure(t *testing.T) {
-	SetApmServerTransportStatus(TransportHealthy, 0)
+	SetApmServerTransportStatus(Healthy, 0)
 	enterBackoff(context.Background())
 	for {
 		if IsTransportStatusHealthyOrPending() {
 			break
 		}
 	}
-	assert.Equal(t, apmServerTransportStatus, TransportPending)
+	assert.Equal(t, apmServerTransportState.Status, Pending)
 
 	// Compress the data
 	pr, pw := io.Pipe()
@@ -283,8 +283,8 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 
 	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
 
-	assert.Equal(t, apmServerTransportStatus, TransportFailing)
-	assert.Equal(t, apmServerReconnectionCount, 1)
+	assert.Equal(t, apmServerTransportState.Status, Failing)
+	assert.Equal(t, apmServerTransportState.ReconnectionCount, 1)
 }
 
 func BenchmarkPostToAPM(b *testing.B) {

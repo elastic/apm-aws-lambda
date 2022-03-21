@@ -36,23 +36,29 @@ var bufferPool = sync.Pool{New: func() interface{} {
 	return &bytes.Buffer{}
 }}
 
-var ApmServerContext, _ = context.WithCancel(context.Background())
-
 type ApmServerTransportStatusType string
 
 const (
-	TransportFailing ApmServerTransportStatusType = "TransportFailing"
-	TransportPending ApmServerTransportStatusType = "TransportPending"
-	TransportHealthy ApmServerTransportStatusType = "TransportHealthy"
+	Failing ApmServerTransportStatusType = "Failing"
+	Pending ApmServerTransportStatusType = "Pending"
+	Healthy ApmServerTransportStatusType = "Healthy"
 )
 
-var apmServerTransportStatus = TransportHealthy
-var apmServerReconnectionCount = 0
-var apmServerGracePeriodTimer *time.Timer
+type ApmServerTransportState struct {
+	sync.Mutex
+	Status            ApmServerTransportStatusType
+	ReconnectionCount int
+	GracePeriodTimer  *time.Timer
+}
+
+var apmServerTransportState = ApmServerTransportState{
+	Status:            Healthy,
+	ReconnectionCount: 0,
+}
 
 func SetApmServerTransportStatus(status ApmServerTransportStatusType, reconnectionCount int) {
-	apmServerTransportStatus = status
-	apmServerReconnectionCount = reconnectionCount
+	apmServerTransportState.Status = status
+	apmServerTransportState.ReconnectionCount = reconnectionCount
 }
 
 // todo: can this be a streaming or streaming style call that keeps the
@@ -115,7 +121,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
-	apmServerTransportStatus = TransportHealthy
+	apmServerTransportState.Status = Healthy
 	Log.Debug("Transport status set to healthy")
 	Log.Debugf("APM server response body: %v", string(body))
 	Log.Debugf("APM server response status code: %v", resp.StatusCode)
@@ -132,12 +138,12 @@ func EnqueueAPMData(agentDataChannel chan AgentData, agentData AgentData) {
 }
 
 func IsTransportStatusHealthyOrPending() bool {
-	return apmServerTransportStatus != TransportFailing
+	return apmServerTransportState.Status != Failing
 }
 
 func WaitForGracePeriod(ctx context.Context) {
 	select {
-	case <-apmServerGracePeriodTimer.C:
+	case <-apmServerTransportState.GracePeriodTimer.C:
 		Log.Debug("Grace period over - timer timed out")
 		return
 	case <-ctx.Done():
@@ -150,27 +156,29 @@ func WaitForGracePeriod(ctx context.Context) {
 // Warning : the apmServerTransportStatus state needs to be locked if this function is ever called
 // concurrently in the future.
 func enterBackoff(ctx context.Context) {
+	apmServerTransportState.Lock()
 	Log.Info("Entering backoff")
-	if apmServerTransportStatus == TransportHealthy {
-		apmServerReconnectionCount = 0
+	if apmServerTransportState.Status == Healthy {
+		apmServerTransportState.ReconnectionCount = 0
 		Log.Debug("Entered backoff as healthy : reconnection count set to 0")
 	} else {
-		apmServerReconnectionCount++
-		Log.Debugf("Entered backoff as pending : reconnection count set to %d", apmServerReconnectionCount)
+		apmServerTransportState.ReconnectionCount++
+		Log.Debugf("Entered backoff as pending : reconnection count set to %d", apmServerTransportState.ReconnectionCount)
 	}
-	apmServerTransportStatus = TransportFailing
+	apmServerTransportState.Status = Failing
 	Log.Debug("Transport status set to failing")
-	apmServerGracePeriodTimer = time.NewTimer(computeGracePeriod())
+	apmServerTransportState.GracePeriodTimer = time.NewTimer(computeGracePeriod())
 	go func() {
 		WaitForGracePeriod(ctx)
-		apmServerTransportStatus = TransportPending
+		apmServerTransportState.Status = Pending
 		Log.Debug("Transport status set to pending")
 	}()
+	apmServerTransportState.Unlock()
 }
 
 // ComputeGracePeriod https://github.com/elastic/apm/blob/main/specs/agents/transport.md#transport-errors
 func computeGracePeriod() time.Duration {
-	gracePeriodWithoutJitter := math.Pow(math.Min(float64(apmServerReconnectionCount), 6), 2)
+	gracePeriodWithoutJitter := math.Pow(math.Min(float64(apmServerTransportState.ReconnectionCount), 6), 2)
 	jitter := rand.Float64()/5 - 0.1
 	return time.Duration((gracePeriodWithoutJitter + jitter*gracePeriodWithoutJitter) * float64(time.Second))
 }
