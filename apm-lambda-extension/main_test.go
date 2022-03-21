@@ -24,8 +24,8 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 
 	// Mock APM Server
 	var apmServerInternals APMServerInternals
-	apmServerInternals.HangLock = true
-	apmServerInternals.HangChan = make(chan struct{})
+	apmServerInternals.WaitForUnlockSignal = true
+	apmServerInternals.UnlockSignalChannel = make(chan struct{})
 	apmServerMutex := &sync.Mutex{}
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/intake/v2/events" {
@@ -47,9 +47,9 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 			case Hangs:
 				extension.Log.Debug("Hang signal received")
 				apmServerMutex.Lock()
-				if apmServerInternals.HangLock {
-					<-apmServerInternals.HangChan
-					apmServerInternals.HangLock = false
+				if apmServerInternals.WaitForUnlockSignal {
+					<-apmServerInternals.UnlockSignalChannel
+					apmServerInternals.WaitForUnlockSignal = false
 				}
 				apmServerInternals.Data += string(decompressedBytes)
 				apmServerMutex.Unlock()
@@ -129,9 +129,9 @@ const (
 )
 
 type APMServerInternals struct {
-	Data     string
-	HangLock bool
-	HangChan chan struct{}
+	Data                string
+	WaitForUnlockSignal bool
+	UnlockSignalChannel chan struct{}
 }
 
 type APMServerBehavior string
@@ -336,7 +336,7 @@ func TestAPMServerHangs(t *testing.T) {
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
 	assert.False(t, strings.Contains(apmServerInternals.Data, string(Hangs)))
-	apmServerInternals.HangChan <- struct{}{}
+	apmServerInternals.UnlockSignalChannel <- struct{}{}
 }
 
 // TestAPMServerRecovery tests a scenario where the APM server recovers after hanging.
@@ -344,6 +344,8 @@ func TestAPMServerHangs(t *testing.T) {
 // Hence, the APM server is waked up just in time to process the TimelyResponse data frame.
 func TestAPMServerRecovery(t *testing.T) {
 	extension.SetApmServerTransportStatus(extension.TransportHealthy, 0)
+	os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1")
+	os.Setenv("ELASTIC_APM_LOG_LEVEL", "trace")
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerInternals := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -355,13 +357,13 @@ func TestAPMServerRecovery(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	go func() {
-		time.Sleep(5 * time.Second)
-		apmServerInternals.HangChan <- struct{}{}
+		time.Sleep(2500 * time.Millisecond) // Cannot multiply time.Second by a float
+		apmServerInternals.UnlockSignalChannel <- struct{}{}
 	}()
 	assert.NotPanics(t, main)
 	assert.True(t, strings.Contains(apmServerInternals.Data, string(Hangs)))
 	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
-
+	os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "")
 }
 
 // TestGracePeriodHangs verifies that the WaitforGracePeriod goroutine ends when main() ends.
@@ -380,7 +382,7 @@ func TestGracePeriodHangs(t *testing.T) {
 	assert.NotPanics(t, main)
 
 	time.Sleep(100 * time.Millisecond)
-	apmServerInternals.HangChan <- struct{}{}
+	apmServerInternals.UnlockSignalChannel <- struct{}{}
 	defer assert.Equal(t, extension.IsTransportStatusHealthy(), true)
 }
 

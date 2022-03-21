@@ -147,6 +147,8 @@ func WaitForGracePeriod(ctx context.Context) {
 
 }
 
+// Warning : the apmServerTransportStatus state needs to be locked if this function is ever called
+// concurrently in the future.
 func enterBackoff(ctx context.Context) {
 	Log.Info("Entering backoff")
 	if apmServerTransportStatus == TransportHealthy {
