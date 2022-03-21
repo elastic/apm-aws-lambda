@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	e2e_testing "elastic/apm-lambda-extension/e2e-testing"
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/logsapi"
@@ -324,7 +325,7 @@ func TestAPMServerDown(t *testing.T) {
 
 // TestAPMServerHangs tests that main does not panic nor runs indefinitely when the APM server does not respond.
 func TestAPMServerHangs(t *testing.T) {
-	extension.SetApmServerTransportStatus(extension.Healthy, 0)
+	extension.SetApmServerTransportState(extension.Healthy, context.Background())
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerInternals := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -343,7 +344,7 @@ func TestAPMServerHangs(t *testing.T) {
 // The default forwarder timeout is 3 seconds, so we wait 5 seconds until we unlock that hanging state.
 // Hence, the APM server is waked up just in time to process the TimelyResponse data frame.
 func TestAPMServerRecovery(t *testing.T) {
-	extension.SetApmServerTransportStatus(extension.Healthy, 0)
+	extension.SetApmServerTransportState(extension.Healthy, context.Background())
 	os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1")
 	os.Setenv("ELASTIC_APM_LOG_LEVEL", "trace")
 	eventsChannel := make(chan MockEvent, 100)
@@ -369,7 +370,8 @@ func TestAPMServerRecovery(t *testing.T) {
 // TestGracePeriodHangs verifies that the WaitforGracePeriod goroutine ends when main() ends.
 // This can be checked by asserting that apmTransportStatus is pending after the execution of main.
 func TestGracePeriodHangs(t *testing.T) {
-	extension.SetApmServerTransportStatus(extension.Pending, 100)
+	extension.ApmServerTransportState.Status = extension.Pending
+	extension.ApmServerTransportState.ReconnectionCount = 100
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerInternals := initMockServers(eventsChannel)
 	defer lambdaServer.Close()

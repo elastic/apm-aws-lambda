@@ -44,21 +44,18 @@ const (
 	Healthy ApmServerTransportStatusType = "Healthy"
 )
 
-type ApmServerTransportState struct {
+type ApmServerTransportStateType struct {
 	sync.Mutex
-	Status            ApmServerTransportStatusType
-	ReconnectionCount int
-	GracePeriodTimer  *time.Timer
+	Status                ApmServerTransportStatusType
+	ReconnectionCount     int
+	GracePeriodTimer      *time.Timer
+	EndGracePeriodChannel chan struct{}
 }
 
-var apmServerTransportState = ApmServerTransportState{
-	Status:            Healthy,
-	ReconnectionCount: 0,
-}
-
-func SetApmServerTransportStatus(status ApmServerTransportStatusType, reconnectionCount int) {
-	apmServerTransportState.Status = status
-	apmServerTransportState.ReconnectionCount = reconnectionCount
+var ApmServerTransportState = ApmServerTransportStateType{
+	Status:                Healthy,
+	ReconnectionCount:     0,
+	EndGracePeriodChannel: make(chan struct{}),
 }
 
 // todo: can this be a streaming or streaming style call that keeps the
@@ -109,7 +106,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 	Log.Debug("Sending data chunk to APM Server")
 	resp, err := client.Do(req)
 	if err != nil {
-		enterBackoff(ctx)
+		SetApmServerTransportState(Failing, ctx)
 		return fmt.Errorf("failed to post to APM server: %v", err)
 	}
 
@@ -117,15 +114,52 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		enterBackoff(ctx)
+		SetApmServerTransportState(Failing, ctx)
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
-	apmServerTransportState.Status = Healthy
+	SetApmServerTransportState(Healthy, ctx)
 	Log.Debug("Transport status set to healthy")
 	Log.Debugf("APM server response body: %v", string(body))
 	Log.Debugf("APM server response status code: %v", resp.StatusCode)
 	return nil
+}
+
+func IsTransportStatusHealthyOrPending() bool {
+	return ApmServerTransportState.Status != Failing
+}
+
+func SetApmServerTransportState(status ApmServerTransportStatusType, ctx context.Context) {
+	ApmServerTransportState.Lock()
+	ApmServerTransportState.Status = status
+	Log.Debugf("APM Server Transport status set to %s", status)
+	switch status {
+	case Healthy:
+		ApmServerTransportState.ReconnectionCount = -1
+		ApmServerTransportState.Unlock()
+	case Failing:
+		ApmServerTransportState.ReconnectionCount++
+		ApmServerTransportState.GracePeriodTimer = time.NewTimer(computeGracePeriod())
+		Log.Debugf("Grace period entered, reconnection count : %d", ApmServerTransportState.ReconnectionCount)
+		go func() {
+			select {
+			case <-ApmServerTransportState.GracePeriodTimer.C:
+				Log.Debug("Grace period over - timer timed out")
+			case <-ctx.Done():
+				Log.Debug("Grace period over - context done")
+			}
+			ApmServerTransportState.Status = Pending
+			Log.Debugf("APM Server Transport status set to %s", status)
+			ApmServerTransportState.Unlock()
+		}()
+	}
+}
+
+// ComputeGracePeriod https://github.com/elastic/apm/blob/main/specs/agents/transport.md#transport-errors
+func computeGracePeriod() time.Duration {
+	gracePeriodWithoutJitter := math.Pow(math.Min(float64(ApmServerTransportState.ReconnectionCount), 6), 2)
+	jitter := rand.Float64()/5 - 0.1
+	return time.Duration((gracePeriodWithoutJitter + jitter*gracePeriodWithoutJitter) * float64(time.Second))
 }
 
 func EnqueueAPMData(agentDataChannel chan AgentData, agentData AgentData) {
@@ -135,49 +169,4 @@ func EnqueueAPMData(agentDataChannel chan AgentData, agentData AgentData) {
 	default:
 		Log.Warn("Channel full: dropping a subset of agent data")
 	}
-}
-
-func IsTransportStatusHealthyOrPending() bool {
-	return apmServerTransportState.Status != Failing
-}
-
-func WaitForGracePeriod(ctx context.Context) {
-	select {
-	case <-apmServerTransportState.GracePeriodTimer.C:
-		Log.Debug("Grace period over - timer timed out")
-		return
-	case <-ctx.Done():
-		Log.Debug("Grace period over - context done")
-		return
-	}
-}
-
-// Warning : the apmServerTransportStatus state needs to be locked if this function is ever called
-// concurrently in the future.
-func enterBackoff(ctx context.Context) {
-	apmServerTransportState.Lock()
-	Log.Info("Entering backoff")
-	if apmServerTransportState.Status == Healthy {
-		apmServerTransportState.ReconnectionCount = 0
-		Log.Debug("Entered backoff as healthy : reconnection count set to 0")
-	} else {
-		apmServerTransportState.ReconnectionCount++
-		Log.Debugf("Entered backoff as pending : reconnection count set to %d", apmServerTransportState.ReconnectionCount)
-	}
-	apmServerTransportState.Status = Failing
-	Log.Debug("Transport status set to failing")
-	apmServerTransportState.GracePeriodTimer = time.NewTimer(computeGracePeriod())
-	go func() {
-		defer apmServerTransportState.Unlock()
-		WaitForGracePeriod(ctx)
-		apmServerTransportState.Status = Pending
-		Log.Debug("Transport status set to pending")
-	}()
-}
-
-// ComputeGracePeriod https://github.com/elastic/apm/blob/main/specs/agents/transport.md#transport-errors
-func computeGracePeriod() time.Duration {
-	gracePeriodWithoutJitter := math.Pow(math.Min(float64(apmServerTransportState.ReconnectionCount), 6), 2)
-	jitter := rand.Float64()/5 - 0.1
-	return time.Duration((gracePeriodWithoutJitter + jitter*gracePeriodWithoutJitter) * float64(time.Second))
 }
