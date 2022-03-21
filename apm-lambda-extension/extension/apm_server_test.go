@@ -157,14 +157,14 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 	}
 
 	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
-	assert.Equal(t, apmServerTransportStatus, TransportFailing)
+	// No way to know for sure if failing or pending (0 sec grace period)
+	assert.True(t, apmServerTransportStatus != TransportHealthy)
 	assert.Equal(t, apmServerReconnectionCount, 0)
 }
 
 func TestEnterBackoffFromFailing(t *testing.T) {
 	SetApmServerTransportStatus(TransportHealthy, 0)
 	enterBackoff(context.Background())
-	assert.Equal(t, apmServerTransportStatus, TransportFailing)
 	for {
 		if IsTransportStatusHealthyOrPending() {
 			break
@@ -206,7 +206,6 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 func TestAPMServerRecovery(t *testing.T) {
 	SetApmServerTransportStatus(TransportHealthy, 0)
 	enterBackoff(context.Background())
-	assert.Equal(t, apmServerTransportStatus, TransportFailing)
 	for {
 		if IsTransportStatusHealthyOrPending() {
 			break
@@ -249,7 +248,6 @@ func TestAPMServerRecovery(t *testing.T) {
 func TestContinuedAPMServerFailure(t *testing.T) {
 	SetApmServerTransportStatus(TransportHealthy, 0)
 	enterBackoff(context.Background())
-	assert.Equal(t, apmServerTransportStatus, TransportFailing)
 	for {
 		if IsTransportStatusHealthyOrPending() {
 			break
