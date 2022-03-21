@@ -156,7 +156,6 @@ func WaitForGracePeriod(ctx context.Context) {
 // Warning : the apmServerTransportStatus state needs to be locked if this function is ever called
 // concurrently in the future.
 func enterBackoff(ctx context.Context) {
-	apmServerTransportState.Lock()
 	Log.Info("Entering backoff")
 	if apmServerTransportState.Status == Healthy {
 		apmServerTransportState.ReconnectionCount = 0
@@ -169,11 +168,12 @@ func enterBackoff(ctx context.Context) {
 	Log.Debug("Transport status set to failing")
 	apmServerTransportState.GracePeriodTimer = time.NewTimer(computeGracePeriod())
 	go func() {
+		apmServerTransportState.Lock()
+		defer apmServerTransportState.Unlock()
 		WaitForGracePeriod(ctx)
 		apmServerTransportState.Status = Pending
 		Log.Debug("Transport status set to pending")
 	}()
-	apmServerTransportState.Unlock()
 }
 
 // ComputeGracePeriod https://github.com/elastic/apm/blob/main/specs/agents/transport.md#transport-errors
