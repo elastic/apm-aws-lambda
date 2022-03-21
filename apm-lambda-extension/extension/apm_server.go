@@ -46,16 +46,14 @@ const (
 
 type ApmServerTransportStateType struct {
 	sync.Mutex
-	Status                ApmServerTransportStatusType
-	ReconnectionCount     int
-	GracePeriodTimer      *time.Timer
-	EndGracePeriodChannel chan struct{}
+	Status            ApmServerTransportStatusType
+	ReconnectionCount int
+	GracePeriodTimer  *time.Timer
 }
 
 var ApmServerTransportState = ApmServerTransportStateType{
-	Status:                Healthy,
-	ReconnectionCount:     0,
-	EndGracePeriodChannel: make(chan struct{}),
+	Status:            Healthy,
+	ReconnectionCount: -1,
 }
 
 // todo: can this be a streaming or streaming style call that keeps the
