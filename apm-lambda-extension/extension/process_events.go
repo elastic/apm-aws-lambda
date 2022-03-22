@@ -18,29 +18,32 @@
 package extension
 
 import (
+	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 )
 
 func ProcessShutdown() {
-	log.Println("Received SHUTDOWN event")
-	log.Println("Exiting")
+	Log.Info("Received SHUTDOWN event, exiting")
 	agentDataServer.Close()
 }
 
-func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *extensionConfig) {
-	log.Println("Checking for agent data")
+func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *extensionConfig, ctx context.Context) {
+	if !IsTransportStatusHealthyOrPending() {
+		Log.Debug("Flush skipped - Transport unhealthy")
+		return
+	}
+	Log.Debug("Flush started - Checking for agent data")
 	for {
 		select {
 		case agentData := <-dataChannel:
-			log.Println("Processing agent data")
-			err := PostToApmServer(client, agentData, config)
+			Log.Debug("Flush in progress - Processing agent data")
+			err := PostToApmServer(client, agentData, config, ctx)
 			if err != nil {
-				log.Printf("Error sending to APM server, skipping: %v", err)
+				Log.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		default:
-			log.Println("No agent data on buffer")
+			Log.Debug("Flush ended - No agent data on buffer")
 			return
 		}
 	}

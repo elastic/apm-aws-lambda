@@ -20,7 +20,6 @@ package extension
 import (
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 )
 
@@ -38,7 +37,7 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 
 		req, err := http.NewRequest(r.Method, apmServerUrl, nil)
 		if err != nil {
-			log.Printf("could not create request object for %s:%s: %v", r.Method, apmServerUrl, err)
+			Log.Errorf("could not create request object for %s:%s: %v", r.Method, apmServerUrl, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -54,7 +53,7 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 		// Send request to apm server
 		serverResp, err := client.Do(req)
 		if err != nil {
-			log.Printf("error forwarding info request (`/`) to APM Server: %v", err)
+			Log.Errorf("error forwarding info request (`/`) to APM Server: %v", err)
 			return
 		}
 		defer serverResp.Body.Close()
@@ -76,7 +75,7 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 		// copy body to request sent back to the agent
 		_, err = io.Copy(w, serverResp.Body)
 		if err != nil {
-			log.Printf("could not read info request response to APM Server: %v", err)
+			Log.Errorf("could not read info request response to APM Server: %v", err)
 			return
 		}
 	}
@@ -89,7 +88,7 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 		rawBytes, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {
-			log.Printf("Could not read agent intake request body: %v\n", err)
+			Log.Errorf("Could not read agent intake request body: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -99,8 +98,8 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 				Data:            rawBytes,
 				ContentEncoding: r.Header.Get("Content-Encoding"),
 			}
-			log.Println("Adding agent data to buffer to be sent to apm server")
-			agentDataChan <- agentData
+
+			EnqueueAPMData(agentDataChan, agentData)
 		}
 
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {

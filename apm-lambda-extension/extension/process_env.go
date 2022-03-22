@@ -18,19 +18,23 @@
 package extension
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type extensionConfig struct {
-	apmServerUrl               string
-	apmServerSecretToken       string
-	apmServerApiKey            string
-	dataReceiverServerPort     string
-	SendStrategy               SendStrategy
-	dataReceiverTimeoutSeconds int
+	apmServerUrl                string
+	apmServerSecretToken        string
+	apmServerApiKey             string
+	dataReceiverServerPort      string
+	SendStrategy                SendStrategy
+	dataReceiverTimeoutSeconds  int
+	DataForwarderTimeoutSeconds int
+	LogLevel                    logrus.Level
 }
 
 // SendStrategy represents the type of sending strategy the extension uses
@@ -45,6 +49,9 @@ const (
 	// flush remaining buffered agent data when it receives a signal that the
 	// function is complete
 	SyncFlush SendStrategy = "syncflush"
+
+	defaultDataReceiverTimeoutSeconds  int = 15
+	defaultDataForwarderTimeoutSeconds int = 3
 )
 
 func getIntFromEnv(name string) (int, error) {
@@ -60,14 +67,26 @@ func getIntFromEnv(name string) (int, error) {
 func ProcessEnv() *extensionConfig {
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
-		log.Printf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to 15: %v\n", err)
-		dataReceiverTimeoutSeconds = 15
+		dataReceiverTimeoutSeconds = defaultDataReceiverTimeoutSeconds
+		Log.Warnf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to %d: %v", dataReceiverTimeoutSeconds, err)
+	}
+
+	dataForwarderTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS")
+	if err != nil {
+		dataForwarderTimeoutSeconds = defaultDataForwarderTimeoutSeconds
+		Log.Warnf("Could not read ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS, defaulting to %d: %v", dataForwarderTimeoutSeconds, err)
 	}
 
 	// add trailing slash to server name if missing
 	normalizedApmLambdaServer := os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")
 	if normalizedApmLambdaServer != "" && normalizedApmLambdaServer[len(normalizedApmLambdaServer)-1:] != "/" {
 		normalizedApmLambdaServer = normalizedApmLambdaServer + "/"
+	}
+
+	logLevel, err := logrus.ParseLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
+	if err != nil {
+		logLevel = logrus.InfoLevel
+		Log.Warnf("Could not read ELASTIC_APM_LOG_LEVEL, defaulting to %s", logLevel)
 	}
 
 	// Get the send strategy, convert to lowercase
@@ -78,22 +97,24 @@ func ProcessEnv() *extensionConfig {
 	}
 
 	config := &extensionConfig{
-		apmServerUrl:               normalizedApmLambdaServer,
-		apmServerSecretToken:       os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
-		apmServerApiKey:            os.Getenv("ELASTIC_APM_API_KEY"),
-		dataReceiverServerPort:     os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"),
-		SendStrategy:               normalizedSendStrategy,
-		dataReceiverTimeoutSeconds: dataReceiverTimeoutSeconds,
+		apmServerUrl:                normalizedApmLambdaServer,
+		apmServerSecretToken:        os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
+		apmServerApiKey:             os.Getenv("ELASTIC_APM_API_KEY"),
+		dataReceiverServerPort:      fmt.Sprintf(":%s", os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT")),
+		SendStrategy:                normalizedSendStrategy,
+		dataReceiverTimeoutSeconds:  dataReceiverTimeoutSeconds,
+		DataForwarderTimeoutSeconds: dataForwarderTimeoutSeconds,
+		LogLevel:                    logLevel,
 	}
 
-	if config.dataReceiverServerPort == "" {
+	if config.dataReceiverServerPort == ":" {
 		config.dataReceiverServerPort = ":8200"
 	}
 	if config.apmServerUrl == "" {
-		log.Fatalln("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
+		Log.Fatalln("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
 	}
 	if config.apmServerSecretToken == "" && config.apmServerApiKey == "" {
-		log.Fatalln("please set ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY, exiting")
+		Log.Fatalln("please set ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY, exiting")
 	}
 
 	return config
