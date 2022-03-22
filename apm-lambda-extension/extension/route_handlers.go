@@ -47,6 +47,12 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 		// from the client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
 		r.Header.Del("X-Forwarded-For")
 
+		// Update headers to allow for SSL redirection
+		r.URL.Host = parsedApmServerUrl.Host
+		r.URL.Scheme = parsedApmServerUrl.Scheme
+		r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
+		r.Host = parsedApmServerUrl.Host
+
 		// Forward request to the APM server
 		reverseProxy.ServeHTTP(w, r)
 	}
