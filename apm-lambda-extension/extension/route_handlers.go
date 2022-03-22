@@ -70,12 +70,7 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 				ContentEncoding: r.Header.Get("Content-Encoding"),
 			}
 
-			select {
-			case agentDataChan <- agentData:
-				Log.Debug("Adding agent data to buffer to be sent to apm server")
-			default:
-				Log.Warn("Channel full: dropping a subset of agent request data")
-			}
+			EnqueueAPMData(agentDataChan, agentData)
 		}
 
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {

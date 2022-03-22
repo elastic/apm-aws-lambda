@@ -86,7 +86,7 @@ func ProcessEnv() *extensionConfig {
 	logLevel, err := logrus.ParseLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
 	if err != nil {
 		logLevel = logrus.InfoLevel
-		Log.Warnf("Could not read ELASTIC_APM_LOG_LEVEL, defaulting to %s: %v", logLevel, err)
+		Log.Warnf("Could not read ELASTIC_APM_LOG_LEVEL, defaulting to %s", logLevel)
 	}
 
 	// Get the send strategy, convert to lowercase
