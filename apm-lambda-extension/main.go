@@ -41,8 +41,8 @@ var (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// setup logger
-	extension.InitLogger()
+	// Trigger ctx.Done() in all relevant goroutines when main ends
+	defer cancel()
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
@@ -74,6 +74,8 @@ func main() {
 		Timeout:   time.Duration(config.DataForwarderTimeoutSeconds) * time.Second,
 		Transport: http.DefaultTransport.(*http.Transport).Clone(),
 	}
+
+	// Create a channel used
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	logsChannel := make(chan logsapi.LogEvent)
@@ -123,25 +125,26 @@ func main() {
 				return
 			}
 
-			// Flush any APM data, in case waiting for the agentDone or runtimeDone signals
-			// timed out, the agent data wasn't available yet, and we got to the next non-shutdown event
-			extension.FlushAPMData(client, agentDataChannel, config)
-
 			// Receive agent data as it comes in and post it to the APM server.
 			// Stop checking for, and sending agent data when the function invocation
 			// has completed, signaled via a channel.
 			backgroundDataSendWg.Add(1)
 			go func() {
 				defer backgroundDataSendWg.Done()
+				if !extension.IsTransportStatusHealthyOrPending() {
+					return
+				}
 				for {
 					select {
 					case <-funcDone:
 						extension.Log.Debug("Received signal that function has completed, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
-						err := extension.PostToApmServer(client, agentData, config)
+						err := extension.PostToApmServer(client, agentData, config, ctx)
 						if err != nil {
 							extension.Log.Errorf("Error sending to APM server, skipping: %v", err)
+							extension.EnqueueAPMData(agentDataChannel, agentData)
+							return
 						}
 					}
 				}
@@ -193,7 +196,7 @@ func main() {
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
 				// Flush APM data now that the function invocation has completed
-				extension.FlushAPMData(client, agentDataChannel, config)
+				extension.FlushAPMData(client, agentDataChannel, config, ctx)
 			}
 		}
 	}
