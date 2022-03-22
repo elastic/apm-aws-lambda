@@ -128,6 +128,47 @@ func TestGracePeriod(t *testing.T) {
 	assert.InDelta(t, val7, float64(36), 0.1*36)
 }
 
+func TestSetHealthyTransport(t *testing.T) {
+	SetApmServerTransportState(Healthy, context.Background())
+	assert.True(t, ApmServerTransportState.Status == Healthy)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, -1)
+}
+
+func TestSetFailingTransport(t *testing.T) {
+	// By explicitly setting the reconnection count to 0, we ensure that the grace period will not be 0
+	// and avoid a race between reaching the pending status and the test assertion.
+	ApmServerTransportState.ReconnectionCount = 0
+	SetApmServerTransportState(Failing, context.Background())
+	assert.True(t, ApmServerTransportState.Status == Failing)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, 1)
+}
+
+func TestSetPendingTransport(t *testing.T) {
+	SetApmServerTransportState(Healthy, context.Background())
+	SetApmServerTransportState(Failing, context.Background())
+	for {
+		if IsTransportStatusHealthyOrPending() {
+			break
+		}
+	}
+	assert.True(t, ApmServerTransportState.Status == Pending)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, 0)
+}
+
+func TestSetPendingTransportExplicitly(t *testing.T) {
+	SetApmServerTransportState(Healthy, context.Background())
+	SetApmServerTransportState(Pending, context.Background())
+	assert.True(t, ApmServerTransportState.Status == Healthy)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, -1)
+}
+
+func TestSetInvalidTransport(t *testing.T) {
+	SetApmServerTransportState(Healthy, context.Background())
+	SetApmServerTransportState("Invalid", context.Background())
+	assert.True(t, ApmServerTransportState.Status == Healthy)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, -1)
+}
+
 func TestEnterBackoffFromHealthy(t *testing.T) {
 	SetApmServerTransportState(Healthy, context.Background())
 	// Compress the data
@@ -150,7 +191,8 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		w.Write([]byte(`{"foo": "bar"}`))
 	}))
-	apmServer.Close() // Close the APM server early so that POST requests fail and that backoff is enabled
+	// Close the APM server early so that POST requests fail and that backoff is enabled
+	apmServer.Close()
 
 	config := extensionConfig{
 		apmServerUrl: apmServer.URL + "/",
@@ -192,7 +234,8 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		w.Write([]byte(`{"foo": "bar"}`))
 	}))
-	apmServer.Close() // Close the APM server early so that POST requests fail and that backoff is enabled
+	// Close the APM server early so that POST requests fail and that backoff is enabled
+	apmServer.Close()
 
 	config := extensionConfig{
 		apmServerUrl: apmServer.URL + "/",

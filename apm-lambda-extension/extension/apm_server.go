@@ -128,14 +128,17 @@ func IsTransportStatusHealthyOrPending() bool {
 }
 
 func SetApmServerTransportState(status ApmServerTransportStatusType, ctx context.Context) {
-	ApmServerTransportState.Lock()
-	ApmServerTransportState.Status = status
-	Log.Debugf("APM Server Transport status set to %s", status)
 	switch status {
 	case Healthy:
+		ApmServerTransportState.Lock()
+		ApmServerTransportState.Status = status
+		Log.Debugf("APM Server Transport status set to %s", status)
 		ApmServerTransportState.ReconnectionCount = -1
 		ApmServerTransportState.Unlock()
 	case Failing:
+		ApmServerTransportState.Lock()
+		ApmServerTransportState.Status = status
+		Log.Debugf("APM Server Transport status set to %s", status)
 		ApmServerTransportState.ReconnectionCount++
 		ApmServerTransportState.GracePeriodTimer = time.NewTimer(computeGracePeriod())
 		Log.Debugf("Grace period entered, reconnection count : %d", ApmServerTransportState.ReconnectionCount)
@@ -150,6 +153,8 @@ func SetApmServerTransportState(status ApmServerTransportStatusType, ctx context
 			Log.Debugf("APM Server Transport status set to %s", status)
 			ApmServerTransportState.Unlock()
 		}()
+	default:
+		Log.Errorf("Cannot set APM Server Transport status to %s", status)
 	}
 }
 
