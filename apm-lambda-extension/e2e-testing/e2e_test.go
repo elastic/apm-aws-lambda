@@ -132,7 +132,8 @@ func retrieveJavaAgent(samJavaPath string, version string) {
 	resp, err := http.Get(fmt.Sprintf("https://github.com/elastic/apm-agent-java/releases/download/v%[1]s/elastic-apm-java-aws-lambda-layer-%[1]s.zip", version))
 	ProcessError(err)
 	defer resp.Body.Close()
-	io.Copy(out, resp.Body)
+	_, err = io.Copy(out, resp.Body)
+	ProcessError(err)
 
 	// Unzip archive and delete it
 	extension.Log.Info("Unzipping Java Agent archive...")
