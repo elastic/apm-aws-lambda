@@ -18,6 +18,7 @@
 package extension
 
 import (
+	"github.com/sirupsen/logrus"
 	"os"
 	"testing"
 )
@@ -65,7 +66,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", ":8201")
+	os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", "8201")
 	config = ProcessEnv()
 	if config.dataReceiverServerPort != ":8201" {
 		t.Log("Env port not set correctly")
@@ -75,14 +76,28 @@ func TestProcessEnv(t *testing.T) {
 	os.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "10")
 	config = ProcessEnv()
 	if config.dataReceiverTimeoutSeconds != 10 {
-		t.Log("Timeout not set correctly")
+		t.Log("APM data receiver timeout not set correctly")
 		t.Fail()
 	}
 
 	os.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "foo")
 	config = ProcessEnv()
 	if config.dataReceiverTimeoutSeconds != 15 {
-		t.Log("Timeout not set correctly")
+		t.Log("APM data receiver timeout not set correctly")
+		t.Fail()
+	}
+
+	os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "10")
+	config = ProcessEnv()
+	if config.DataForwarderTimeoutSeconds != 10 {
+		t.Log("APM data forwarder timeout not set correctly")
+		t.Fail()
+	}
+
+	os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "foo")
+	config = ProcessEnv()
+	if config.DataForwarderTimeoutSeconds != 3 {
+		t.Log("APM data forwarder not set correctly")
 		t.Fail()
 	}
 
@@ -96,14 +111,28 @@ func TestProcessEnv(t *testing.T) {
 	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "Background")
 	config = ProcessEnv()
 	if config.SendStrategy != "background" {
-		t.Log("Send strategy not set correctly")
+		t.Log("Background send strategy not set correctly")
 		t.Fail()
 	}
 
 	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "invalid")
 	config = ProcessEnv()
 	if config.SendStrategy != "syncflush" {
-		t.Log("Send strategy not set correctly")
+		t.Log("Syncflush send strategy not set correctly")
+		t.Fail()
+	}
+
+	os.Setenv("ELASTIC_APM_LOG_LEVEL", "debug")
+	config = ProcessEnv()
+	if config.LogLevel != logrus.DebugLevel {
+		t.Log("Log level not set correctly")
+		t.Fail()
+	}
+
+	os.Setenv("ELASTIC_APM_LOG_LEVEL", "invalid")
+	config = ProcessEnv()
+	if config.LogLevel != logrus.InfoLevel {
+		t.Log("Log level not set correctly")
 		t.Fail()
 	}
 }

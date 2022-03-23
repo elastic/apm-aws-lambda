@@ -44,7 +44,7 @@ func TestSubscribeWithSamLocalEnv(t *testing.T) {
 }
 
 func TestSubscribeAWSRequest(t *testing.T) {
-	listenerHost = "localhost"
+	ListenerHost = "localhost"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	out := make(chan LogEvent, 1)
@@ -77,7 +77,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 		t.Fail()
 		return
 	}
-	defer logsAPIServer.Close()
+	defer Server.Close()
 
 	// Create a request to send to the logs listener
 	platformDoneEvent := `{
@@ -89,7 +89,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 		}
 	}`
 	body := []byte(`[` + platformDoneEvent + `]`)
-	url := "http://" + logsAPIListener.Addr().String()
+	url := "http://" + Listener.Addr().String()
 	req, err := http.NewRequest("GET", url, bytes.NewReader(body))
 	if err != nil {
 		t.Log("Could not create request")
@@ -107,7 +107,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 }
 
 func TestSubscribeWithBadLogsRequest(t *testing.T) {
-	listenerHost = "localhost"
+	ListenerHost = "localhost"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	out := make(chan LogEvent)
@@ -126,12 +126,12 @@ func TestSubscribeWithBadLogsRequest(t *testing.T) {
 		t.Fail()
 		return
 	}
-	defer logsAPIServer.Close()
+	defer Server.Close()
 
 	// Create a request to send to the logs listener
 	logEvent := `{"invalid": "json"}`
 	body := []byte(`[` + logEvent + `]`)
-	url := "http://" + logsAPIListener.Addr().String()
+	url := "http://" + Listener.Addr().String()
 	req, err := http.NewRequest("GET", url, bytes.NewReader(body))
 	if err != nil {
 		t.Log("Could not create request")

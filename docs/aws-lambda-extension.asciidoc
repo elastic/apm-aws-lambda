@@ -98,25 +98,32 @@ For a _minimal configuration_ you need to specify the `ELASTIC_APM_LAMBDA_APM_SE
 [[aws-lambda-handler]]
 === Configuring the Agent and Lambda Function handler
 
-Once you've installed the extension, there's one last step to take. You'll need to wrap the Lambda function handler.
+After the extension has been installed, install the relevant language agent and wrap the Lambda function handler.
+
 
 [discrete]
 [[aws-lambda-nodejs]]
 ==== Node.js
 
-In Node.js, you wrap a Lambda function handler using the following syntax.
+To install the Node.js agent in Lambda you'll use a second layer.  You'll need to https://github.com/elastic/apm-agent-nodejs/releases[pick the right ARN from the agent release table]. The ARN has the pattern `arn:aws:lambda:<AWS_REGION_KEY>:267093732750:layer:elastic-apm-node-ver-<APM_EXTENSION_VERSION>:<LAYER_VERSION>` and depends on:
 
-[source,js]
-----
-const apm = require('elastic-apm-node').start({/*...*/})
-exports.handler = apm.lambda(async function handler (event, context) {
-    const response = {
-      statusCode: 200,
-      body: "hello new async."
-    };
-    return response
-})
-----
+* The AWS region your Lambda function runs in. The APM Lambda Extension layer needs to be in the same region as your Lambda function.
+* The version of the APM Lambda Extension you would like to use.
+
+You'll then need to configure your function to use that layer. To add a layer
+
+1. Navigate to your function in the AWS Console
+2. Scroll to the Layers section and click the _Add a layer_ button image:images/config-layer.png[image of layer configuration section in AWS Console]
+3. Choose the _Specify an ARN_ radio button
+4. Enter the Version ARN of the APM Lambda Extension layer in the _Specify an ARN_ text input
+5. Click the _Add_ button
+
+Finally, to have the Node.js agent automatically wrap your Lambda function handler, add the following environment variable.
+
+[source]
+---
+NODE_OPTIONS=-r elastic-apm-node/start
+---
 
 See the {apm-node-ref}/lambda.html[Node.js agent setup guide] for detailed instructions on setting up the Node.js agent for AWS Lambda.
 
@@ -140,6 +147,6 @@ See the {apm-py-ref}/lambda-support.html[Python agent setup guide] for detailed 
 [[aws-lambda-java]]
 ==== Java
 
-Like the extension, the Elastic APM Java agent is installed as a Lambda layer. 
+Like the extension, the Elastic APM Java agent is installed as a Lambda layer.
 
 See the {apm-java-ref}/aws-lambda.html[Java agent setup guide] for detailed instructions on setting up the Java agent for AWS Lambda.

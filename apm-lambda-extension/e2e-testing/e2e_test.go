@@ -1,28 +1,24 @@
 package e2e_testing
 
 import (
-	"archive/zip"
-	"bufio"
-	"bytes"
-	"compress/gzip"
-	"compress/zlib"
+	"elastic/apm-lambda-extension/extension"
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/joho/godotenv"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 var rebuildPtr = flag.Bool("rebuild", false, "rebuild lambda functions")
@@ -31,19 +27,23 @@ var timerPtr = flag.Int("timer", 20, "the timeout of the test lambda function")
 var javaAgentVerPtr = flag.String("java-agent-ver", "1.28.4", "the version of the java APM agent")
 
 func TestEndToEnd(t *testing.T) {
-
 	// Check the only mandatory environment variable
 	if err := godotenv.Load(".e2e_test_config"); err != nil {
-		log.Println("No additional .e2e_test_config file found")
+		panic("No config file")
 	}
-	if getEnvVarValueOrSetDefault("RUN_E2E_TESTS", "false") != "true" {
+
+	if os.Getenv("ELASTIC_APM_LOG_LEVEL") != "" {
+		logLevel, _ := logrus.ParseLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
+		extension.Log.Logger.SetLevel(logLevel)
+	}
+	if GetEnvVarValueOrSetDefault("RUN_E2E_TESTS", "false") != "true" {
 		t.Skip("Skipping E2E tests. Please set the env. variable RUN_E2E_TESTS=true if you want to run them.")
 	}
 
 	languageName := strings.ToLower(*langPtr)
 	supportedLanguages := []string{"nodejs", "python", "java"}
-	if !isStringInSlice(languageName, supportedLanguages) {
-		processError(errors.New(fmt.Sprintf("Unsupported language %s ! Supported languages are %v", languageName, supportedLanguages)))
+	if !IsStringInSlice(languageName, supportedLanguages) {
+		ProcessError(errors.New(fmt.Sprintf("Unsupported language %s ! Supported languages are %v", languageName, supportedLanguages)))
 	}
 
 	samPath := "sam-" + languageName
@@ -54,8 +54,8 @@ func TestEndToEnd(t *testing.T) {
 
 	// Java agent processing
 	if languageName == "java" {
-		if !folderExists(filepath.Join(samPath, "agent")) {
-			log.Println("Java agent not found ! Collecting archive from Github...")
+		if !FolderExists(filepath.Join(samPath, "agent")) {
+			extension.Log.Warn("Java agent not found ! Collecting archive from Github...")
 			retrieveJavaAgent(samPath, *javaAgentVerPtr)
 		}
 		changeJavaAgentPermissions(samPath)
@@ -65,7 +65,7 @@ func TestEndToEnd(t *testing.T) {
 	mockAPMServerLog := ""
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/intake/v2/events" {
-			bytesRes, _ := getDecompressedBytesFromRequest(r)
+			bytesRes, _ := GetDecompressedBytesFromRequest(r)
 			mockAPMServerLog += fmt.Sprintf("%s\n", bytesRes)
 		}
 	}))
@@ -74,11 +74,11 @@ func TestEndToEnd(t *testing.T) {
 	resultsChan := make(chan string, 1)
 
 	uuid := runTestWithTimer(samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
-	log.Printf("UUID generated during the test : %s", uuid)
+	extension.Log.Infof("UUID generated during the test : %s", uuid)
 	if uuid == "" {
 		t.Fail()
 	}
-	log.Printf("Querying the mock server for transaction bound to %s...", samServiceName)
+	extension.Log.Infof("Querying the mock server for transaction bound to %s...", samServiceName)
 	assert.True(t, strings.Contains(mockAPMServerLog, uuid))
 }
 
@@ -95,27 +95,27 @@ func runTestWithTimer(path string, serviceName string, serverURL string, buildFl
 }
 
 func buildExtensionBinaries() {
-	runCommandInDir("make", []string{}, "..", getEnvVarValueOrSetDefault("DEBUG_OUTPUT", "false") == "true")
+	RunCommandInDir("make", []string{}, "..")
 }
 
 func runTest(path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) {
-	log.Printf("Starting to test %s", serviceName)
+	extension.Log.Infof("Starting to test %s", serviceName)
 
-	if !folderExists(filepath.Join(path, ".aws-sam")) || buildFlag {
-		log.Printf("Building the Lambda function %s", serviceName)
-		runCommandInDir("sam", []string{"build"}, path, getEnvVarValueOrSetDefault("DEBUG_OUTPUT", "false") == "true")
+	if !FolderExists(filepath.Join(path, ".aws-sam")) || buildFlag {
+		extension.Log.Infof("Building the Lambda function %s", serviceName)
+		RunCommandInDir("sam", []string{"build"}, path)
 	}
 
-	log.Printf("Invoking the Lambda function %s", serviceName)
+	extension.Log.Infof("Invoking the Lambda function %s", serviceName)
 	uuidWithHyphen := uuid.New().String()
 	urlSlice := strings.Split(serverURL, ":")
 	port := urlSlice[len(urlSlice)-1]
-	runCommandInDir("sam", []string{"local", "invoke", "--parameter-overrides",
+	RunCommandInDir("sam", []string{"local", "invoke", "--parameter-overrides",
 		fmt.Sprintf("ParameterKey=ApmServerURL,ParameterValue=http://host.docker.internal:%s", port),
 		fmt.Sprintf("ParameterKey=TestUUID,ParameterValue=%s", uuidWithHyphen),
 		fmt.Sprintf("ParameterKey=TimeoutParam,ParameterValue=%d", lambdaFuncTimeout)},
-		path, getEnvVarValueOrSetDefault("DEBUG_OUTPUT", "false") == "true")
-	log.Printf("%s execution complete", serviceName)
+		path)
+	extension.Log.Infof("%s execution complete", serviceName)
 
 	resultsChan <- uuidWithHyphen
 }
@@ -127,165 +127,26 @@ func retrieveJavaAgent(samJavaPath string, version string) {
 
 	// Download archive
 	out, err := os.Create(agentArchivePath)
-	processError(err)
+	ProcessError(err)
 	defer out.Close()
 	resp, err := http.Get(fmt.Sprintf("https://github.com/elastic/apm-agent-java/releases/download/v%[1]s/elastic-apm-java-aws-lambda-layer-%[1]s.zip", version))
-	processError(err)
+	ProcessError(err)
 	defer resp.Body.Close()
 	io.Copy(out, resp.Body)
 
 	// Unzip archive and delete it
-	log.Println("Unzipping Java Agent archive...")
-	unzip(agentArchivePath, agentFolderPath)
+	extension.Log.Info("Unzipping Java Agent archive...")
+	Unzip(agentArchivePath, agentFolderPath)
 	err = os.Remove(agentArchivePath)
-	processError(err)
+	ProcessError(err)
 }
 
 func changeJavaAgentPermissions(samJavaPath string) {
 	agentFolderPath := filepath.Join(samJavaPath, "agent")
-	log.Println("Setting appropriate permissions for Java agent files...")
+	extension.Log.Info("Setting appropriate permissions for Java agent files...")
 	agentFiles, err := ioutil.ReadDir(agentFolderPath)
-	processError(err)
+	ProcessError(err)
 	for _, f := range agentFiles {
 		os.Chmod(filepath.Join(agentFolderPath, f.Name()), 0755)
 	}
-}
-
-func getEnvVarValueOrSetDefault(envVarName string, defaultVal string) string {
-	val := os.Getenv(envVarName)
-	if val == "" {
-		return defaultVal
-	}
-	return val
-}
-
-func runCommandInDir(command string, args []string, dir string, printOutput bool) {
-	e := exec.Command(command, args...)
-	if printOutput {
-		log.Println(e.String())
-	}
-	e.Dir = dir
-	stdout, _ := e.StdoutPipe()
-	stderr, _ := e.StderrPipe()
-	e.Start()
-	scannerOut := bufio.NewScanner(stdout)
-	for scannerOut.Scan() {
-		m := scannerOut.Text()
-		if printOutput {
-			log.Println(m)
-		}
-	}
-	scannerErr := bufio.NewScanner(stderr)
-	for scannerErr.Scan() {
-		m := scannerErr.Text()
-		if printOutput {
-			log.Println(m)
-		}
-	}
-	e.Wait()
-
-}
-
-func folderExists(path string) bool {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true
-	}
-	return false
-}
-
-func processError(err error) {
-	if err != nil {
-		log.Panic(err)
-	}
-}
-
-func unzip(archivePath string, destinationFolderPath string) {
-
-	openedArchive, err := zip.OpenReader(archivePath)
-	processError(err)
-	defer openedArchive.Close()
-
-	// Permissions setup
-	os.MkdirAll(destinationFolderPath, 0755)
-
-	// Closure required, so that Close() calls do not pile up when unzipping archives with a lot of files
-	extractAndWriteFile := func(f *zip.File) error {
-		rc, err := f.Open()
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if err := rc.Close(); err != nil {
-				panic(err)
-			}
-		}()
-
-		path := filepath.Join(destinationFolderPath, f.Name)
-
-		// Check for ZipSlip (Directory traversal)
-		if !strings.HasPrefix(path, filepath.Clean(destinationFolderPath)+string(os.PathSeparator)) {
-			return fmt.Errorf("illegal file path: %s", path)
-		}
-
-		if f.FileInfo().IsDir() {
-			os.MkdirAll(path, f.Mode())
-		} else {
-			os.MkdirAll(filepath.Dir(path), f.Mode())
-			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-			processError(err)
-			defer f.Close()
-			_, err = io.Copy(f, rc)
-			processError(err)
-		}
-		return nil
-	}
-
-	for _, f := range openedArchive.File {
-		err := extractAndWriteFile(f)
-		processError(err)
-	}
-}
-
-func getDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
-	var rawBytes []byte
-	if req.Body != nil {
-		rawBytes, _ = ioutil.ReadAll(req.Body)
-	}
-
-	switch req.Header.Get("Content-Encoding") {
-	case "deflate":
-		reader := bytes.NewReader([]byte(rawBytes))
-		zlibreader, err := zlib.NewReader(reader)
-		if err != nil {
-			return nil, fmt.Errorf("could not create zlib.NewReader: %v", err)
-		}
-		bodyBytes, err := ioutil.ReadAll(zlibreader)
-		if err != nil {
-			return nil, fmt.Errorf("could not read from zlib reader using ioutil.ReadAll: %v", err)
-		}
-		return bodyBytes, nil
-	case "gzip":
-		reader := bytes.NewReader([]byte(rawBytes))
-		zlibreader, err := gzip.NewReader(reader)
-		if err != nil {
-			return nil, fmt.Errorf("could not create gzip.NewReader: %v", err)
-		}
-		bodyBytes, err := ioutil.ReadAll(zlibreader)
-		if err != nil {
-			return nil, fmt.Errorf("could not read from gzip reader using ioutil.ReadAll: %v", err)
-		}
-		return bodyBytes, nil
-	default:
-		return rawBytes, nil
-	}
-}
-
-func isStringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
 }

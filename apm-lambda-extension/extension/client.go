@@ -22,7 +22,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 )
@@ -116,7 +115,7 @@ func (e *Client) Register(ctx context.Context, filename string) (*RegisterRespon
 		return nil, err
 	}
 	e.ExtensionID = httpRes.Header.Get(extensionIdentiferHeader)
-	log.Println(e.ExtensionID)
+	Log.Tracef("ExtensionID : %s", e.ExtensionID)
 	return &res, nil
 }
 
