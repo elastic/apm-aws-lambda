@@ -15,11 +15,6 @@ endif
 
 export AWS_FOLDER GOARCH ARCHITECTURE
 
-.PHONY: lint
-check-go: ## - Run golangci-lint
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.45.0
-	@./bin/golangci-lint run -v
-
 build:
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
 	chmod +x bin/extensions/apm-lambda-extension
