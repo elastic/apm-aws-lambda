@@ -43,7 +43,7 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 		}
 		reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
 
-		// Process request (the Golang doc suggests removing pre-existing any pre-existing X-Forwarded-For header coming
+		// Process request (the Golang doc suggests removing any pre-existing X-Forwarded-For header coming
 		// from the client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
 		r.Header.Del("X-Forwarded-For")
 
