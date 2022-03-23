@@ -18,9 +18,10 @@
 package extension
 
 import (
-	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 )
 
 type AgentData struct {
@@ -33,51 +34,27 @@ var AgentDoneSignal chan struct{}
 // URL: http://server/
 func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		client := &http.Client{}
 
-		req, err := http.NewRequest(r.Method, apmServerUrl, nil)
+		// Init reverse proxy
+		parsedApmServerUrl, err := url.Parse(apmServerUrl)
 		if err != nil {
-			Log.Errorf("could not create request object for %s:%s: %v", r.Method, apmServerUrl, err)
-			w.WriteHeader(http.StatusInternalServerError)
+			Log.Errorf("could not parse APM server URL: %v", err)
 			return
 		}
+		reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
 
-		//forward every header received
-		for name, values := range r.Header {
-			// Loop over all values for the name.
-			for _, value := range values {
-				req.Header.Set(name, value)
-			}
-		}
+		// Process request (the Golang doc suggests removing any pre-existing X-Forwarded-For header coming
+		// from the client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
+		r.Header.Del("X-Forwarded-For")
 
-		// Send request to apm server
-		serverResp, err := client.Do(req)
-		if err != nil {
-			Log.Errorf("error forwarding info request (`/`) to APM Server: %v", err)
-			return
-		}
-		defer serverResp.Body.Close()
+		// Update headers to allow for SSL redirection
+		r.URL.Host = parsedApmServerUrl.Host
+		r.URL.Scheme = parsedApmServerUrl.Scheme
+		r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
+		r.Host = parsedApmServerUrl.Host
 
-		// If WriteHeader is not called explicitly, the first call to Write
-		// will trigger an implicit WriteHeader(http.StatusOK).
-		if serverResp.StatusCode != 200 {
-			w.WriteHeader(serverResp.StatusCode)
-		}
-
-		// send every header received
-		for name, values := range serverResp.Header {
-			// Loop over all values for the name.
-			for _, value := range values {
-				w.Header().Add(name, value)
-			}
-		}
-
-		// copy body to request sent back to the agent
-		_, err = io.Copy(w, serverResp.Body)
-		if err != nil {
-			Log.Errorf("could not read info request response to APM Server: %v", err)
-			return
-		}
+		// Forward request to the APM server
+		reverseProxy.ServeHTTP(w, r)
 	}
 }
 
