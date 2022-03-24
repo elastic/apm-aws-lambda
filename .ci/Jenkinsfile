@@ -44,7 +44,7 @@ pipeline {
           withGoEnv(){
             dir("${BASE_DIR}/apm-lambda-extension"){
               sh(label: 'lint-prep', script: 'go mod tidy && git diff --exit-code')
-              sh(label: 'lint-run', script: './golangci-lint.sh')
+              sh(label: 'lint-run', script: 'make lint')
               sh(label: 'Go vet', script: 'go vet')
             }
           }
