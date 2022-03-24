@@ -1,7 +1,7 @@
 [[monitoring-aws-lambda]]
 = Monitoring AWS Lambda Functions
 
-Elastic APM lets you monitor your AWS Lambda functions. 
+Elastic APM lets you monitor your AWS Lambda functions.
 The natural integration of {apm-guide-ref}/apm-distributed-tracing.html[distributed tracing] into your AWS Lambda functions provides insights into the functions' execution and runtime behavior as well as their relationships and dependencies to other services.
 
 To get started with the setup of Elastic APM for your Lambda functions checkout the language-specific guides:
@@ -10,7 +10,7 @@ To get started with the setup of Elastic APM for your Lambda functions checkout 
 * {apm-py-ref}/lambda-support.html[Quick Start with APM on AWS Lambda - Python]
 * {apm-java-ref}/aws-lambda.html[Quick Start with APM on AWS Lambda - Java]
 
-Learn more about the <<aws-lambda-arch, architecture>> of Elastic APM for AWS Lambda. 
+Learn more about the <<aws-lambda-arch, architecture>> of Elastic APM for AWS Lambda.
 
 [[aws-lambda-arch]]
 == APM Architecture for AWS Lambda
@@ -31,7 +31,7 @@ By using an AWS Lambda Extension, Elastic APM Agents can send data to a local La
 [[aws-lambda-config-options]]
 == Configuration Options for APM on AWS Lambda
 
-The recommended way of configuring the APM Lambda Extension and the APM Agents on AWS Lambda is through the Lambda function's environment variables. 
+The recommended way of configuring the APM Lambda Extension and the APM Agents on AWS Lambda is through the Lambda function's environment variables.
 
 The configuration options for the APM Agents are documented in the corresponding language agents:
 

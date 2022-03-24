@@ -18,6 +18,7 @@
 package extension
 
 import (
+	"github.com/sirupsen/logrus"
 	"os"
 	"testing"
 )
@@ -118,6 +119,20 @@ func TestProcessEnv(t *testing.T) {
 	config = ProcessEnv()
 	if config.SendStrategy != "syncflush" {
 		t.Log("Syncflush send strategy not set correctly")
+		t.Fail()
+	}
+
+	os.Setenv("ELASTIC_APM_LOG_LEVEL", "debug")
+	config = ProcessEnv()
+	if config.LogLevel != logrus.DebugLevel {
+		t.Log("Log level not set correctly")
+		t.Fail()
+	}
+
+	os.Setenv("ELASTIC_APM_LOG_LEVEL", "invalid")
+	config = ProcessEnv()
+	if config.LogLevel != logrus.InfoLevel {
+		t.Log("Log level not set correctly")
 		t.Fail()
 	}
 }

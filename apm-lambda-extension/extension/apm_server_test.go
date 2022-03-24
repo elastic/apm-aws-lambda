@@ -19,13 +19,13 @@ package extension
 
 import (
 	"compress/gzip"
+	"context"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"gotest.tools/assert"
 )
 
 func TestPostToApmServerDataCompressed(t *testing.T) {
@@ -57,7 +57,7 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	err := PostToApmServer(apmServer.Client(), agentData, &config)
+	err := PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
 	assert.Equal(t, nil, err)
 }
 
@@ -90,8 +90,244 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	err := PostToApmServer(apmServer.Client(), agentData, &config)
+	err := PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
 	assert.Equal(t, nil, err)
+}
+
+func TestGracePeriod(t *testing.T) {
+	ApmServerTransportState.ReconnectionCount = 0
+	val0 := computeGracePeriod().Seconds()
+	assert.Equal(t, val0, float64(0))
+
+	ApmServerTransportState.ReconnectionCount = 1
+	val1 := computeGracePeriod().Seconds()
+	assert.InDelta(t, val1, float64(1), 0.1*1)
+
+	ApmServerTransportState.ReconnectionCount = 2
+	val2 := computeGracePeriod().Seconds()
+	assert.InDelta(t, val2, float64(4), 0.1*4)
+
+	ApmServerTransportState.ReconnectionCount = 3
+	val3 := computeGracePeriod().Seconds()
+	assert.InDelta(t, val3, float64(9), 0.1*9)
+
+	ApmServerTransportState.ReconnectionCount = 4
+	val4 := computeGracePeriod().Seconds()
+	assert.InDelta(t, val4, float64(16), 0.1*16)
+
+	ApmServerTransportState.ReconnectionCount = 5
+	val5 := computeGracePeriod().Seconds()
+	assert.InDelta(t, val5, float64(25), 0.1*25)
+
+	ApmServerTransportState.ReconnectionCount = 6
+	val6 := computeGracePeriod().Seconds()
+	assert.InDelta(t, val6, float64(36), 0.1*36)
+
+	ApmServerTransportState.ReconnectionCount = 7
+	val7 := computeGracePeriod().Seconds()
+	assert.InDelta(t, val7, float64(36), 0.1*36)
+}
+
+func TestSetHealthyTransport(t *testing.T) {
+	SetApmServerTransportState(Healthy, context.Background())
+	assert.True(t, ApmServerTransportState.Status == Healthy)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, -1)
+}
+
+func TestSetFailingTransport(t *testing.T) {
+	// By explicitly setting the reconnection count to 0, we ensure that the grace period will not be 0
+	// and avoid a race between reaching the pending status and the test assertion.
+	ApmServerTransportState.ReconnectionCount = 0
+	SetApmServerTransportState(Failing, context.Background())
+	assert.True(t, ApmServerTransportState.Status == Failing)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, 1)
+}
+
+func TestSetPendingTransport(t *testing.T) {
+	SetApmServerTransportState(Healthy, context.Background())
+	SetApmServerTransportState(Failing, context.Background())
+	for {
+		if IsTransportStatusHealthyOrPending() {
+			break
+		}
+	}
+	assert.True(t, ApmServerTransportState.Status == Pending)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, 0)
+}
+
+func TestSetPendingTransportExplicitly(t *testing.T) {
+	SetApmServerTransportState(Healthy, context.Background())
+	SetApmServerTransportState(Pending, context.Background())
+	assert.True(t, ApmServerTransportState.Status == Healthy)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, -1)
+}
+
+func TestSetInvalidTransport(t *testing.T) {
+	SetApmServerTransportState(Healthy, context.Background())
+	SetApmServerTransportState("Invalid", context.Background())
+	assert.True(t, ApmServerTransportState.Status == Healthy)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, -1)
+}
+
+func TestEnterBackoffFromHealthy(t *testing.T) {
+	SetApmServerTransportState(Healthy, context.Background())
+	// Compress the data
+	pr, pw := io.Pipe()
+	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
+	go func() {
+		gw.Write([]byte(""))
+		gw.Close()
+		pw.Close()
+	}()
+
+	// Create AgentData struct with compressed data
+	data, _ := ioutil.ReadAll(pr)
+	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
+
+	// Create apm server and handler
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bytes, _ := ioutil.ReadAll(r.Body)
+		assert.Equal(t, string(data), string(bytes))
+		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+		w.Write([]byte(`{"foo": "bar"}`))
+	}))
+	// Close the APM server early so that POST requests fail and that backoff is enabled
+	apmServer.Close()
+
+	config := extensionConfig{
+		apmServerUrl: apmServer.URL + "/",
+	}
+
+	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
+	// No way to know for sure if failing or pending (0 sec grace period)
+	assert.True(t, ApmServerTransportState.Status != Healthy)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, 0)
+}
+
+func TestEnterBackoffFromFailing(t *testing.T) {
+	SetApmServerTransportState(Healthy, context.Background())
+	SetApmServerTransportState(Failing, context.Background())
+	for {
+		if IsTransportStatusHealthyOrPending() {
+			break
+		}
+	}
+	assert.Equal(t, ApmServerTransportState.Status, Pending)
+
+	// Compress the data
+	pr, pw := io.Pipe()
+	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
+	go func() {
+		gw.Write([]byte(""))
+		gw.Close()
+		pw.Close()
+	}()
+
+	// Create AgentData struct with compressed data
+	data, _ := ioutil.ReadAll(pr)
+	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
+
+	// Create apm server and handler
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bytes, _ := ioutil.ReadAll(r.Body)
+		assert.Equal(t, string(data), string(bytes))
+		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+		w.Write([]byte(`{"foo": "bar"}`))
+	}))
+	// Close the APM server early so that POST requests fail and that backoff is enabled
+	apmServer.Close()
+
+	config := extensionConfig{
+		apmServerUrl: apmServer.URL + "/",
+	}
+
+	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
+	assert.Equal(t, ApmServerTransportState.Status, Failing)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, 1)
+}
+
+func TestAPMServerRecovery(t *testing.T) {
+	SetApmServerTransportState(Healthy, context.Background())
+	SetApmServerTransportState(Failing, context.Background())
+	for {
+		if IsTransportStatusHealthyOrPending() {
+			break
+		}
+	}
+	assert.Equal(t, ApmServerTransportState.Status, Pending)
+
+	// Compress the data
+	pr, pw := io.Pipe()
+	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
+	go func() {
+		gw.Write([]byte(""))
+		gw.Close()
+		pw.Close()
+	}()
+
+	// Create AgentData struct with compressed data
+	data, _ := ioutil.ReadAll(pr)
+	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
+
+	// Create apm server and handler
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bytes, _ := ioutil.ReadAll(r.Body)
+		assert.Equal(t, string(data), string(bytes))
+		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+		w.Write([]byte(`{"foo": "bar"}`))
+	}))
+	defer apmServer.Close()
+
+	config := extensionConfig{
+		apmServerUrl: apmServer.URL + "/",
+	}
+
+	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
+
+	assert.Equal(t, ApmServerTransportState.Status, Healthy)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, -1)
+}
+
+func TestContinuedAPMServerFailure(t *testing.T) {
+	SetApmServerTransportState(Healthy, context.Background())
+	SetApmServerTransportState(Failing, context.Background())
+	for {
+		if IsTransportStatusHealthyOrPending() {
+			break
+		}
+	}
+	assert.Equal(t, ApmServerTransportState.Status, Pending)
+
+	// Compress the data
+	pr, pw := io.Pipe()
+	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
+	go func() {
+		gw.Write([]byte(""))
+		gw.Close()
+		pw.Close()
+	}()
+
+	// Create AgentData struct with compressed data
+	data, _ := ioutil.ReadAll(pr)
+	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
+
+	// Create apm server and handler
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		bytes, _ := ioutil.ReadAll(r.Body)
+		assert.Equal(t, string(data), string(bytes))
+		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+		w.Write([]byte(`{"foo": "bar"}`))
+	}))
+	apmServer.Close() // Close the APM server early so that POST requests fail and that backoff is enabled
+
+	config := extensionConfig{
+		apmServerUrl: apmServer.URL + "/",
+	}
+
+	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
+
+	assert.Equal(t, ApmServerTransportState.Status, Failing)
+	assert.Equal(t, ApmServerTransportState.ReconnectionCount, 1)
 }
 
 func BenchmarkPostToAPM(b *testing.B) {
@@ -121,7 +357,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := PostToApmServer(client, agentData, &config)
+		err := PostToApmServer(client, agentData, &config, context.Background())
 		if err != nil {
 			b.Fatal(err)
 		}

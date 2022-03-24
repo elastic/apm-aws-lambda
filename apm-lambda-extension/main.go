@@ -19,7 +19,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -42,24 +41,27 @@ var (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// Trigger ctx.Done() in all relevant goroutines when main ends
+	defer cancel()
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		s := <-sigs
 		cancel()
-		log.Printf("Received %v\n", s)
-		log.Println("Exiting")
+		extension.Log.Infof("Received %v\n, exiting", s)
 	}()
+
+	// pulls ELASTIC_ env variable into globals for easy access
+	config := extension.ProcessEnv()
+	extension.Log.Logger.SetLevel(config.LogLevel)
 
 	// register extension with AWS Extension API
 	res, err := extensionClient.Register(ctx, extensionName)
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("Register response: %v\n", extension.PrettyPrint(res))
-
-	// pulls ELASTIC_ env variable into globals for easy access
-	config := extension.ProcessEnv()
+	extension.Log.Debugf("Register response: %v", extension.PrettyPrint(res))
 
 	// Create a channel to buffer apm agent data
 	agentDataChannel := make(chan extension.AgentData, 100)
@@ -72,6 +74,8 @@ func main() {
 		Timeout:   time.Duration(config.DataForwarderTimeoutSeconds) * time.Second,
 		Transport: http.DefaultTransport.(*http.Transport).Clone(),
 	}
+
+	// Create a channel used
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	logsChannel := make(chan logsapi.LogEvent)
@@ -87,7 +91,7 @@ func main() {
 		logsChannel,
 	)
 	if err != nil {
-		log.Printf("Error while subscribing to the Logs API: %v", err)
+		extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
 	}
 
 	for {
@@ -97,14 +101,14 @@ func main() {
 		default:
 			// call Next method of extension API.  This long polling HTTP method
 			// will block until there's an invocation of the function
-			log.Println("Waiting for next event...")
+			extension.Log.Infof("Waiting for next event...")
 			event, err := extensionClient.NextEvent(ctx)
 			if err != nil {
-				log.Printf("Error: %v\n", err)
-				log.Println("Exiting")
+				extension.Log.Errorf("Error: %v\n. Exiting.", err)
 				return
 			}
-			log.Printf("Received event: %v\n", extension.PrettyPrint(event))
+			extension.Log.Debug("Received event.")
+			extension.Log.Debugf("%v", extension.PrettyPrint(event))
 
 			// Make a channel for signaling that we received the agent flushed signal
 			extension.AgentDoneSignal = make(chan struct{})
@@ -121,25 +125,26 @@ func main() {
 				return
 			}
 
-			// Flush any APM data, in case waiting for the agentDone or runtimeDone signals
-			// timed out, the agent data wasn't available yet, and we got to the next non-shutdown event
-			extension.FlushAPMData(client, agentDataChannel, config)
-
 			// Receive agent data as it comes in and post it to the APM server.
 			// Stop checking for, and sending agent data when the function invocation
 			// has completed, signaled via a channel.
 			backgroundDataSendWg.Add(1)
 			go func() {
 				defer backgroundDataSendWg.Done()
+				if !extension.IsTransportStatusHealthyOrPending() {
+					return
+				}
 				for {
 					select {
 					case <-funcDone:
-						log.Println("funcDone signal received, not processing any more agent data")
+						extension.Log.Debug("Received signal that function has completed, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
-						err := extension.PostToApmServer(client, agentData, config)
+						err := extension.PostToApmServer(client, agentData, config, ctx)
 						if err != nil {
-							log.Printf("Error sending to APM server, skipping: %v", err)
+							extension.Log.Errorf("Error sending to APM server, skipping: %v", err)
+							extension.EnqueueAPMData(agentDataChannel, agentData)
+							return
 						}
 					}
 				}
@@ -151,19 +156,19 @@ func main() {
 				for {
 					select {
 					case <-funcDone:
-						log.Println("funcDone signal received, not processing any more log events")
+						extension.Log.Debug("Received signal that function has completed, not processing any more log events")
 						return
 					case logEvent := <-logsChannel:
-						log.Printf("Received log event %v\n", logEvent.Type)
+						extension.Log.Debugf("Received log event %v", logEvent.Type)
 						// Check the logEvent for runtimeDone and compare the RequestID
 						// to the id that came in via the Next API
 						if logEvent.Type == logsapi.RuntimeDone {
 							if logEvent.Record.RequestId == event.RequestID {
-								log.Println("Received runtimeDone event for this function invocation")
+								extension.Log.Info("Received runtimeDone event for this function invocation")
 								runtimeDoneSignal <- struct{}{}
 								return
 							} else {
-								log.Println("Log API runtimeDone event request id didn't match")
+								extension.Log.Debug("Log API runtimeDone event request id didn't match")
 							}
 						}
 					}
@@ -180,18 +185,18 @@ func main() {
 
 			select {
 			case <-extension.AgentDoneSignal:
-				log.Println("Received agent done signal")
+				extension.Log.Debug("Received agent done signal")
 			case <-runtimeDoneSignal:
-				log.Println("Received runtimeDone signal")
+				extension.Log.Debug("Received runtimeDone signal")
 			case <-timer.C:
-				log.Println("Time expired waiting for agent signal or runtimeDone event")
+				extension.Log.Info("Time expired waiting for agent signal or runtimeDone event")
 			}
 
 			close(funcDone)
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
 				// Flush APM data now that the function invocation has completed
-				extension.FlushAPMData(client, agentDataChannel, config)
+				extension.FlushAPMData(client, agentDataChannel, config, ctx)
 			}
 		}
 	}
