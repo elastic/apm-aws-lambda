@@ -1,8 +1,7 @@
-package e2e_testing
+package e2eTesting
 
 import (
 	"elastic/apm-lambda-extension/extension"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -40,10 +39,12 @@ func TestEndToEnd(t *testing.T) {
 		t.Skip("Skipping E2E tests. Please set the env. variable RUN_E2E_TESTS=true if you want to run them.")
 	}
 
+	extension.Log.Info("If the end-to-end tests are failing unexpectedly, please verify that Docker is running on your machine.")
+
 	languageName := strings.ToLower(*langPtr)
 	supportedLanguages := []string{"nodejs", "python", "java"}
 	if !IsStringInSlice(languageName, supportedLanguages) {
-		ProcessError(errors.New(fmt.Sprintf("Unsupported language %s ! Supported languages are %v", languageName, supportedLanguages)))
+		ProcessError(fmt.Errorf(fmt.Sprintf("Unsupported language %s ! Supported languages are %v", languageName, supportedLanguages)))
 	}
 
 	samPath := "sam-" + languageName
@@ -73,13 +74,13 @@ func TestEndToEnd(t *testing.T) {
 
 	resultsChan := make(chan string, 1)
 
-	uuid := runTestWithTimer(samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
-	extension.Log.Infof("UUID generated during the test : %s", uuid)
-	if uuid == "" {
+	testUuid := runTestWithTimer(samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
+	extension.Log.Infof("UUID generated during the test : %s", testUuid)
+	if testUuid == "" {
 		t.Fail()
 	}
 	extension.Log.Infof("Querying the mock server for transaction bound to %s...", samServiceName)
-	assert.True(t, strings.Contains(mockAPMServerLog, uuid))
+	assert.True(t, strings.Contains(mockAPMServerLog, testUuid))
 }
 
 func runTestWithTimer(path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) string {
@@ -87,8 +88,8 @@ func runTestWithTimer(path string, serviceName string, serverURL string, buildFl
 	defer timer.Stop()
 	go runTest(path, serviceName, serverURL, buildFlag, lambdaFuncTimeout, resultsChan)
 	select {
-	case uuid := <-resultsChan:
-		return uuid
+	case testUuid := <-resultsChan:
+		return testUuid
 	case <-timer.C:
 		return ""
 	}
@@ -132,7 +133,10 @@ func retrieveJavaAgent(samJavaPath string, version string) {
 	resp, err := http.Get(fmt.Sprintf("https://github.com/elastic/apm-agent-java/releases/download/v%[1]s/elastic-apm-java-aws-lambda-layer-%[1]s.zip", version))
 	ProcessError(err)
 	defer resp.Body.Close()
-	io.Copy(out, resp.Body)
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		extension.Log.Errorf("Could not retrieve java agent : %v", err)
+	}
 
 	// Unzip archive and delete it
 	extension.Log.Info("Unzipping Java Agent archive...")
@@ -147,6 +151,9 @@ func changeJavaAgentPermissions(samJavaPath string) {
 	agentFiles, err := ioutil.ReadDir(agentFolderPath)
 	ProcessError(err)
 	for _, f := range agentFiles {
-		os.Chmod(filepath.Join(agentFolderPath, f.Name()), 0755)
+		err = os.Chmod(filepath.Join(agentFolderPath, f.Name()), 0755)
+		if err != nil {
+			extension.Log.Errorf("Could not change java agent permissions : %v", err)
+		}
 	}
 }

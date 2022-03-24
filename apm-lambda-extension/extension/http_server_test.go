@@ -42,7 +42,11 @@ func TestInfoProxy(t *testing.T) {
 			assert.Equal(t, headers[key], r.Header[key][0])
 		}
 		w.Header().Add("test", "header")
-		w.Write([]byte(`{"foo": "bar"}`))
+		_, err := w.Write([]byte(`{"foo": "bar"}`))
+		if err != nil {
+			t.Fail()
+			return
+		}
 	}))
 	defer apmServer.Close()
 
@@ -56,7 +60,11 @@ func TestInfoProxy(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	StartHttpServer(dataChannel, &config)
+	err := StartHttpServer(dataChannel, &config)
+	if err != nil {
+		t.Fail()
+		return
+	}
 	defer agentDataServer.Close()
 
 	hosts, _ := net.LookupHost("localhost")
@@ -102,7 +110,11 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	StartHttpServer(dataChannel, &config)
+	err := StartHttpServer(dataChannel, &config)
+	if err != nil {
+		t.Fail()
+		return
+	}
 	defer agentDataServer.Close()
 
 	hosts, _ := net.LookupHost("localhost")
@@ -143,7 +155,11 @@ func Test_handleInfoRequest(t *testing.T) {
 	}
 
 	// Start extension server
-	StartHttpServer(dataChannel, &config)
+	err := StartHttpServer(dataChannel, &config)
+	if err != nil {
+		t.Fail()
+		return
+	}
 	defer agentDataServer.Close()
 
 	// Create a request to send to the extension
@@ -205,7 +221,11 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	StartHttpServer(dataChannel, &config)
+	err := StartHttpServer(dataChannel, &config)
+	if err != nil {
+		t.Fail()
+		return
+	}
 	defer agentDataServer.Close()
 
 	hosts, _ := net.LookupHost("localhost")
@@ -255,7 +275,11 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	StartHttpServer(dataChannel, &config)
+	err := StartHttpServer(dataChannel, &config)
+	if err != nil {
+		t.Fail()
+		return
+	}
 	defer agentDataServer.Close()
 
 	hosts, _ := net.LookupHost("localhost")
@@ -296,7 +320,11 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	StartHttpServer(dataChannel, &config)
+	err := StartHttpServer(dataChannel, &config)
+	if err != nil {
+		t.Fail()
+		return
+	}
 	defer agentDataServer.Close()
 
 	hosts, _ := net.LookupHost("localhost")

@@ -82,7 +82,7 @@ type HttpMethod string
 const (
 	//HttpPost is to receive logs through POST.
 	HttpPost HttpMethod = "POST"
-	//HttpPUT is to receive logs through PUT.
+	// HttpPut is to receive logs through PUT.
 	HttpPut HttpMethod = "PUT"
 )
 

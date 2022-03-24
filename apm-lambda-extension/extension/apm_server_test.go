@@ -35,9 +35,21 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 	go func() {
-		gw.Write([]byte(s))
-		gw.Close()
-		pw.Close()
+		_, err := gw.Write([]byte(s))
+		if err != nil {
+			t.Fail()
+			return
+		}
+		err = gw.Close()
+		if err != nil {
+			t.Fail()
+			return
+		}
+		err = pw.Close()
+		if err != nil {
+			t.Fail()
+			return
+		}
 	}()
 
 	// Create AgentData struct with compressed data
@@ -49,7 +61,11 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-		w.Write([]byte(`{"foo": "bar"}`))
+		_, err := w.Write([]byte(`{"foo": "bar"}`))
+		if err != nil {
+			t.Fail()
+			return
+		}
 	}))
 	defer apmServer.Close()
 
@@ -71,18 +87,34 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 	go func() {
-		gw.Write(body)
-		gw.Close()
-		pw.Close()
+		_, err := gw.Write(body)
+		if err != nil {
+			t.Fail()
+			return
+		}
+		err = gw.Close()
+		if err != nil {
+			t.Fail()
+			return
+		}
+		err = pw.Close()
+		if err != nil {
+			t.Fail()
+			return
+		}
 	}()
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		request_bytes, _ := ioutil.ReadAll(r.Body)
-		compressed_bytes, _ := ioutil.ReadAll(pr)
-		assert.Equal(t, string(compressed_bytes), string(request_bytes))
+		requestBytes, _ := ioutil.ReadAll(r.Body)
+		compressedBytes, _ := ioutil.ReadAll(pr)
+		assert.Equal(t, string(compressedBytes), string(requestBytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-		w.Write([]byte(`{"foo": "bar"}`))
+		_, err := w.Write([]byte(`{"foo": "bar"}`))
+		if err != nil {
+			t.Fail()
+			return
+		}
 	}))
 	defer apmServer.Close()
 
@@ -175,9 +207,21 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 	go func() {
-		gw.Write([]byte(""))
-		gw.Close()
-		pw.Close()
+		_, err := gw.Write([]byte(""))
+		if err != nil {
+			t.Fail()
+			return
+		}
+		err = gw.Close()
+		if err != nil {
+			t.Fail()
+			return
+		}
+		err = pw.Close()
+		if err != nil {
+			t.Fail()
+			return
+		}
 	}()
 
 	// Create AgentData struct with compressed data
@@ -189,7 +233,10 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-		w.Write([]byte(`{"foo": "bar"}`))
+		_, err := w.Write([]byte(`{"foo": "bar"}`))
+		if err != nil {
+			return
+		}
 	}))
 	// Close the APM server early so that POST requests fail and that backoff is enabled
 	apmServer.Close()
@@ -198,7 +245,10 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
+	err := PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
+	if err != nil {
+		return
+	}
 	// No way to know for sure if failing or pending (0 sec grace period)
 	assert.True(t, ApmServerTransportState.Status != Healthy)
 	assert.Equal(t, ApmServerTransportState.ReconnectionCount, 0)
@@ -218,9 +268,21 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 	go func() {
-		gw.Write([]byte(""))
-		gw.Close()
-		pw.Close()
+		_, err := gw.Write([]byte(""))
+		if err != nil {
+			t.Fail()
+			return
+		}
+		err = gw.Close()
+		if err != nil {
+			t.Fail()
+			return
+		}
+		err = pw.Close()
+		if err != nil {
+			t.Fail()
+			return
+		}
 	}()
 
 	// Create AgentData struct with compressed data
@@ -232,7 +294,11 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-		w.Write([]byte(`{"foo": "bar"}`))
+		_, err := w.Write([]byte(`{"foo": "bar"}`))
+		if err != nil {
+			t.Fail()
+			return
+		}
 	}))
 	// Close the APM server early so that POST requests fail and that backoff is enabled
 	apmServer.Close()
@@ -241,7 +307,7 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
+	assert.Error(t, PostToApmServer(apmServer.Client(), agentData, &config, context.Background()))
 	assert.Equal(t, ApmServerTransportState.Status, Failing)
 	assert.Equal(t, ApmServerTransportState.ReconnectionCount, 1)
 }
@@ -260,9 +326,21 @@ func TestAPMServerRecovery(t *testing.T) {
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 	go func() {
-		gw.Write([]byte(""))
-		gw.Close()
-		pw.Close()
+		_, err := gw.Write([]byte(""))
+		if err != nil {
+			t.Fail()
+			return
+		}
+		err = gw.Close()
+		if err != nil {
+			t.Fail()
+			return
+		}
+		err = pw.Close()
+		if err != nil {
+			t.Fail()
+			return
+		}
 	}()
 
 	// Create AgentData struct with compressed data
@@ -274,7 +352,10 @@ func TestAPMServerRecovery(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-		w.Write([]byte(`{"foo": "bar"}`))
+		_, err := w.Write([]byte(`{"foo": "bar"}`))
+		if err != nil {
+			return
+		}
 	}))
 	defer apmServer.Close()
 
@@ -282,8 +363,7 @@ func TestAPMServerRecovery(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
-
+	assert.NoError(t, PostToApmServer(apmServer.Client(), agentData, &config, context.Background()))
 	assert.Equal(t, ApmServerTransportState.Status, Healthy)
 	assert.Equal(t, ApmServerTransportState.ReconnectionCount, -1)
 }
@@ -302,9 +382,21 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 	go func() {
-		gw.Write([]byte(""))
-		gw.Close()
-		pw.Close()
+		_, err := gw.Write([]byte(""))
+		if err != nil {
+			t.Fail()
+			return
+		}
+		err = gw.Close()
+		if err != nil {
+			t.Fail()
+			return
+		}
+		err = pw.Close()
+		if err != nil {
+			t.Fail()
+			return
+		}
 	}()
 
 	// Create AgentData struct with compressed data
@@ -316,7 +408,11 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-		w.Write([]byte(`{"foo": "bar"}`))
+		_, err := w.Write([]byte(`{"foo": "bar"}`))
+		if err != nil {
+			t.Fail()
+			return
+		}
 	}))
 	apmServer.Close() // Close the APM server early so that POST requests fail and that backoff is enabled
 
@@ -324,8 +420,7 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
-
+	assert.Error(t, PostToApmServer(apmServer.Client(), agentData, &config, context.Background()))
 	assert.Equal(t, ApmServerTransportState.Status, Failing)
 	assert.Equal(t, ApmServerTransportState.ReconnectionCount, 1)
 }
@@ -343,10 +438,19 @@ func BenchmarkPostToAPM(b *testing.B) {
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.Copy(ioutil.Discard, r.Body)
-		r.Body.Close()
+		_, err := io.Copy(ioutil.Discard, r.Body)
+		if err != nil {
+			return
+		}
+		err = r.Body.Close()
+		if err != nil {
+			return
+		}
 		w.WriteHeader(202)
-		w.Write([]byte(`{}`))
+		_, err = w.Write([]byte(`{}`))
+		if err != nil {
+			return
+		}
 	}))
 	config := extensionConfig{
 		apmServerUrl: apmServer.URL + "/",

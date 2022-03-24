@@ -63,7 +63,7 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 	return err
 }
 
-// Starts the HTTP server listening for log events and subscribes to the Logs API
+// Subscribe : Starts the HTTP server listening for log events and subscribes to the Logs API
 func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, out chan LogEvent) (err error) {
 	if checkAWSSamLocal() {
 		return errors.New("Detected sam local environment")
@@ -96,7 +96,10 @@ func startHTTPServer(out chan LogEvent) error {
 
 	go func() {
 		extension.Log.Infof("Extension listening for Lambda Logs API events on %s", Listener.Addr().String())
-		Server.Serve(Listener)
+		err = Server.Serve(Listener)
+		if err != nil {
+			extension.Log.Errorf("Error upon Logs API server start : %v", err)
+		}
 	}()
 	return nil
 }

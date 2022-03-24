@@ -67,7 +67,10 @@ func main() {
 	agentDataChannel := make(chan extension.AgentData, 100)
 
 	// Start http server to receive data from agent
-	extension.StartHttpServer(agentDataChannel, config)
+	err = extension.StartHttpServer(agentDataChannel, config)
+	if err != nil {
+		extension.Log.Errorf("Could not start APM data receiver : %v", err)
+	}
 
 	// Create a client to use for sending data to the apm server
 	client := &http.Client{

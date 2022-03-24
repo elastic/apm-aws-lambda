@@ -33,13 +33,19 @@ import (
 func TestSubscribeWithSamLocalEnv(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	os.Setenv("AWS_SAM_LOCAL", "true")
+	err := os.Setenv("AWS_SAM_LOCAL", "true")
+	if err != nil {
+		t.Fail()
+	}
 	t.Cleanup(func() {
-		os.Unsetenv("AWS_SAM_LOCAL")
+		err = os.Unsetenv("AWS_SAM_LOCAL")
+		if err != nil {
+			t.Fail()
+		}
 	})
 	out := make(chan LogEvent)
 
-	err := Subscribe(ctx, "testID", []EventType{Platform}, out)
+	err = Subscribe(ctx, "testID", []EventType{Platform}, out)
 	assert.Error(t, err)
 }
 
@@ -68,10 +74,13 @@ func TestSubscribeAWSRequest(t *testing.T) {
 	defer awsRuntimeApiServer.Close()
 
 	// Set the Runtime server address as an env variable
-	os.Setenv("AWS_LAMBDA_RUNTIME_API", awsRuntimeApiServer.Listener.Addr().String())
+	err := os.Setenv("AWS_LAMBDA_RUNTIME_API", awsRuntimeApiServer.Listener.Addr().String())
+	if err != nil {
+		return
+	}
 
 	// Subscribe to the logs api and start the http server listening for events
-	err := Subscribe(ctx, "testID", []EventType{Platform}, out)
+	err = Subscribe(ctx, "testID", []EventType{Platform}, out)
 	if err != nil {
 		t.Logf("Error subscribing, %v", err)
 		t.Fail()
@@ -117,10 +126,14 @@ func TestSubscribeWithBadLogsRequest(t *testing.T) {
 	defer awsRuntimeApiServer.Close()
 
 	// Set the Runtime server address as an env variable
-	os.Setenv("AWS_LAMBDA_RUNTIME_API", awsRuntimeApiServer.Listener.Addr().String())
+	err := os.Setenv("AWS_LAMBDA_RUNTIME_API", awsRuntimeApiServer.Listener.Addr().String())
+	if err != nil {
+		t.Fail()
+		return
+	}
 
 	// Subscribe to the logs api and start the http server listening for events
-	err := Subscribe(ctx, "testID", []EventType{Platform}, out)
+	err = Subscribe(ctx, "testID", []EventType{Platform}, out)
 	if err != nil {
 		t.Logf("Error subscribing, %v", err)
 		t.Fail()

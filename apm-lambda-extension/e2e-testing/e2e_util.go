@@ -1,4 +1,4 @@
-package e2e_testing
+package e2eTesting
 
 import (
 	"archive/zip"
@@ -35,7 +35,10 @@ func RunCommandInDir(command string, args []string, dir string) {
 	e.Dir = dir
 	stdout, _ := e.StdoutPipe()
 	stderr, _ := e.StderrPipe()
-	e.Start()
+	err := e.Start()
+	if err != nil {
+		extension.Log.Errorf("Could not retrieve run %s : %v", command, err)
+	}
 	scannerOut := bufio.NewScanner(stdout)
 	for scannerOut.Scan() {
 		m := scannerOut.Text()
@@ -46,17 +49,17 @@ func RunCommandInDir(command string, args []string, dir string) {
 		m := scannerErr.Text()
 		extension.Log.Tracef(m)
 	}
-	e.Wait()
+	err = e.Wait()
+	if err != nil {
+		extension.Log.Errorf("Could not wait for the execution of %s : %v", command, err)
+	}
 
 }
 
 // FolderExists returns true if the specified folder exists, and false else.
 func FolderExists(path string) bool {
 	_, err := os.Stat(path)
-	if err == nil {
-		return true
-	}
-	return false
+	return err == nil
 }
 
 // ProcessError is a shorthand function to handle fatal errors, the idiomatic Go way.
@@ -75,7 +78,10 @@ func Unzip(archivePath string, destinationFolderPath string) {
 	defer openedArchive.Close()
 
 	// Permissions setup
-	os.MkdirAll(destinationFolderPath, 0755)
+	err = os.MkdirAll(destinationFolderPath, 0755)
+	if err != nil {
+		extension.Log.Errorf("Could not create folders required to unzip, %v", err)
+	}
 
 	// Closure required, so that Close() calls do not pile up when unzipping archives with a lot of files
 	extractAndWriteFile := func(f *zip.File) error {
@@ -84,7 +90,7 @@ func Unzip(archivePath string, destinationFolderPath string) {
 			return err
 		}
 		defer func() {
-			if err := rc.Close(); err != nil {
+			if err = rc.Close(); err != nil {
 				panic(err)
 			}
 		}()
@@ -97,9 +103,15 @@ func Unzip(archivePath string, destinationFolderPath string) {
 		}
 
 		if f.FileInfo().IsDir() {
-			os.MkdirAll(path, f.Mode())
+			err = os.MkdirAll(path, f.Mode())
+			if err != nil {
+				extension.Log.Errorf("Could not unzip folder : %v", err)
+			}
 		} else {
-			os.MkdirAll(filepath.Dir(path), f.Mode())
+			err = os.MkdirAll(filepath.Dir(path), f.Mode())
+			if err != nil {
+				extension.Log.Errorf("Could not unzip file : %v", err)
+			}
 			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 			ProcessError(err)
 			defer f.Close()
@@ -135,7 +147,7 @@ func GetDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 
 	switch req.Header.Get("Content-Encoding") {
 	case "deflate":
-		reader := bytes.NewReader([]byte(rawBytes))
+		reader := bytes.NewReader(rawBytes)
 		zlibreader, err := zlib.NewReader(reader)
 		if err != nil {
 			return nil, fmt.Errorf("could not create zlib.NewReader: %v", err)
@@ -146,7 +158,7 @@ func GetDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 		}
 		return bodyBytes, nil
 	case "gzip":
-		reader := bytes.NewReader([]byte(rawBytes))
+		reader := bytes.NewReader(rawBytes)
 		zlibreader, err := gzip.NewReader(reader)
 		if err != nil {
 			return nil, fmt.Errorf("could not create gzip.NewReader: %v", err)

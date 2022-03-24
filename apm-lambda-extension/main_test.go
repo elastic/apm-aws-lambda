@@ -3,10 +3,10 @@ package main
 import (
 	"bytes"
 	"context"
-	e2e_testing "elastic/apm-lambda-extension/e2e-testing"
+	e2eTesting "elastic/apm-lambda-extension/e2e-testing"
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/logsapi"
-	json "encoding/json"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -30,7 +30,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 	apmServerMutex := &sync.Mutex{}
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/intake/v2/events" {
-			decompressedBytes, err := e2e_testing.GetDecompressedBytesFromRequest(r)
+			decompressedBytes, err := e2eTesting.GetDecompressedBytesFromRequest(r)
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 			}
@@ -62,8 +62,16 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 			}
 		}
 	}))
-	os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", apmServer.URL)
-	os.Setenv("ELASTIC_APM_SECRET_TOKEN", "none")
+	err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", apmServer.URL)
+	if err != nil {
+		extension.Log.Fatalf("Could not set environment variable : %v", err)
+		return nil, nil, nil
+	}
+	err = os.Setenv("ELASTIC_APM_SECRET_TOKEN", "none")
+	if err != nil {
+		extension.Log.Fatalf("Could not set environment variable : %v", err)
+		return nil, nil, nil
+	}
 
 	// Mock Lambda Server
 	logsapi.ListenerHost = "localhost"
@@ -104,16 +112,24 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 
 	slicedLambdaURL := strings.Split(lambdaServer.URL, "//")
 	strippedLambdaURL := slicedLambdaURL[1]
-	os.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL)
+	err = os.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL)
+	if err != nil {
+		extension.Log.Fatalf("Could not set environment variable : %v", err)
+		return nil, nil, nil
+	}
 	extensionClient = extension.NewClient(os.Getenv("AWS_LAMBDA_RUNTIME_API"))
 
 	// Find unused port for the extension to listen to
-	extensionPort, err := e2e_testing.GetFreePort()
+	extensionPort, err := e2eTesting.GetFreePort()
 	if err != nil {
 		extension.Log.Errorf("Could not find free port for the extension to listen on : %v", err)
 		extensionPort = 8200
 	}
-	os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort))
+	err = os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort))
+	if err != nil {
+		extension.Log.Fatalf("Could not set environment variable : %v", err)
+		return nil, nil, nil
+	}
 
 	return lambdaServer, apmServer, &apmServerInternals
 }
@@ -165,18 +181,21 @@ func processMockEvent(currId string, event MockEvent, extensionPort string) {
 	case InvokeStandardFlush:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
-		client.Do(reqData)
+		_, err := client.Do(reqData)
+		if err != nil {
+			extension.Log.Error(err)
+		}
 	case InvokeWaitgroupsRace:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData0, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		reqData1, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		_, err := client.Do(reqData0)
 		if err != nil {
-			extension.Log.Errorln(err)
+			extension.Log.Error(err)
 		}
 		_, err = client.Do(reqData1)
 		if err != nil {
-			extension.Log.Errorln(err)
+			extension.Log.Error(err)
 		}
 		time.Sleep(650 * time.Microsecond)
 	case InvokeMultipleTransactionsOverload:
@@ -186,7 +205,10 @@ func processMockEvent(currId string, event MockEvent, extensionPort string) {
 			go func() {
 				time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 				reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
-				client.Do(reqData)
+				_, err := client.Do(reqData)
+				if err != nil {
+					extension.Log.Error(err)
+				}
 				wg.Done()
 			}()
 		}
@@ -231,7 +253,7 @@ func sendLogEvent(requestId string, logEventType logsapi.SubEventType) {
 		extension.Log.Errorf("Could not encode record : %v", err)
 		return
 	}
-	logEvent.StringRecord = string(bufRecord.Bytes())
+	logEvent.StringRecord = bufRecord.String()
 
 	// Convert full log event to JSON
 	bufLogEvent := new(bytes.Buffer)
@@ -345,8 +367,14 @@ func TestAPMServerHangs(t *testing.T) {
 // Hence, the APM server is waked up just in time to process the TimelyResponse data frame.
 func TestAPMServerRecovery(t *testing.T) {
 	extension.SetApmServerTransportState(extension.Healthy, context.Background())
-	os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1")
-	os.Setenv("ELASTIC_APM_LOG_LEVEL", "trace")
+	err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1")
+	if err != nil {
+		t.Fail()
+	}
+	err = os.Setenv("ELASTIC_APM_LOG_LEVEL", "trace")
+	if err != nil {
+		t.Fail()
+	}
 	eventsChannel := make(chan MockEvent, 100)
 	lambdaServer, apmServer, apmServerInternals := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -364,7 +392,10 @@ func TestAPMServerRecovery(t *testing.T) {
 	assert.NotPanics(t, main)
 	assert.True(t, strings.Contains(apmServerInternals.Data, string(Hangs)))
 	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
-	os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "")
+	err = os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "")
+	if err != nil {
+		t.Fail()
+	}
 }
 
 // TestGracePeriodHangs verifies that the WaitforGracePeriod goroutine ends when main() ends.
@@ -423,7 +454,10 @@ func TestFullChannel(t *testing.T) {
 // TestFullChannelSlowAPMServer tests what happens when the APM Data channel is full and the APM server is slow
 // (send strategy : background)
 func TestFullChannelSlowAPMServer(t *testing.T) {
-	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
+	err := os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
+	if err != nil {
+		t.Fail()
+	}
 	eventsChannel := make(chan MockEvent, 1000)
 	lambdaServer, apmServer, _ := initMockServers(eventsChannel)
 	defer lambdaServer.Close()
@@ -435,5 +469,8 @@ func TestFullChannelSlowAPMServer(t *testing.T) {
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
 	// The test should not hang
-	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "syncflush")
+	err = os.Setenv("ELASTIC_APM_SEND_STRATEGY", "syncflush")
+	if err != nil {
+		t.Fail()
+	}
 }
