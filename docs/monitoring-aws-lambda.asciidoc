@@ -26,7 +26,7 @@ Normally, during the execution of a Lambda function, there's only a single langu
 
 image:images/architecture-white.png[image showing data flow from lambda function, to extension, to APM Server]
 
-By using an AWS Lambda Extension, Elastic APM Agents can send data to a locally running Lambda Extension process, and that process will forward data on to APM Server. The Lambda Extension ensures that any latency between the Lambda function and the AWS Server instance will not cause latency on the request flow of the Lambda function itself.
+By using an AWS Lambda Extension, Elastic APM Agents can send data to a local Lambda Extension process, and that process will forward data on to APM Server asynchronously. The Lambda Extension ensures that any potential latency between the Lambda function and the APM Server instance will not cause latency in the request flow of the Lambda function itself.
 
 [[aws-lambda-config-options]]
 == Configuration Options for APM on AWS Lambda
