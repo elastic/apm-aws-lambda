@@ -17,7 +17,7 @@ Learn more about the <<aws-lambda-arch, architecture>> of Elastic APM for AWS La
 
 AWS Lambda uses a special execution model to provide a scalable, on-demand compute service for code execution. In particular, AWS freezes the execution environment of a lambda function when there are no active requests being processed. This execution model poses additional requirements on APM in the context of AWS Lambda functions:
 
-1. To avoid data loss, APM data collected by APM agents needs to be flushed before the execution environment of a lambda function gets frozen.
+1. To avoid data loss, APM data collected by APM agents needs to be flushed before the execution environment of a lambda function is frozen.
 2. And, flushing APM data must be fast to not impact the response times of lambda function requests.
 
 To accomplish the above, Elastic's APM Agents instrument AWS Lambda functions and dispatch APM data via an https://docs.aws.amazon.com/lambda/latest/dg/using-extensions.html[AWS Lambda Extension].
