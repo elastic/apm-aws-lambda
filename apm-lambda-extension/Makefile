@@ -16,14 +16,12 @@ endif
 export AWS_FOLDER GOARCH ARCHITECTURE
 
 check-licenses:
-	go get -d github.com/elastic/go-licenser
-	go run github.com/elastic/go-licenser -d .
-	go mod tidy
+	go install github.com/elastic/go-licenser@v0.4.0
+	go run github.com/elastic/go-licenser@v0.4.0 -d .
 
 update-licenses:
-	go get -d github.com/elastic/go-licenser
-	go run github.com/elastic/go-licenser .
-	go mod tidy
+	go install github.com/elastic/go-licenser@v0.4.0
+	go run github.com/elastic/go-licenser@v0.4.0 .
 
 build: check-licenses
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
