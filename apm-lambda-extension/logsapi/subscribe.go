@@ -93,7 +93,7 @@ func startHTTPServer(out chan LogEvent) error {
 
 	go func() {
 		extension.Log.Infof("Extension listening for Lambda Logs API events on %s", Listener.Addr().String())
-		if Server.Serve(Listener); err != nil {
+		if err = Server.Serve(Listener); err != nil {
 			extension.Log.Errorf("Error upon Logs API server start : %v", err)
 		}
 	}()
