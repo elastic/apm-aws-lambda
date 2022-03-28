@@ -35,8 +35,7 @@ func RunCommandInDir(command string, args []string, dir string) {
 	e.Dir = dir
 	stdout, _ := e.StdoutPipe()
 	stderr, _ := e.StderrPipe()
-	err := e.Start()
-	if err != nil {
+	if err := e.Start(); err != nil {
 		extension.Log.Errorf("Could not retrieve run %s : %v", command, err)
 	}
 	scannerOut := bufio.NewScanner(stdout)
@@ -49,8 +48,7 @@ func RunCommandInDir(command string, args []string, dir string) {
 		m := scannerErr.Text()
 		extension.Log.Tracef(m)
 	}
-	err = e.Wait()
-	if err != nil {
+	if err := e.Wait(); err != nil {
 		extension.Log.Errorf("Could not wait for the execution of %s : %v", command, err)
 	}
 
@@ -103,13 +101,11 @@ func Unzip(archivePath string, destinationFolderPath string) {
 		}
 
 		if f.FileInfo().IsDir() {
-			err = os.MkdirAll(path, f.Mode())
-			if err != nil {
+			if err := os.MkdirAll(path, f.Mode()); err != nil {
 				extension.Log.Errorf("Could not unzip folder : %v", err)
 			}
 		} else {
-			err = os.MkdirAll(filepath.Dir(path), f.Mode())
-			if err != nil {
+			if err = os.MkdirAll(filepath.Dir(path), f.Mode()); err != nil {
 				extension.Log.Errorf("Could not unzip file : %v", err)
 			}
 			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())

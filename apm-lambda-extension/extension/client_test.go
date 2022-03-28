@@ -44,8 +44,7 @@ func TestRegister(t *testing.T) {
 	runtimeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, expectedRequest, string(bytes))
-		_, err := w.Write(response)
-		if err != nil {
+		if _, err := w.Write(response); err != nil {
 			t.Fail()
 			return
 		}
@@ -77,8 +76,7 @@ func TestNextEvent(t *testing.T) {
 	`)
 
 	runtimeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write(response)
-		if err != nil {
+		if _, err := w.Write(response); err != nil {
 			t.Fail()
 			return
 		}

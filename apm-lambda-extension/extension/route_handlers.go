@@ -84,8 +84,7 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 		}
 
 		w.WriteHeader(http.StatusAccepted)
-		_, err = w.Write([]byte("ok"))
-		if err != nil {
+		if _, err = w.Write([]byte("ok")); err != nil {
 			Log.Errorf("Failed to send intake response to APM agent : %v", err)
 		}
 	}

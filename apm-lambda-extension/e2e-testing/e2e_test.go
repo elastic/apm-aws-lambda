@@ -133,8 +133,7 @@ func retrieveJavaAgent(samJavaPath string, version string) {
 	resp, err := http.Get(fmt.Sprintf("https://github.com/elastic/apm-agent-java/releases/download/v%[1]s/elastic-apm-java-aws-lambda-layer-%[1]s.zip", version))
 	ProcessError(err)
 	defer resp.Body.Close()
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
+	if _, err = io.Copy(out, resp.Body); err != nil {
 		extension.Log.Errorf("Could not retrieve java agent : %v", err)
 	}
 
@@ -151,8 +150,7 @@ func changeJavaAgentPermissions(samJavaPath string) {
 	agentFiles, err := ioutil.ReadDir(agentFolderPath)
 	ProcessError(err)
 	for _, f := range agentFiles {
-		err = os.Chmod(filepath.Join(agentFolderPath, f.Name()), 0755)
-		if err != nil {
+		if err = os.Chmod(filepath.Join(agentFolderPath, f.Name()), 0755); err != nil {
 			extension.Log.Errorf("Could not change java agent permissions : %v", err)
 		}
 	}

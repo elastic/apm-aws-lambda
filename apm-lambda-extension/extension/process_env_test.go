@@ -24,13 +24,11 @@ import (
 )
 
 func TestProcessEnv(t *testing.T) {
-	err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "bar.example.com/")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "bar.example.com/"); err != nil {
 		t.Fail()
 		return
 	}
-	err = os.Setenv("ELASTIC_APM_SECRET_TOKEN", "foo")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_SECRET_TOKEN", "foo"); err != nil {
 		t.Fail()
 		return
 	}
@@ -42,13 +40,11 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	err = os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "foo.example.com")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "foo.example.com"); err != nil {
 		t.Fail()
 		return
 	}
-	err = os.Setenv("ELASTIC_APM_SECRET_TOKEN", "bar")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_SECRET_TOKEN", "bar"); err != nil {
 		t.Fail()
 		return
 	}
@@ -82,8 +78,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	err = os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", "8201")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", "8201"); err != nil {
 		t.Fail()
 		return
 	}
@@ -93,8 +88,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	err = os.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "10")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "10"); err != nil {
 		t.Fail()
 		return
 	}
@@ -104,8 +98,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	err = os.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "foo")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "foo"); err != nil {
 		t.Fail()
 		return
 	}
@@ -115,8 +108,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	err = os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "10")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "10"); err != nil {
 		t.Fail()
 		return
 	}
@@ -126,8 +118,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	err = os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "foo")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "foo"); err != nil {
 		t.Fail()
 		return
 	}
@@ -137,8 +128,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	err = os.Setenv("ELASTIC_APM_API_KEY", "foo")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_API_KEY", "foo"); err != nil {
 		t.Fail()
 		return
 	}
@@ -148,8 +138,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	err = os.Setenv("ELASTIC_APM_SEND_STRATEGY", "Background")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_SEND_STRATEGY", "Background"); err != nil {
 		t.Fail()
 		return
 	}
@@ -159,8 +148,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	err = os.Setenv("ELASTIC_APM_SEND_STRATEGY", "invalid")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_SEND_STRATEGY", "invalid"); err != nil {
 		t.Fail()
 		return
 	}
@@ -170,8 +158,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	err = os.Setenv("ELASTIC_APM_LOG_LEVEL", "debug")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_LOG_LEVEL", "debug"); err != nil {
 		t.Fail()
 		return
 	}
@@ -181,8 +168,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	err = os.Setenv("ELASTIC_APM_LOG_LEVEL", "invalid")
-	if err != nil {
+	if err := os.Setenv("ELASTIC_APM_LOG_LEVEL", "invalid"); err != nil {
 		t.Fail()
 		return
 	}

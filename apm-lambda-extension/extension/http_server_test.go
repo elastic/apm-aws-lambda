@@ -42,8 +42,7 @@ func TestInfoProxy(t *testing.T) {
 			assert.Equal(t, headers[key], r.Header[key][0])
 		}
 		w.Header().Add("test", "header")
-		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		if err != nil {
+		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
 			t.Fail()
 			return
 		}
@@ -60,8 +59,7 @@ func TestInfoProxy(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	err := StartHttpServer(dataChannel, &config)
-	if err != nil {
+	if err := StartHttpServer(dataChannel, &config); err != nil {
 		t.Fail()
 		return
 	}
@@ -110,8 +108,7 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	err := StartHttpServer(dataChannel, &config)
-	if err != nil {
+	if err := StartHttpServer(dataChannel, &config); err != nil {
 		t.Fail()
 		return
 	}
@@ -155,8 +152,7 @@ func Test_handleInfoRequest(t *testing.T) {
 	}
 
 	// Start extension server
-	err := StartHttpServer(dataChannel, &config)
-	if err != nil {
+	if err := StartHttpServer(dataChannel, &config); err != nil {
 		t.Fail()
 		return
 	}
@@ -221,8 +217,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	err := StartHttpServer(dataChannel, &config)
-	if err != nil {
+	if err := StartHttpServer(dataChannel, &config); err != nil {
 		t.Fail()
 		return
 	}
@@ -240,8 +235,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	// Send the request to the extension
 	client := &http.Client{}
 	go func() {
-		_, err := client.Do(req)
-		if err != nil {
+		if _, err := client.Do(req); err != nil {
 			t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
 			t.Fail()
 		}
@@ -275,8 +269,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	err := StartHttpServer(dataChannel, &config)
-	if err != nil {
+	if err := StartHttpServer(dataChannel, &config); err != nil {
 		t.Fail()
 		return
 	}
@@ -320,8 +313,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	err := StartHttpServer(dataChannel, &config)
-	if err != nil {
+	if err := StartHttpServer(dataChannel, &config); err != nil {
 		t.Fail()
 		return
 	}
@@ -339,8 +331,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	// Send the request to the extension
 	client := &http.Client{}
 	go func() {
-		_, err := client.Do(req)
-		if err != nil {
+		if _, err := client.Do(req); err != nil {
 			t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
 			t.Fail()
 		}

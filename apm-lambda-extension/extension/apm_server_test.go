@@ -35,18 +35,15 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 	go func() {
-		_, err := gw.Write([]byte(s))
-		if err != nil {
+		if _, err := gw.Write([]byte(s)); err != nil {
 			t.Fail()
 			return
 		}
-		err = gw.Close()
-		if err != nil {
+		if err := gw.Close(); err != nil {
 			t.Fail()
 			return
 		}
-		err = pw.Close()
-		if err != nil {
+		if err := pw.Close(); err != nil {
 			t.Fail()
 			return
 		}
@@ -61,8 +58,7 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		if err != nil {
+		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
 			t.Fail()
 			return
 		}
@@ -87,18 +83,15 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 	go func() {
-		_, err := gw.Write(body)
-		if err != nil {
+		if _, err := gw.Write([]byte(s)); err != nil {
 			t.Fail()
 			return
 		}
-		err = gw.Close()
-		if err != nil {
+		if err := gw.Close(); err != nil {
 			t.Fail()
 			return
 		}
-		err = pw.Close()
-		if err != nil {
+		if err := pw.Close(); err != nil {
 			t.Fail()
 			return
 		}
@@ -110,8 +103,7 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 		compressedBytes, _ := ioutil.ReadAll(pr)
 		assert.Equal(t, string(compressedBytes), string(requestBytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		if err != nil {
+		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
 			t.Fail()
 			return
 		}
@@ -207,18 +199,15 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 	go func() {
-		_, err := gw.Write([]byte(""))
-		if err != nil {
+		if _, err := gw.Write([]byte("")); err != nil {
 			t.Fail()
 			return
 		}
-		err = gw.Close()
-		if err != nil {
+		if err := gw.Close(); err != nil {
 			t.Fail()
 			return
 		}
-		err = pw.Close()
-		if err != nil {
+		if err := pw.Close(); err != nil {
 			t.Fail()
 			return
 		}
@@ -233,8 +222,7 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		if err != nil {
+		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
 			return
 		}
 	}))
@@ -245,8 +233,7 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	err := PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
-	if err != nil {
+	if err := PostToApmServer(apmServer.Client(), agentData, &config, context.Background()); err != nil {
 		return
 	}
 	// No way to know for sure if failing or pending (0 sec grace period)
@@ -268,18 +255,15 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 	go func() {
-		_, err := gw.Write([]byte(""))
-		if err != nil {
+		if _, err := gw.Write([]byte("")); err != nil {
 			t.Fail()
 			return
 		}
-		err = gw.Close()
-		if err != nil {
+		if err := gw.Close(); err != nil {
 			t.Fail()
 			return
 		}
-		err = pw.Close()
-		if err != nil {
+		if err := pw.Close(); err != nil {
 			t.Fail()
 			return
 		}
@@ -294,8 +278,7 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		if err != nil {
+		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
 			t.Fail()
 			return
 		}
@@ -326,18 +309,15 @@ func TestAPMServerRecovery(t *testing.T) {
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 	go func() {
-		_, err := gw.Write([]byte(""))
-		if err != nil {
+		if _, err := gw.Write([]byte("")); err != nil {
 			t.Fail()
 			return
 		}
-		err = gw.Close()
-		if err != nil {
+		if err := gw.Close(); err != nil {
 			t.Fail()
 			return
 		}
-		err = pw.Close()
-		if err != nil {
+		if err := pw.Close(); err != nil {
 			t.Fail()
 			return
 		}
@@ -352,8 +332,7 @@ func TestAPMServerRecovery(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		if err != nil {
+		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
 			return
 		}
 	}))
@@ -382,18 +361,15 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 	pr, pw := io.Pipe()
 	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
 	go func() {
-		_, err := gw.Write([]byte(""))
-		if err != nil {
+		if _, err := gw.Write([]byte("")); err != nil {
 			t.Fail()
 			return
 		}
-		err = gw.Close()
-		if err != nil {
+		if err := gw.Close(); err != nil {
 			t.Fail()
 			return
 		}
-		err = pw.Close()
-		if err != nil {
+		if err := pw.Close(); err != nil {
 			t.Fail()
 			return
 		}
@@ -408,8 +384,7 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		if err != nil {
+		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
 			t.Fail()
 			return
 		}
@@ -438,17 +413,14 @@ func BenchmarkPostToAPM(b *testing.B) {
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := io.Copy(ioutil.Discard, r.Body)
-		if err != nil {
+		if _, err := io.Copy(ioutil.Discard, r.Body); err != nil {
 			return
 		}
-		err = r.Body.Close()
-		if err != nil {
+		if err := r.Body.Close(); err != nil {
 			return
 		}
 		w.WriteHeader(202)
-		_, err = w.Write([]byte(`{}`))
-		if err != nil {
+		if _, err := w.Write([]byte(`{}`)); err != nil {
 			return
 		}
 	}))
@@ -461,8 +433,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := PostToApmServer(client, agentData, &config, context.Background())
-		if err != nil {
+		if err := PostToApmServer(client, agentData, &config, context.Background()); err != nil {
 			b.Fatal(err)
 		}
 	}
