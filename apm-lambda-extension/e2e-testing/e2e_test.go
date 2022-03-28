@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package e2e_testing
+package e2eTesting
 
 import (
 	"elastic/apm-lambda-extension/extension"
