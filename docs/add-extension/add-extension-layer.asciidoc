@@ -61,12 +61,13 @@ In your SAM `template.yml` file add the APM Extension Layer ARN as follows:
 [source,yml]
 ----
 ...
-ServerlessFunction:
-  Type: AWS::Serverless::Function
-  Properties:
-    ...
-    Layers:
-        - EXTENSION_ARN
+Resources:
+  yourLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      ...
+      Layers:
+          - EXTENSION_ARN
 ...
 ----
 
@@ -79,13 +80,14 @@ In your SAM `template.yml` file add the Layer ARNs of the APM Extension and the 
 [source,yml]
 ----
 ...
-ServerlessFunction:
-  Type: AWS::Serverless::Function
-  Properties:
-    ...
-    Layers:
-        - EXTENSION_ARN
-        - AGENT_ARN
+Resources:
+  yourLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      ...
+      Layers:
+          - EXTENSION_ARN
+          - AGENT_ARN
 ...
 ----
 
@@ -133,7 +135,6 @@ To add the APM Extension Layer to your function add the ARN to the `layers` prop
 ----
 ...
 resource "aws_lambda_function" "your_lambda_function" {
-  function_name = "yourLambdaFunctionName"
   ...
   layers = ["EXTENSION_ARN"]
 }
@@ -149,7 +150,6 @@ To add the APM Extension and the APM Agent to your function add the ARNs to the 
 ----
 ...
 resource "aws_lambda_function" "your_lambda_function" {
-  function_name = "yourLambdaFunctionName"
   ...
   layers = ["EXTENSION_ARN", "AGENT_ARN"]
 }
