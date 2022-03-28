@@ -15,15 +15,23 @@ endif
 
 export AWS_FOLDER GOARCH ARCHITECTURE
 
+check-licenses:
+	go install github.com/elastic/go-licenser@v0.4.0
+	go run github.com/elastic/go-licenser@v0.4.0 -d .
+
+update-licenses:
+	go install github.com/elastic/go-licenser@v0.4.0
+	go run github.com/elastic/go-licenser@v0.4.0 .
+
 lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.0
 	golangci-lint --version
 	golangci-lint run
 
-build:
+build: check-licenses
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
 	chmod +x bin/extensions/apm-lambda-extension
-build-and-publish: validate-layer-name validate-aws-default-region
+build-and-publish: check-licenses validate-layer-name validate-aws-default-region
 ifndef AWS_ACCESS_KEY_ID
 	$(error AWS_ACCESS_KEY_ID is undefined)
 endif
