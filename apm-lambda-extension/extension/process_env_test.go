@@ -24,8 +24,14 @@ import (
 )
 
 func TestProcessEnv(t *testing.T) {
-	os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "bar.example.com/")
-	os.Setenv("ELASTIC_APM_SECRET_TOKEN", "foo")
+	if err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "bar.example.com/"); err != nil {
+		t.Fail()
+		return
+	}
+	if err := os.Setenv("ELASTIC_APM_SECRET_TOKEN", "foo"); err != nil {
+		t.Fail()
+		return
+	}
 	config := ProcessEnv()
 	t.Logf("%v", config)
 
@@ -34,8 +40,14 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "foo.example.com")
-	os.Setenv("ELASTIC_APM_SECRET_TOKEN", "bar")
+	if err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "foo.example.com"); err != nil {
+		t.Fail()
+		return
+	}
+	if err := os.Setenv("ELASTIC_APM_SECRET_TOKEN", "bar"); err != nil {
+		t.Fail()
+		return
+	}
 
 	config = ProcessEnv()
 	t.Logf("%v", config)
@@ -66,70 +78,100 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", "8201")
+	if err := os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", "8201"); err != nil {
+		t.Fail()
+		return
+	}
 	config = ProcessEnv()
 	if config.dataReceiverServerPort != ":8201" {
 		t.Log("Env port not set correctly")
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "10")
+	if err := os.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "10"); err != nil {
+		t.Fail()
+		return
+	}
 	config = ProcessEnv()
 	if config.dataReceiverTimeoutSeconds != 10 {
 		t.Log("APM data receiver timeout not set correctly")
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "foo")
+	if err := os.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "foo"); err != nil {
+		t.Fail()
+		return
+	}
 	config = ProcessEnv()
 	if config.dataReceiverTimeoutSeconds != 15 {
 		t.Log("APM data receiver timeout not set correctly")
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "10")
+	if err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "10"); err != nil {
+		t.Fail()
+		return
+	}
 	config = ProcessEnv()
 	if config.DataForwarderTimeoutSeconds != 10 {
 		t.Log("APM data forwarder timeout not set correctly")
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "foo")
+	if err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "foo"); err != nil {
+		t.Fail()
+		return
+	}
 	config = ProcessEnv()
 	if config.DataForwarderTimeoutSeconds != 3 {
 		t.Log("APM data forwarder not set correctly")
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_API_KEY", "foo")
+	if err := os.Setenv("ELASTIC_APM_API_KEY", "foo"); err != nil {
+		t.Fail()
+		return
+	}
 	config = ProcessEnv()
 	if config.apmServerApiKey != "foo" {
 		t.Log("API Key not set correctly")
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "Background")
+	if err := os.Setenv("ELASTIC_APM_SEND_STRATEGY", "Background"); err != nil {
+		t.Fail()
+		return
+	}
 	config = ProcessEnv()
 	if config.SendStrategy != "background" {
 		t.Log("Background send strategy not set correctly")
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_SEND_STRATEGY", "invalid")
+	if err := os.Setenv("ELASTIC_APM_SEND_STRATEGY", "invalid"); err != nil {
+		t.Fail()
+		return
+	}
 	config = ProcessEnv()
 	if config.SendStrategy != "syncflush" {
 		t.Log("Syncflush send strategy not set correctly")
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_LOG_LEVEL", "debug")
+	if err := os.Setenv("ELASTIC_APM_LOG_LEVEL", "debug"); err != nil {
+		t.Fail()
+		return
+	}
 	config = ProcessEnv()
 	if config.LogLevel != logrus.DebugLevel {
 		t.Log("Log level not set correctly")
 		t.Fail()
 	}
 
-	os.Setenv("ELASTIC_APM_LOG_LEVEL", "invalid")
+	if err := os.Setenv("ELASTIC_APM_LOG_LEVEL", "invalid"); err != nil {
+		t.Fail()
+		return
+	}
 	config = ProcessEnv()
 	if config.LogLevel != logrus.InfoLevel {
 		t.Log("Log level not set correctly")
