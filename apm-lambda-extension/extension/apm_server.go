@@ -56,9 +56,9 @@ var ApmServerTransportState = ApmServerTransportStateType{
 	ReconnectionCount: -1,
 }
 
-// todo: can this be a streaming or streaming style call that keeps the
-//       connection open across invocations?
 func PostToApmServer(client *http.Client, agentData AgentData, config *extensionConfig, ctx context.Context) error {
+	// todo: can this be a streaming or streaming style call that keeps the
+	//       connection open across invocations?
 	if !IsTransportStatusHealthyOrPending() {
 		return errors.New("transport status is unhealthy")
 	}

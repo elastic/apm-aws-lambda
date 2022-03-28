@@ -121,8 +121,7 @@ func Test_unmarshalRuntimeDoneFaultRecordString(t *testing.T) {
 	`)
 
 	var le LogEvent
-	err := json.Unmarshal(jsonBytes, &le)
-	if err != nil {
+	if err := json.Unmarshal(jsonBytes, &le); err != nil {
 		t.Fail()
 	}
 

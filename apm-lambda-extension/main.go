@@ -67,7 +67,9 @@ func main() {
 	agentDataChannel := make(chan extension.AgentData, 100)
 
 	// Start http server to receive data from agent
-	extension.StartHttpServer(agentDataChannel, config)
+	if err = extension.StartHttpServer(agentDataChannel, config); err != nil {
+		extension.Log.Errorf("Could not start APM data receiver : %v", err)
+	}
 
 	// Create a client to use for sending data to the apm server
 	client := &http.Client{
@@ -84,13 +86,12 @@ func main() {
 	// completes before signaling that the extension is ready for the next invocation.
 	var backgroundDataSendWg sync.WaitGroup
 
-	err = logsapi.Subscribe(
+	if err := logsapi.Subscribe(
 		ctx,
 		extensionClient.ExtensionID,
 		[]logsapi.EventType{logsapi.Platform},
 		logsChannel,
-	)
-	if err != nil {
+	); err != nil {
 		extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
 	}
 
@@ -140,8 +141,7 @@ func main() {
 						extension.Log.Debug("Received signal that function has completed, not processing any more agent data")
 						return
 					case agentData := <-agentDataChannel:
-						err := extension.PostToApmServer(client, agentData, config, ctx)
-						if err != nil {
+						if err := extension.PostToApmServer(client, agentData, config, ctx); err != nil {
 							extension.Log.Errorf("Error sending to APM server, skipping: %v", err)
 							extension.EnqueueAPMData(agentDataChannel, agentData)
 							return

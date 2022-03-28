@@ -38,8 +38,7 @@ func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *exten
 		select {
 		case agentData := <-dataChannel:
 			Log.Debug("Flush in progress - Processing agent data")
-			err := PostToApmServer(client, agentData, config, ctx)
-			if err != nil {
+			if err := PostToApmServer(client, agentData, config, ctx); err != nil {
 				Log.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		default:
