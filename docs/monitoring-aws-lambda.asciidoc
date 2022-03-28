@@ -39,7 +39,7 @@ The configuration options for the APM Agents are documented in the corresponding
 * {apm-py-ref}/configuration.html[Configuration options - Python APM Agent]
 * {apm-java-ref}/configuration.html[Configuration options - Java APM Agent]
 
-The following configuration options are in particular relevant for Elastic's APM on AWS Lambda:
+The following configuration options are particularly relevant for Elastic's APM on AWS Lambda:
 
 [[aws-lambda-extension]]
 === `ELASTIC_APM_LAMBDA_APM_SERVER`
