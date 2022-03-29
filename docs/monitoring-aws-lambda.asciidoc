@@ -55,8 +55,7 @@ Finally, once the layer's in place you'll need to configure a few environment va
 
 The following environment variables are relevant for instrumenting a Lambda function:
 
-[[aws-lambda-extension]]
-=== `ELASTIC_APM_LAMBDA_APM_SERVER`
+* (required) `ELASTIC_APM_LAMBDA_APM_SERVER`: +
 This required config option controls where the Lambda extension will ship data. This should be the URL of the final APM Server destination for your telemetry.
 
 * (required) `ELASTIC_APM_SECRET_TOKEN` or `ELASTIC_APM_API_KEY`: +
