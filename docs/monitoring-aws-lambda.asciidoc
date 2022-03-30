@@ -6,7 +6,7 @@ experimental::[]
 Elastic's APM Agents instrument AWS Lambda functions and dispatch APM data via an AWS Lambda Extension.
 
 [discrete]
-[[aws-lambda-arch]]
+[[aws-lambda-arch-old]]
 == Extension Architecture
 
 Normally, during the execution of a Lambda function, there's only a single language process running in the AWS Lambda execution environment.  However, with an AWS Lambda Extension, Lambda users can run a _second_ process alongside their main service/application process.
@@ -187,3 +187,8 @@ function response time and its throughput.
 extension receives a signal that the function invocation has completed. This strategy blocks the lambda function from receiving
 the next request until the extension has flushed all the data. This has a negative effect on the throughput of the function,
 though it ensures that all APM data is sent to the APM server.
+
+[role="exclude",id="aws-lambda-arch"]
+== AWS Lambda architecture
+
+Please see <<aws-lambda-arch>> instead. This link will be fixed soon.
