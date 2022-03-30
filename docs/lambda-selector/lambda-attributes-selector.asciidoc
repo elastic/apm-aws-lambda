@@ -107,7 +107,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 </script>
 
 <div role="lambda-selector">
-  <div role="lambda-selector-header">Select the AWS region and architecture of your Lambda function:</div>
+  <div role="lambda-selector-header">Select the AWS region and architecture of your Lambda function. This documentation will update based on your selections.</div>
   <div role="lambda-selector-content">
     <div role="lambda-selector-input">
       <div>region:</div>
