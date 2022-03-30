@@ -54,17 +54,26 @@ The configured name of your application or service.  The APM Agent will use this
 === `ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS`
 The timeout value, in seconds, for the Lambda Extension's server receiving data from the agent. The _default_ is `15`.
 
+=== `ELASTIC_APM_DATA_RECEIVER_SERVER_PORT`
+The port on which the Lambda Extension's server receiving data from the agent listens for the said data. The _default_ is `8200`.
+
+=== `ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS`
+The timeout value, in seconds, for the Lambda Extension's HTTP client sending data to the APM Server. The _default_ is `3`. If the Extension's attempt to send APM data during this time interval is not successful, the extension queues back the data. Further attempts at sending the data are governed by an exponential backoff algorithm: data will be sent after a increasingly large grace period of 0, then circa 1, 4, 9, 16, 25 and 36 seconds, provided that the Lambda function execution is ongoing.
+
 === `ELASTIC_APM_SEND_STRATEGY`
-Whether to synchronously flush APM agent data from the extension to the APM server at the end of the function invocation.
+Whether to synchronously flush APM agent data from the extension to the APM Server at the end of the function invocation.
 The two accepted values are `background` and `syncflush`. The _default_ is `syncflush`.
 
 * The `background` strategy indicates that the extension will not flush when it receives a signal that the function invocation
 has completed. It will instead send any remaining buffered data on the next function invocation. The result is that, if the
 function is not subsequently invoked for that Lambda environment, the buffered data will be lost. However, for lambda functions
-that have a steadily frequent load pattern the extension could delay sending the data to the APM server to the next lambda
+that have a steadily frequent load pattern the extension could delay sending the data to the APM Server to the next lambda
 request and do the sending in parallel to the processing of that next request. This potentially would improve both the lambda
 function response time and its throughput.
-* The other value, `syncflush` will synchronously flush all remaining buffered APM agent data to the APM server when the
+* The other value, `syncflush` will synchronously flush all remaining buffered APM agent data to the APM Server when the
 extension receives a signal that the function invocation has completed. This strategy blocks the lambda function from receiving
 the next request until the extension has flushed all the data. This has a negative effect on the throughput of the function,
 though it ensures that all APM data is sent to the APM server.
+
+=== `ELASTIC_APM_LOG_LEVEL`
+The logging level to be used by both the APM Agent and the Lambda Extension. Supported values are `trace`, `debug`, `info`, `warning`, `error`, `fatal` and `panic`.
