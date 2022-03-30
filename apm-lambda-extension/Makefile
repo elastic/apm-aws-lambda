@@ -15,6 +15,9 @@ endif
 
 export AWS_FOLDER GOARCH ARCHITECTURE
 
+.PHONY: all
+all: build
+
 check-licenses:
 	go install github.com/elastic/go-licenser@v0.4.0
 	go run github.com/elastic/go-licenser@v0.4.0 -d .
