@@ -2,6 +2,8 @@ SHELL = /bin/bash -eo pipefail
 
 AWS_FOLDER = .aws
 
+GO111MODULE=on
+
 ifndef GOARCH
 	GOARCH=amd64
 endif
