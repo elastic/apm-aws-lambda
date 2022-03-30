@@ -1,0 +1,7 @@
+tag::java-env-vars[]
+image:./java-lambda-env-vars.png[Java environment variables configuration section in AWS Console]
+end::java-env-vars[]
+
+tag::python-env-vars[]
+image:./python-lambda-env-vars.png[Python environment variables configuration section in AWS Console]
+end::python-env-vars[]
