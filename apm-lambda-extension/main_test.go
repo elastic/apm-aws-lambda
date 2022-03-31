@@ -26,7 +26,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/suite"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -291,6 +290,8 @@ type MainUnitTestsSuite struct {
 	lambdaServer       *httptest.Server
 	apmServer          *httptest.Server
 	apmServerInternals *APMServerInternals
+	ctx                context.Context
+	cancel             context.CancelFunc
 }
 
 func TestMainUnitTestsSuite(t *testing.T) {
@@ -299,11 +300,16 @@ func TestMainUnitTestsSuite(t *testing.T) {
 
 // This function executes before each test case
 func (suite *MainUnitTestsSuite) SetupTest() {
-	log.Println("Hey")
+	suite.ctx, suite.cancel = context.WithCancel(context.Background())
 	http.DefaultServeMux = new(http.ServeMux)
-	extension.SetApmServerTransportState(extension.Healthy, context.Background())
 	suite.eventsChannel = make(chan MockEvent, 100)
 	suite.lambdaServer, suite.apmServer, suite.apmServerInternals = initMockServers(suite.eventsChannel)
+	extension.SetApmServerTransportState(extension.Healthy, suite.ctx)
+}
+
+// This function executes before each test case
+func (suite *MainUnitTestsSuite) AfterTest() {
+	suite.cancel()
 }
 
 // TestStandardEventsChain checks a nominal sequence of events (fast APM server, only one standard event)
