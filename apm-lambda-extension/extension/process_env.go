@@ -63,7 +63,7 @@ func getIntFromEnv(name string) (int, error) {
 	return value, nil
 }
 
-// ProcessEnv : pull env into globals
+// ProcessEnv extracts ENV variables into globals
 func ProcessEnv() *extensionConfig {
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {

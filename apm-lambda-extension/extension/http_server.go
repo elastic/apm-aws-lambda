@@ -25,6 +25,7 @@ import (
 
 var agentDataServer *http.Server
 
+// StartHttpServer starts the server listening for APM agent data.
 func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) (err error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleInfoRequest(config.apmServerUrl))

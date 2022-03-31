@@ -55,6 +55,7 @@ const (
 	Extension EventType = "extension"
 )
 
+// SubEventType is a Logs API sub event type
 type SubEventType string
 
 const (
@@ -108,6 +109,7 @@ type Destination struct {
 	Encoding   HttpEncoding `json:"encoding"`
 }
 
+// SchemaVersion is the Lambda runtime API schema version
 type SchemaVersion string
 
 const (

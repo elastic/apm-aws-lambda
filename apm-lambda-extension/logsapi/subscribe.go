@@ -33,6 +33,7 @@ var ListenerHost = "sandbox"
 var Server *http.Server
 var Listener net.Listener
 
+// LogEvent represents an event received from the Logs API
 type LogEvent struct {
 	Time         time.Time    `json:"time"`
 	Type         SubEventType `json:"type"`
@@ -40,6 +41,7 @@ type LogEvent struct {
 	Record       LogEventRecord
 }
 
+// LogEventRecord is a sub-object in a Logs API event
 type LogEventRecord struct {
 	RequestId string `json:"requestId"`
 	Status    string `json:"status"`
@@ -63,7 +65,7 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 	return err
 }
 
-// Subscribe : Starts the HTTP server listening for log events and subscribes to the Logs API
+// Subscribe starts the HTTP server listening for log events and subscribes to the Logs API
 func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, out chan LogEvent) (err error) {
 	if checkAWSSamLocal() {
 		return errors.New("Detected sam local environment")
