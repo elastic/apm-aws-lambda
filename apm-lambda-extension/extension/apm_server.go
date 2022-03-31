@@ -133,8 +133,8 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 	return nil
 }
 
-// IsTransportStatusHealthyOrPending returns whether the APM server transport status is
-// healthy or pending.
+// IsTransportStatusHealthyOrPending returns true if the APM server transport status is 
+// healthy or pending, and false otherwise.
 //
 // This function is public for use in tests.
 func IsTransportStatusHealthyOrPending() bool {
