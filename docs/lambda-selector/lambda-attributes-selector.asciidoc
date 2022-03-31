@@ -68,9 +68,9 @@ const addArnGenerator = async (type, ghRepo, arnPattern) => {
     const releases = await fetch(`https://api.github.com/repos/elastic/${ghRepo}/releases`).then(data => {
         return data.json();
       });
-      
+
       releases.filter(release => !release.draft && release.body.includes('arn:aws:lambda:'));
-      
+
       var latestRelease = releases[0];
 
       releases.forEach(release => {
@@ -107,7 +107,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 </script>
 
 <div role="lambda-selector">
-  <div role="lambda-selector-header">Select the AWS region and architecture of your Lambda function:</div>
+  <div role="lambda-selector-header">Select the AWS region and architecture of your Lambda function. This documentation will update based on your selections.</div>
   <div role="lambda-selector-content">
     <div role="lambda-selector-input">
       <div>region:</div>
