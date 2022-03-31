@@ -1,0 +1,150 @@
+++++
+<style>
+[role="lambda-selector"] {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  border: 1px solid hsl(219, 1%, 72%);
+  border-radius: 0.2em 0.2em 0 0;
+  overflow: visible;
+  font-family: inherit;
+  font-size: inherit;
+  background: hsl(220, 43%, 99%);
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+[role="lambda-selector-content"] {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  margin-top: 10px;
+  column-gap: 50px;
+}
+
+[role="lambda-selector-input"] {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  column-gap: 5px;
+}
+
+[role="select-input"]{
+    border: none;
+    margin-left: 1px;
+    color: #2b4590;
+    font-weight: bold;
+    border-radius: 5px;
+}
+
+[role="lambda-selector-header"]{
+  align-self: flex-start;
+}
+</style>
+
+<script>
+const lambdaAttributesUpdateListeners = [];
+const layerArnPattern = /arn:aws:lambda:[^:]*:[^:]*:layer:[^:]*:\d*/g;
+
+const updateLambdaAttributes = () => {
+      const region = document.getElementById("lambda-aws-region").value;
+      const arch = document.getElementById("lambda-arch").value;
+      lambdaAttributesUpdateListeners.forEach(listener => listener(region, arch));
+    };
+
+const addArnGenerator = async (type, ghRepo, arnPattern) => {
+  const tabs = document.getElementsByName("lambda-tabpanel");
+  const rgx = type === 'agent' ? /AGENT_ARN/ : /EXTENSION_ARN/;
+  tabs.forEach(tab => {
+    tab.innerHTML = tab.innerHTML.replace(rgx, `<span role="replace${type}Arn"></span>`);
+  });
+
+  var version = "ver-1-0-0";
+  var releaseArns = [];
+
+  const retrieveLatestLayerVersion = async () => {
+    const releases = await fetch(`https://api.github.com/repos/elastic/${ghRepo}/releases`).then(data => {
+        return data.json();
+      });
+      
+      releases.filter(release => !release.draft && release.body.includes('arn:aws:lambda:'));
+      
+      var latestRelease = releases[0];
+
+      releases.forEach(release => {
+        if(Date.parse(release.created_at) > Date.parse(latestRelease.created_at)){
+          latestRelease = release;
+        }
+      });
+
+      releaseArns = latestRelease.body.match(layerArnPattern);
+
+      version = latestRelease.tag_name.replace("v","ver-").replace(/\./g, '-');
+  };
+
+  const updateARN = (region, arch) => {
+      const arnWithoutLayerVersion = arnPattern.replace(/\$\{region\}/, region).replace(/\$\{arch\}/, arch).replace(/\$\{version\}/, version);
+      const arn = releaseArns.length === 0 ? arnWithoutLayerVersion + ':1' : releaseArns.find(a => a.startsWith(arnWithoutLayerVersion));
+      document.querySelectorAll(`[role="replace${type}Arn"]`).forEach(span => {
+        span.innerHTML = arn;
+      });
+    };
+
+  lambdaAttributesUpdateListeners.push(updateARN);
+  await retrieveLatestLayerVersion();
+  updateLambdaAttributes();
+}
+
+window.addEventListener("DOMContentLoaded", async () => {
+  const arnInputs = document.querySelectorAll('[role="select-input"]');
+
+  arnInputs.forEach(input => {
+    input.addEventListener("change", e => updateLambdaAttributes());
+  });
+});
+</script>
+
+<div role="lambda-selector">
+  <div role="lambda-selector-header">Select the AWS region and architecture of your Lambda function. This documentation will update based on your selections.</div>
+  <div role="lambda-selector-content">
+    <div role="lambda-selector-input">
+      <div>region:</div>
+      <select id="lambda-aws-region" role="select-input">
+        <option value="af-south-1">af-south-1</option>
+        <option value="ap-east-1">ap-east-1</option>
+        <option value="ap-northeast-1">ap-northeast-1</option>
+        <option value="ap-northeast-2">ap-northeast-2</option>
+        <option value="ap-northeast-3">ap-northeast-3</option>
+        <option value="ap-south-1">ap-south-1</option>
+        <option value="ap-southeast-1">ap-southeast-1</option>
+        <option value="ap-southeast-2">ap-southeast-2</option>
+        <option value="ap-southeast-3">ap-southeast-3</option>
+        <option value="ca-central-1">ca-central-1</option>
+        <option value="eu-central-1">eu-central-1</option>
+        <option value="eu-north-1">eu-north-1</option>
+        <option value="eu-south-1">eu-south-1</option>
+        <option value="eu-west-1">eu-west-1</option>
+        <option value="eu-west-2">eu-west-2</option>
+        <option value="eu-west-3">eu-west-3</option>
+        <option value="me-south-1">me-south-1</option>
+        <option value="sa-east-1">sa-east-1</option>
+        <option value="us-east-1" selected="selected">us-east-1</option>
+        <option value="us-east-2">us-east-2</option>
+        <option value="us-west-1">us-west-1</option>
+        <option value="us-west-2">us-west-2</option>
+      </select>
+    </div>
+    <div role="lambda-selector-input">
+      <div>architecture:</div>
+      <select id="lambda-arch" role="select-input">
+        <option value="x86_64">x86_64</option>
+        <option value="arm64">arm64</option>
+      </select>
+    </div>
+  </div>
+</div>
+++++
+
+WARNING: The selected _AWS region_ and the _architecture_ must match the AWS region and architecture of your AWS Lambda function!
