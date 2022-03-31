@@ -52,10 +52,10 @@ One of these needs to be set as the authentication method that the extension use
 The configured name of your application or service.  The APM Agent will use this value when reporting data to the APM Server. If unset, the APM Agent will automatically set the value based on the Lambda function name. Use this config option if you want to group multiple Lambda functions under a single service entity in APM.
 
 === `ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS`
-The timeout value, in seconds, for the Lambda Extension's server receiving data from the agent. The _default_ is `15`.
+The APM Lambda Extension's timeout value, in seconds, for receiving data from the APM Agent. The _default_ is `15`.
 
 === `ELASTIC_APM_DATA_RECEIVER_SERVER_PORT`
-The port on which the Lambda Extension's server receiving data from the agent listens for the said data. The _default_ is `8200`.
+The port on which the APM Lambda Extension listens to receive data from the APM Agent. The _default_ is `8200`.
 
 === `ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS`
 The timeout value, in seconds, for the Lambda Extension's HTTP client sending data to the APM Server. The _default_ is `3`. If the Extension's attempt to send APM data during this time interval is not successful, the extension queues back the data. Further attempts at sending the data are governed by an exponential backoff algorithm: data will be sent after a increasingly large grace period of 0, then circa 1, 4, 9, 16, 25 and 36 seconds, provided that the Lambda function execution is ongoing.
