@@ -19,7 +19,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -65,9 +64,9 @@ func main() {
 		if errRuntime != nil {
 			panic(errRuntime)
 		}
-		log.Printf("Error: %s", err)
-		log.Printf("Init error signal sent to runtime : %s", status)
-		log.Println("Exiting")
+		extension.Log.Errorf("Error: %s", err)
+		extension.Log.Infof("Init error signal sent to runtime : %s", status)
+		extension.Log.Infof("Exiting")
 		return
 	}
 	extension.Log.Debugf("Register response: %v", extension.PrettyPrint(res))
@@ -117,9 +116,9 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				extension.Log.Printf("Error: %s", err)
-				extension.Log.Printf("Exit signal sent to runtime : %s", status)
-				extension.Log.Println("Exiting")
+				extension.Log.Errorf("Error: %s", err)
+				extension.Log.Infof("Exit signal sent to runtime : %s", status)
+				extension.Log.Infof("Exiting")
 				return
 			}
 			extension.Log.Debug("Received event.")
