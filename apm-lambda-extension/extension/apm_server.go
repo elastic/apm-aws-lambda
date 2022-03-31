@@ -56,6 +56,8 @@ type ApmServerTransportStateType struct {
 }
 
 // The status of transport to the APM server.
+//
+// This instance of the ApmServerTransportStateType is public for use in tests.
 var ApmServerTransportState = ApmServerTransportStateType{
 	Status:            Healthy,
 	ReconnectionCount: -1,
