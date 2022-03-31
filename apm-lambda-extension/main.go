@@ -39,6 +39,7 @@ var (
 /* --- elastic vars  --- */
 
 func main() {
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Trigger ctx.Done() in all relevant goroutines when main ends
@@ -59,7 +60,14 @@ func main() {
 	// register extension with AWS Extension API
 	res, err := extensionClient.Register(ctx, extensionName)
 	if err != nil {
-		panic(err)
+		status, errRuntime := extensionClient.InitError(ctx, err.Error())
+		if errRuntime != nil {
+			panic(errRuntime)
+		}
+		extension.Log.Errorf("Error: %s", err)
+		extension.Log.Infof("Init error signal sent to runtime : %s", status)
+		extension.Log.Infof("Exiting")
+		return
 	}
 	extension.Log.Debugf("Register response: %v", extension.PrettyPrint(res))
 
@@ -105,7 +113,13 @@ func main() {
 			extension.Log.Infof("Waiting for next event...")
 			event, err := extensionClient.NextEvent(ctx)
 			if err != nil {
-				extension.Log.Errorf("Error: %v\n. Exiting.", err)
+				status, err := extensionClient.ExitError(ctx, err.Error())
+				if err != nil {
+					panic(err)
+				}
+				extension.Log.Errorf("Error: %s", err)
+				extension.Log.Infof("Exit signal sent to runtime : %s", status)
+				extension.Log.Infof("Exiting")
 				return
 			}
 			extension.Log.Debug("Received event.")
