@@ -5,3 +5,7 @@ end::java-env-vars[]
 tag::python-env-vars[]
 image:./python-lambda-env-vars.png[Python environment variables configuration section in AWS Console]
 end::python-env-vars[]
+
+tag::nodejs-env-vars[]
+image:./nodejs-lambda-env-vars.png[Node.js environment variables configuration section in AWS Console]
+end::nodejs-env-vars[]
