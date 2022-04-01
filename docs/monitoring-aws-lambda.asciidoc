@@ -41,7 +41,6 @@ The configuration options for the APM Agents are documented in the corresponding
 
 The following configuration options are particularly relevant for Elastic's APM on AWS Lambda:
 
-[[aws-lambda-extension]]
 === `ELASTIC_APM_LAMBDA_APM_SERVER`
 This required config option controls where the Lambda extension will ship data. This should be the URL of the final APM Server destination for your telemetry.
 
