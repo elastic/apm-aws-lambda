@@ -53,7 +53,7 @@ func ParseLogLevel(s string) (logrus.Level, error) {
 		return logrus.WarnLevel, nil
 	case "error":
 		return logrus.ErrorLevel, nil
-	case "critical":
+	case "fatal", "critical":
 		return logrus.FatalLevel, nil
 	case "off":
 		logrus.SetOutput(ioutil.Discard)
