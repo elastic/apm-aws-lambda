@@ -127,8 +127,8 @@ window.addEventListener("DOMContentLoaded", async () => {
 });
 </script>
 
-<p id="fallback-extension-arn-selector-section">Pick the right ARN from <a target="_bkank" href="RELEASE_LINK">this release table for the APM Lambda Extension Layer</a>.</p>
-<p id="fallback-agent-arn-selector-section">In addition, pick the right ARN from <a target="_bkank" href="RELEASE_LINK">this release table for the APM Agent Layer</a>.</p>
+<p id="fallback-extension-arn-selector-section">Pick the right ARN from <a target="_blank" href="RELEASE_LINK">this release table for the APM Lambda Extension Layer</a>.</p>
+<p id="fallback-agent-arn-selector-section">In addition, pick the right ARN from <a target="_blank" href="RELEASE_LINK">this release table for the APM Agent Layer</a>.</p>
 <div id="default-arn-selector-section" role="lambda-selector">
   <div role="lambda-selector-header">Select the AWS region and architecture of your Lambda function. This documentation will update based on your selections.</div>
   <div role="lambda-selector-content">
