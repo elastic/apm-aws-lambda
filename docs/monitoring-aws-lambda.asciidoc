@@ -77,3 +77,8 @@ though it ensures that all APM data is sent to the APM server.
 
 === `ELASTIC_APM_LOG_LEVEL`
 The logging level to be used by both the APM Agent and the Lambda Extension. Supported values are `trace`, `debug`, `info`, `warning`, `error`, `fatal` and `panic`.
+
+[role="exclude",id="aws-lambda-extension"]
+== AWS Lambda architecture
+
+Please see <<monitoring-aws-lambda>> instead. This link will be fixed soon.
