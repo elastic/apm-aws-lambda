@@ -194,6 +194,6 @@ though it ensures that all APM data is sent to the APM server.
 Please see <<aws-lambda-extension>> instead. This link will be fixed soon.
 
 [role="exclude",id="monitoring-aws-lambda"]
-== AWS Lambda architecture
+== Monitoring AWS Lambda
 
 Please see <<aws-lambda-extension>> instead. This link will be fixed soon.
