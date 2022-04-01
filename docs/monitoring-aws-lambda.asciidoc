@@ -191,4 +191,9 @@ though it ensures that all APM data is sent to the APM server.
 [role="exclude",id="aws-lambda-arch"]
 == AWS Lambda architecture
 
-Please see <<aws-lambda-arch>> instead. This link will be fixed soon.
+Please see <<aws-lambda-extension>> instead. This link will be fixed soon.
+
+[role="exclude",id="monitoring-aws-lambda"]
+== Monitoring AWS Lambda
+
+Please see <<aws-lambda-extension>> instead. This link will be fixed soon.
