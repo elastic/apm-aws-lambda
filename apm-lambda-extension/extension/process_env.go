@@ -83,7 +83,7 @@ func ProcessEnv() *extensionConfig {
 		normalizedApmLambdaServer = normalizedApmLambdaServer + "/"
 	}
 
-	logLevel, err := logrus.ParseLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
+	logLevel, err := ParseLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
 	if err != nil {
 		logLevel = logrus.InfoLevel
 		Log.Warnf("Could not read ELASTIC_APM_LOG_LEVEL, defaulting to %s", logLevel)

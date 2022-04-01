@@ -33,7 +33,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,7 +48,7 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	if os.Getenv("ELASTIC_APM_LOG_LEVEL") != "" {
-		logLevel, _ := logrus.ParseLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
+		logLevel, _ := extension.ParseLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
 		extension.Log.Logger.SetLevel(logLevel)
 	}
 	if GetEnvVarValueOrSetDefault("RUN_E2E_TESTS", "false") != "true" {

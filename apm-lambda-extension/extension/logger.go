@@ -18,8 +18,12 @@
 package extension
 
 import (
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"go.elastic.co/ecslogrus"
+	"io/ioutil"
+	"os"
+	"strings"
 )
 
 var Log *logrus.Entry
@@ -30,4 +34,30 @@ func init() {
 	newLogger.SetLevel(logrus.TraceLevel)
 	newLoggerWithFields := newLogger.WithFields(logrus.Fields{"event.dataset": "apm-lambda-extension"})
 	Log = newLoggerWithFields
+}
+
+// ParseLogLevel parses s as a logrus log level.
+func ParseLogLevel(s string) (logrus.Level, error) {
+	// Set default output. Required to start logging back if the prior level was "off"
+	logrus.SetOutput(os.Stderr)
+	switch strings.ToLower(s) {
+	case "trace":
+		return logrus.TraceLevel, nil
+	case "debug":
+		return logrus.DebugLevel, nil
+	case "info":
+		return logrus.InfoLevel, nil
+	case "warn", "warning":
+		// "warn" exists for backwards compatibility;
+		// "warning" is the canonical level name.
+		return logrus.WarnLevel, nil
+	case "error":
+		return logrus.ErrorLevel, nil
+	case "critical":
+		return logrus.FatalLevel, nil
+	case "off":
+		logrus.SetOutput(ioutil.Discard)
+		return logrus.PanicLevel, nil
+	}
+	return logrus.InfoLevel, fmt.Errorf("invalid log level string %q", s)
 }
