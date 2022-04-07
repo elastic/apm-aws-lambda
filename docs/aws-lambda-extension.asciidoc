@@ -207,7 +207,7 @@ Finally, once the layer's in place you'll need to configure a few environmental 
 [[aws-lambda-variables]]
 === The Necessary Variables
 
-NOTE: The necessary environment variables depend on the APM agent being used. Follow the {apm-node-ref}/lambda.html[Node.js agent setup guide], {apm-py-ref}/lambda-support.html[Python agent setup guide] or {apm-java-ref}/aws-lambda.html#aws-lambda-instrumenting[Java agent setup guide], respectively, for specific instructions on setting the environment variables.
+NOTE: The necessary environment variables depend on the APM agent being used. Follow the {apm-node-ref}/lambda.html[Node.js agent setup guide], {apm-py-ref}/lambda-support.html[Python agent setup guide] or {apm-java-ref}/aws-lambda.html[Java agent setup guide], respectively, for specific instructions on setting the environment variables.
 
 [discrete]
 [[aws-lambda-central_config]]
