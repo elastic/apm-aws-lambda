@@ -55,7 +55,9 @@ func main() {
 
 	// pulls ELASTIC_ env variable into globals for easy access
 	config := extension.ProcessEnv()
-	extension.Log.Logger.SetLevel(config.LogLevel)
+	if err := extension.Log.SetLogLevel(config.LogLevel); err != nil {
+		extension.Log.Criticalf("Could not set log level : %v", err)
+	}
 
 	// register extension with AWS Extension API
 	res, err := extensionClient.Register(ctx, extensionName)

@@ -80,11 +80,11 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 		}
 	}))
 	if err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", apmServer.URL); err != nil {
-		extension.Log.Fatalf("Could not set environment variable : %v", err)
+		extension.Log.Criticalf("Could not set environment variable : %v", err)
 		return nil, nil, nil
 	}
 	if err := os.Setenv("ELASTIC_APM_SECRET_TOKEN", "none"); err != nil {
-		extension.Log.Fatalf("Could not set environment variable : %v", err)
+		extension.Log.Criticalf("Could not set environment variable : %v", err)
 		return nil, nil, nil
 	}
 
@@ -100,7 +100,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 				FunctionVersion: "$LATEST",
 				Handler:         "main_test.mock_lambda",
 			}); err != nil {
-				extension.Log.Fatalf("Could not encode registration response : %v", err)
+				extension.Log.Criticalf("Could not encode registration response : %v", err)
 				return
 			}
 		case "/2020-01-01/extension/event/next":
@@ -127,7 +127,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 	slicedLambdaURL := strings.Split(lambdaServer.URL, "//")
 	strippedLambdaURL := slicedLambdaURL[1]
 	if err := os.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL); err != nil {
-		extension.Log.Fatalf("Could not set environment variable : %v", err)
+		extension.Log.Criticalf("Could not set environment variable : %v", err)
 		return nil, nil, nil
 	}
 	extensionClient = extension.NewClient(os.Getenv("AWS_LAMBDA_RUNTIME_API"))
@@ -139,7 +139,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 		extensionPort = 8200
 	}
 	if err = os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort)); err != nil {
-		extension.Log.Fatalf("Could not set environment variable : %v", err)
+		extension.Log.Criticalf("Could not set environment variable : %v", err)
 		return nil, nil, nil
 	}
 
@@ -194,17 +194,17 @@ func processMockEvent(currId string, event MockEvent, extensionPort string) {
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		if _, err := client.Do(reqData); err != nil {
-			extension.Log.Error(err)
+			extension.Log.Error(err.Error())
 		}
 	case InvokeWaitgroupsRace:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData0, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		reqData1, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		if _, err := client.Do(reqData0); err != nil {
-			extension.Log.Error(err)
+			extension.Log.Error(err.Error())
 		}
 		if _, err := client.Do(reqData1); err != nil {
-			extension.Log.Error(err)
+			extension.Log.Error(err.Error())
 		}
 		time.Sleep(650 * time.Microsecond)
 	case InvokeMultipleTransactionsOverload:
@@ -215,7 +215,7 @@ func processMockEvent(currId string, event MockEvent, extensionPort string) {
 				time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 				reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 				if _, err := client.Do(reqData); err != nil {
-					extension.Log.Error(err)
+					extension.Log.Error(err.Error())
 				}
 				wg.Done()
 			}()
