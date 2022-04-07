@@ -307,16 +307,15 @@ func (suite *MainUnitTestsSuite) SetupTest() {
 	extension.SetApmServerTransportState(extension.Healthy, suite.ctx)
 }
 
-// This function executes before each test case
-func (suite *MainUnitTestsSuite) AfterTest() {
+// This function executes after each test case
+func (suite *MainUnitTestsSuite) TearDownTest() {
+	suite.lambdaServer.Close()
+	suite.apmServer.Close()
 	suite.cancel()
 }
 
 // TestStandardEventsChain checks a nominal sequence of events (fast APM server, only one standard event)
 func (suite *MainUnitTestsSuite) TestStandardEventsChain() {
-	defer suite.lambdaServer.Close()
-	defer suite.apmServer.Close()
-
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
@@ -327,9 +326,6 @@ func (suite *MainUnitTestsSuite) TestStandardEventsChain() {
 
 // TestFlush checks if the flushed param does not cause a panic or an unexpected behavior
 func (suite *MainUnitTestsSuite) TestFlush() {
-	defer suite.lambdaServer.Close()
-	defer suite.apmServer.Close()
-
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
@@ -340,9 +336,6 @@ func (suite *MainUnitTestsSuite) TestFlush() {
 
 // TestWaitGroup checks if there is no race condition between the main waitgroups (issue #128)
 func (suite *MainUnitTestsSuite) TestWaitGroup() {
-	defer suite.lambdaServer.Close()
-	defer suite.apmServer.Close()
-
 	eventsChain := []MockEvent{
 		{Type: InvokeWaitgroupsRace, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 500},
 	}
@@ -353,9 +346,7 @@ func (suite *MainUnitTestsSuite) TestWaitGroup() {
 
 // TestAPMServerDown tests that main does not panic nor runs indefinitely when the APM server is inactive.
 func (suite *MainUnitTestsSuite) TestAPMServerDown() {
-	defer suite.lambdaServer.Close()
 	suite.apmServer.Close()
-
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
@@ -366,9 +357,6 @@ func (suite *MainUnitTestsSuite) TestAPMServerDown() {
 
 // TestAPMServerHangs tests that main does not panic nor runs indefinitely when the APM server does not respond.
 func (suite *MainUnitTestsSuite) TestAPMServerHangs() {
-	defer suite.lambdaServer.Close()
-	defer suite.apmServer.Close()
-
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
 	}
@@ -388,8 +376,6 @@ func (suite *MainUnitTestsSuite) TestAPMServerRecovery() {
 	if err := os.Setenv("ELASTIC_APM_LOG_LEVEL", "trace"); err != nil {
 		suite.T().Fail()
 	}
-	defer suite.lambdaServer.Close()
-	defer suite.apmServer.Close()
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
@@ -413,8 +399,6 @@ func (suite *MainUnitTestsSuite) TestAPMServerRecovery() {
 func (suite *MainUnitTestsSuite) TestGracePeriodHangs() {
 	extension.ApmServerTransportState.Status = extension.Pending
 	extension.ApmServerTransportState.ReconnectionCount = 100
-	defer suite.lambdaServer.Close()
-	defer suite.apmServer.Close()
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
@@ -430,9 +414,6 @@ func (suite *MainUnitTestsSuite) TestGracePeriodHangs() {
 // TestAPMServerCrashesDuringExecution tests that main does not panic nor runs indefinitely when the APM server crashes
 // during execution.
 func (suite *MainUnitTestsSuite) TestAPMServerCrashesDuringExecution() {
-	defer suite.lambdaServer.Close()
-	defer suite.apmServer.Close()
-
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Crashes, ExecutionDuration: 1, Timeout: 5},
 	}
@@ -444,9 +425,6 @@ func (suite *MainUnitTestsSuite) TestAPMServerCrashesDuringExecution() {
 // TestFullChannel checks that an overload of APM data chunks is handled correctly, events dropped beyond the 100th one
 // if no space left in channel, no panic, no infinite hanging.
 func (suite *MainUnitTestsSuite) TestFullChannel() {
-	defer suite.lambdaServer.Close()
-	defer suite.apmServer.Close()
-
 	eventsChain := []MockEvent{
 		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.1, Timeout: 5},
 	}
@@ -461,8 +439,6 @@ func (suite *MainUnitTestsSuite) TestFullChannelSlowAPMServer() {
 	if err := os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background"); err != nil {
 		suite.T().Fail()
 	}
-	defer suite.lambdaServer.Close()
-	defer suite.apmServer.Close()
 
 	eventsChain := []MockEvent{
 		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: SlowResponse, ExecutionDuration: 0.01, Timeout: 5},
