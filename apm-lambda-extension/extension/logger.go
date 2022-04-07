@@ -60,6 +60,7 @@ func (lvl Level) String() string {
 type LevelLogger struct {
 	logger *zap.Logger
 	level  Level
+	// Stored in order to rebuild the Logger on-the-fly after an output or a level change
 	config zap.Config
 }
 
@@ -177,7 +178,7 @@ func (l *LevelLogger) log(level Level, msg string) {
 		return
 	}
 
-	// apm <-> zap level mapping
+	// APM <-> zap level mapping
 	switch level {
 	case TraceLevel, DebugLevel:
 		l.logger.Debug(msg, zap.String("log.level", level.String()))
