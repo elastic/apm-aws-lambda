@@ -76,4 +76,4 @@ the next request until the extension has flushed all the data. This has a negati
 though it ensures that all APM data is sent to the APM server.
 
 === `ELASTIC_APM_LOG_LEVEL`
-The logging level to be used by both the APM Agent and the Lambda Extension. Supported values are `trace`, `debug`, `info`, `warning`, `error`, `critical` and `off` (the latter disables logging).
+The logging level to be used by both the APM Agent and the Lambda Extension. Supported values are `trace`, `debug`, `info`, `warning`, `error`, `critical` and `off` (the latter disables logging, except for fatal errors).
