@@ -49,9 +49,7 @@ func TestEndToEnd(t *testing.T) {
 
 	if os.Getenv("ELASTIC_APM_LOG_LEVEL") != "" {
 		logLevel, _ := extension.ParseLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
-		if err := extension.Log.SetLogLevel(logLevel); err != nil {
-			panic(err)
-		}
+		extension.Log.Level.SetLevel(logLevel)
 	}
 	if GetEnvVarValueOrSetDefault("RUN_E2E_TESTS", "false") != "true" {
 		t.Skip("Skipping E2E tests. Please set the env. variable RUN_E2E_TESTS=true if you want to run them.")

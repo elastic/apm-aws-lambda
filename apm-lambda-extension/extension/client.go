@@ -113,7 +113,7 @@ func (e *Client) Register(ctx context.Context, filename string) (*RegisterRespon
 		return nil, err
 	}
 	e.ExtensionID = httpRes.Header.Get(extensionIdentiferHeader)
-	Log.Tracef("ExtensionID : %s", e.ExtensionID)
+	Log.Debugf("ExtensionID : %s", e.ExtensionID)
 	return &res, nil
 }
 

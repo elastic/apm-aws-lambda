@@ -58,12 +58,12 @@ func RunCommandInDir(command string, args []string, dir string) {
 	scannerOut := bufio.NewScanner(stdout)
 	for scannerOut.Scan() {
 		m := scannerOut.Text()
-		extension.Log.Tracef(m)
+		extension.Log.Debugf(m)
 	}
 	scannerErr := bufio.NewScanner(stderr)
 	for scannerErr.Scan() {
 		m := scannerErr.Text()
-		extension.Log.Tracef(m)
+		extension.Log.Debugf(m)
 	}
 	if err := e.Wait(); err != nil {
 		extension.Log.Errorf("Could not wait for the execution of %s : %v", command, err)
@@ -81,7 +81,7 @@ func FolderExists(path string) bool {
 // This should only be used for showstopping errors.
 func ProcessError(err error) {
 	if err != nil {
-		extension.Log.Critical(err.Error())
+		extension.Log.Fatal(err.Error())
 	}
 }
 

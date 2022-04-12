@@ -18,6 +18,7 @@
 package extension
 
 import (
+	"go.uber.org/zap/zapcore"
 	"os"
 	"testing"
 )
@@ -162,7 +163,7 @@ func TestProcessEnv(t *testing.T) {
 		return
 	}
 	config = ProcessEnv()
-	if config.LogLevel != DebugLevel {
+	if config.LogLevel != zapcore.DebugLevel {
 		t.Log("Log level not set correctly")
 		t.Fail()
 	}
@@ -172,7 +173,7 @@ func TestProcessEnv(t *testing.T) {
 		return
 	}
 	config = ProcessEnv()
-	if config.LogLevel != InfoLevel {
+	if config.LogLevel != zapcore.InfoLevel {
 		t.Log("Log level not set correctly")
 		t.Fail()
 	}

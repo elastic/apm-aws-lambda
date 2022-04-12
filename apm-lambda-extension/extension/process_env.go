@@ -19,6 +19,7 @@ package extension
 
 import (
 	"fmt"
+	"go.uber.org/zap/zapcore"
 	"os"
 	"strconv"
 	"strings"
@@ -32,7 +33,7 @@ type extensionConfig struct {
 	SendStrategy                SendStrategy
 	dataReceiverTimeoutSeconds  int
 	DataForwarderTimeoutSeconds int
-	LogLevel                    Level
+	LogLevel                    zapcore.Level
 }
 
 // SendStrategy represents the type of sending strategy the extension uses
@@ -83,7 +84,7 @@ func ProcessEnv() *extensionConfig {
 
 	logLevel, err := ParseLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
 	if err != nil {
-		logLevel = InfoLevel
+		logLevel = zapcore.InfoLevel
 		Log.Warnf("Could not read ELASTIC_APM_LOG_LEVEL, defaulting to %s", logLevel)
 	}
 
@@ -109,10 +110,10 @@ func ProcessEnv() *extensionConfig {
 		config.dataReceiverServerPort = ":8200"
 	}
 	if config.apmServerUrl == "" {
-		Log.Critical("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
+		Log.Fatal("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
 	}
 	if config.apmServerSecretToken == "" && config.apmServerApiKey == "" {
-		Log.Critical("please set ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY, exiting")
+		Log.Fatal("please set ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY, exiting")
 	}
 
 	return config
