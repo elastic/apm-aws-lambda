@@ -111,10 +111,10 @@ func ProcessEnv() *extensionConfig {
 		config.dataReceiverServerPort = ":8200"
 	}
 	if config.apmServerUrl == "" {
-		Log.Fatalln("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
+		Log.Fatal("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
 	}
 	if config.apmServerSecretToken == "" && config.apmServerApiKey == "" {
-		Log.Fatalln("please set ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY, exiting")
+		Log.Warn("ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY not specified")
 	}
 
 	return config
