@@ -35,11 +35,8 @@ type LevelLogger struct {
 var Log LevelLogger
 
 func init() {
-	// Init Log level to info
-	atom := zap.NewAtomicLevel()
 	// Set ECS logging config
 	Log.Config = zap.NewProductionConfig()
-	Log.Config.Level = atom
 	Log.Config.EncoderConfig = ecszap.NewDefaultEncoderConfig().ToZapCoreEncoderConfig()
 	// Create ECS logger
 	logger, _ := Log.Config.Build(ecszap.WrapCoreOption(), zap.AddCaller())
@@ -62,9 +59,9 @@ func ParseLogLevel(s string) (zapcore.Level, error) {
 	case "error":
 		return zapcore.ErrorLevel, nil
 	case "critical":
-		return zapcore.PanicLevel, nil
-	case "off":
 		return zapcore.FatalLevel, nil
+	case "off":
+		return zapcore.FatalLevel + 1, nil
 	}
 	return zapcore.InfoLevel, fmt.Errorf("invalid log level string %s", s)
 }

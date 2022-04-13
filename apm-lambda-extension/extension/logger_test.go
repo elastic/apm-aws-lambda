@@ -35,7 +35,7 @@ func TestInitLogger(t *testing.T) {
 }
 
 func TestDefaultLogger(t *testing.T) {
-	tempFile, err := ioutil.TempFile(os.TempDir(), "tempFileLoggerTest-")
+	tempFile, err := ioutil.TempFile(t.TempDir(), "tempFileLoggerTest-")
 	require.NoError(t, err)
 	defer tempFile.Close()
 
@@ -63,22 +63,20 @@ func TestLoggerParseLogLevel(t *testing.T) {
 	assert.Equal(t, zapcore.InfoLevel, info)
 	assert.Equal(t, zapcore.WarnLevel, warn)
 	assert.Equal(t, zapcore.ErrorLevel, errorL)
-	assert.Equal(t, zapcore.PanicLevel, critical)
-	assert.Equal(t, zapcore.FatalLevel, off)
+	assert.Equal(t, zapcore.FatalLevel, critical)
+	assert.Equal(t, zapcore.FatalLevel+1, off)
 	assert.Equal(t, zapcore.InfoLevel, invalid)
 	assert.Error(t, err, "invalid log level string Inva@Lid3")
 }
 
 func TestLoggerSetLogLevel(t *testing.T) {
-	tempFile, err := ioutil.TempFile(os.TempDir(), "tempFileLoggerTest-")
+	tempFile, err := ioutil.TempFile(t.TempDir(), "tempFileLoggerTest-")
 	require.NoError(t, err)
 	defer tempFile.Close()
 
 	Log.Level.SetLevel(zapcore.DebugLevel)
 
-	defer func() {
-		Log.Level.SetLevel(zapcore.InfoLevel)
-	}()
+	defer Log.Level.SetLevel(zapcore.InfoLevel)
 
 	SetLogOutputPaths([]string{tempFile.Name()})
 	defer SetLogOutputPaths([]string{"stderr"})
@@ -87,4 +85,23 @@ func TestLoggerSetLogLevel(t *testing.T) {
 	tempFileContents, err := ioutil.ReadFile(tempFile.Name())
 	require.NoError(t, err)
 	assert.Regexp(t, `{"log.level":"debug","@timestamp":".*","log.origin":{"file.name":"extension/logger_test.go","file.line":.*},"message":"logger-test-trace","ecs.version":"1.6.0"}`, string(tempFileContents))
+}
+
+func TestLoggerSetOffLevel(t *testing.T) {
+	tempFile, err := ioutil.TempFile(t.TempDir(), "tempFileLoggerTest-")
+	require.NoError(t, err)
+	defer tempFile.Close()
+
+	offLevel, _ := ParseLogLevel("off")
+	Log.Level.SetLevel(offLevel)
+
+	defer Log.Level.SetLevel(zapcore.InfoLevel)
+
+	SetLogOutputPaths([]string{tempFile.Name()})
+	defer SetLogOutputPaths([]string{"stderr"})
+
+	Log.Errorf("%s", "logger-test-trace")
+	tempFileContents, err := ioutil.ReadFile(tempFile.Name())
+	require.NoError(t, err)
+	assert.Equal(t, "", string(tempFileContents))
 }
