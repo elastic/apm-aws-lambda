@@ -18,16 +18,59 @@
 package extension
 
 import (
-	"github.com/sirupsen/logrus"
-	"go.elastic.co/ecslogrus"
+	"fmt"
+	"go.elastic.co/ecszap"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"strings"
 )
 
-var Log *logrus.Entry
+type Level uint32
+
+type LevelLogger struct {
+	*zap.SugaredLogger
+	zap.Config
+}
+
+var Log LevelLogger
 
 func init() {
-	newLogger := logrus.New()
-	newLogger.SetFormatter(&ecslogrus.Formatter{})
-	newLogger.SetLevel(logrus.TraceLevel)
-	newLoggerWithFields := newLogger.WithFields(logrus.Fields{"event.dataset": "apm-lambda-extension"})
-	Log = newLoggerWithFields
+	// Set ECS logging config
+	Log.Config = zap.NewProductionConfig()
+	Log.Config.EncoderConfig = ecszap.NewDefaultEncoderConfig().ToZapCoreEncoderConfig()
+	// Create ECS logger
+	logger, _ := Log.Config.Build(ecszap.WrapCoreOption(), zap.AddCaller())
+	Log.SugaredLogger = logger.Sugar()
+}
+
+// ParseLogLevel parses s as a logrus log level. If the level is off, the return flag is set to true.
+func ParseLogLevel(s string) (zapcore.Level, error) {
+	switch strings.ToLower(s) {
+	case "trace":
+		return zapcore.DebugLevel, nil
+	case "debug":
+		return zapcore.DebugLevel, nil
+	case "info":
+		return zapcore.InfoLevel, nil
+	case "warn", "warning":
+		// "warn" exists for backwards compatibility;
+		// "warning" is the canonical level name.
+		return zapcore.WarnLevel, nil
+	case "error":
+		return zapcore.ErrorLevel, nil
+	case "critical":
+		return zapcore.FatalLevel, nil
+	case "off":
+		return zapcore.FatalLevel + 1, nil
+	}
+	return zapcore.InfoLevel, fmt.Errorf("invalid log level string %s", s)
+}
+
+func SetLogOutputPaths(paths []string) {
+	Log.Config.OutputPaths = paths
+	logger, err := Log.Config.Build(ecszap.WrapCoreOption(), zap.AddCaller())
+	if err != nil {
+		Log.Errorf("Could not set log path : %v", err)
+	}
+	Log.SugaredLogger = logger.Sugar()
 }

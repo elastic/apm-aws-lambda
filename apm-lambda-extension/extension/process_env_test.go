@@ -18,7 +18,7 @@
 package extension
 
 import (
-	"github.com/sirupsen/logrus"
+	"go.uber.org/zap/zapcore"
 	"os"
 	"testing"
 )
@@ -163,7 +163,7 @@ func TestProcessEnv(t *testing.T) {
 		return
 	}
 	config = ProcessEnv()
-	if config.LogLevel != logrus.DebugLevel {
+	if config.LogLevel != zapcore.DebugLevel {
 		t.Log("Log level not set correctly")
 		t.Fail()
 	}
@@ -173,7 +173,7 @@ func TestProcessEnv(t *testing.T) {
 		return
 	}
 	config = ProcessEnv()
-	if config.LogLevel != logrus.InfoLevel {
+	if config.LogLevel != zapcore.InfoLevel {
 		t.Log("Log level not set correctly")
 		t.Fail()
 	}
