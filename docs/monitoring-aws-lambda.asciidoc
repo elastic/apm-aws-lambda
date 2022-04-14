@@ -46,7 +46,7 @@ The following configuration options are particularly relevant for Elastic's APM 
 This required config option controls where the Lambda extension will ship data. This should be the URL of the final APM Server destination for your telemetry.
 
 === `ELASTIC_APM_SECRET_TOKEN` or `ELASTIC_APM_API_KEY`
-One of these needs to be set as the authentication method that the extension uses when sending data to the URL configured via `ELASTIC_APM_LAMBDA_APM_SERVER`.
+One of these needs to be set as the authentication method that the extension uses when sending data to the URL configured via `ELASTIC_APM_LAMBDA_APM_SERVER`. Sending data to the APM Server if none of these options is set is possible, but your APM agent must be allowed to send data to your APM server in https://www.elastic.co/guide/en/apm/guide/current/configuration-anonymous.html[anonymous mode].
 
 === `ELASTIC_APM_SERVICE_NAME`
 The configured name of your application or service.  The APM Agent will use this value when reporting data to the APM Server. If unset, the APM Agent will automatically set the value based on the Lambda function name. Use this config option if you want to group multiple Lambda functions under a single service entity in APM.
