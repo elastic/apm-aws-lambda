@@ -129,7 +129,10 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 			}
-			w.Write(infoPayload)
+			_, err = w.Write(infoPayload)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
 		}
 	}))
 	if err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", apmServer.URL); err != nil {
