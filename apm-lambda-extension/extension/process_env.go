@@ -113,7 +113,7 @@ func ProcessEnv() *extensionConfig {
 		Log.Fatal("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
 	}
 	if config.apmServerSecretToken == "" && config.apmServerApiKey == "" {
-		Log.Fatal("please set ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY, exiting")
+		Log.Warn("ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY not specified")
 	}
 
 	return config
