@@ -26,6 +26,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/suite"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -39,126 +40,19 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.Server, *APMServerInternals) {
-
-	// Mock APM Server
-	var apmServerInternals APMServerInternals
-	apmServerInternals.WaitForUnlockSignal = true
-	apmServerInternals.UnlockSignalChannel = make(chan struct{})
-	apmServerMutex := &sync.Mutex{}
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.RequestURI == "/intake/v2/events" {
-			decompressedBytes, err := e2eTesting.GetDecompressedBytesFromRequest(r)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-			}
-			extension.Log.Debugf("Event type received by mock APM server : %s", string(decompressedBytes))
-			switch APMServerBehavior(decompressedBytes) {
-			case TimelyResponse:
-				extension.Log.Debug("Timely response received")
-				apmServerInternals.Data += string(decompressedBytes)
-				w.WriteHeader(http.StatusAccepted)
-				extension.Log.Debug("Timely response processed")
-			case SlowResponse:
-				apmServerInternals.Data += string(decompressedBytes)
-				time.Sleep(2 * time.Second)
-				w.WriteHeader(http.StatusAccepted)
-			case Hangs:
-				extension.Log.Debug("Hang signal received")
-				apmServerMutex.Lock()
-				if apmServerInternals.WaitForUnlockSignal {
-					<-apmServerInternals.UnlockSignalChannel
-					apmServerInternals.WaitForUnlockSignal = false
-				}
-				apmServerInternals.Data += string(decompressedBytes)
-				apmServerMutex.Unlock()
-				extension.Log.Debug("Hang signal processed")
-			case Crashes:
-				panic("Server crashed")
-			default:
-				w.WriteHeader(http.StatusInternalServerError)
-			}
-		}
-	}))
-	if err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", apmServer.URL); err != nil {
-		extension.Log.Fatalf("Could not set environment variable : %v", err)
-		return nil, nil, nil
-	}
-	if err := os.Setenv("ELASTIC_APM_SECRET_TOKEN", "none"); err != nil {
-		extension.Log.Fatalf("Could not set environment variable : %v", err)
-		return nil, nil, nil
-	}
-
-	// Mock Lambda Server
-	logsapi.ListenerHost = "localhost"
-	lambdaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.RequestURI {
-		// Extension registration request
-		case "/2020-01-01/extension/register":
-			w.Header().Set("Lambda-Extension-Identifier", "b03a29ec-ee63-44cd-8e53-3987a8e8aa8e")
-			if err := json.NewEncoder(w).Encode(extension.RegisterResponse{
-				FunctionName:    "UnitTestingMockLambda",
-				FunctionVersion: "$LATEST",
-				Handler:         "main_test.mock_lambda",
-			}); err != nil {
-				extension.Log.Fatalf("Could not encode registration response : %v", err)
-				return
-			}
-		case "/2020-01-01/extension/event/next":
-			currId := uuid.New().String()
-			select {
-			case nextEvent := <-eventsChannel:
-				sendNextEventInfo(w, currId, nextEvent)
-				go processMockEvent(currId, nextEvent, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"))
-			default:
-				finalShutDown := MockEvent{
-					Type:              Shutdown,
-					ExecutionDuration: 0,
-					Timeout:           0,
-				}
-				sendNextEventInfo(w, currId, finalShutDown)
-				go processMockEvent(currId, finalShutDown, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"))
-			}
-		// Logs API subscription request
-		case "/2020-08-15/logs":
-			w.WriteHeader(http.StatusOK)
-		}
-	}))
-
-	slicedLambdaURL := strings.Split(lambdaServer.URL, "//")
-	strippedLambdaURL := slicedLambdaURL[1]
-	if err := os.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL); err != nil {
-		extension.Log.Fatalf("Could not set environment variable : %v", err)
-		return nil, nil, nil
-	}
-	extensionClient = extension.NewClient(os.Getenv("AWS_LAMBDA_RUNTIME_API"))
-
-	// Find unused port for the extension to listen to
-	extensionPort, err := e2eTesting.GetFreePort()
-	if err != nil {
-		extension.Log.Errorf("Could not find free port for the extension to listen on : %v", err)
-		extensionPort = 8200
-	}
-	if err = os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort)); err != nil {
-		extension.Log.Fatalf("Could not set environment variable : %v", err)
-		return nil, nil, nil
-	}
-
-	return lambdaServer, apmServer, &apmServerInternals
-}
-
 type MockEventType string
 
 const (
 	InvokeHang                         MockEventType = "Hang"
 	InvokeStandard                     MockEventType = "Standard"
+	InvokeStandardInfo                 MockEventType = "StandardInfo"
 	InvokeStandardFlush                MockEventType = "Flush"
 	InvokeWaitgroupsRace               MockEventType = "InvokeWaitgroupsRace"
 	InvokeMultipleTransactionsOverload MockEventType = "MultipleTransactionsOverload"
 	Shutdown                           MockEventType = "Shutdown"
 )
 
-type APMServerInternals struct {
+type MockServerInternals struct {
 	Data                string
 	WaitForUnlockSignal bool
 	UnlockSignalChannel chan struct{}
@@ -180,7 +74,133 @@ type MockEvent struct {
 	Timeout           float64
 }
 
-func processMockEvent(currId string, event MockEvent, extensionPort string) {
+type ApmInfo struct {
+	BuildDate    time.Time `json:"build_date"`
+	BuildSHA     string    `json:"build_sha"`
+	PublishReady bool      `json:"publish_ready"`
+	Version      string    `json:"version"`
+}
+
+func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.Server, *MockServerInternals, *MockServerInternals) {
+
+	// Mock APM Server
+	var apmServerInternals MockServerInternals
+	apmServerInternals.WaitForUnlockSignal = true
+	apmServerInternals.UnlockSignalChannel = make(chan struct{})
+	apmServerMutex := &sync.Mutex{}
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		decompressedBytes, err := e2eTesting.GetDecompressedBytesFromRequest(r)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		extension.Log.Debugf("Event type received by mock APM server : %s", string(decompressedBytes))
+		switch APMServerBehavior(decompressedBytes) {
+		case TimelyResponse:
+			extension.Log.Debug("Timely response signal received")
+		case SlowResponse:
+			extension.Log.Debug("Slow response signal received")
+			time.Sleep(2 * time.Second)
+		case Hangs:
+			extension.Log.Debug("Hang signal received")
+			apmServerMutex.Lock()
+			if apmServerInternals.WaitForUnlockSignal {
+				<-apmServerInternals.UnlockSignalChannel
+				apmServerInternals.WaitForUnlockSignal = false
+			}
+			apmServerMutex.Unlock()
+		case Crashes:
+			panic("Server crashed")
+		default:
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if r.RequestURI == "/intake/v2/events" {
+			w.WriteHeader(http.StatusAccepted)
+			apmServerInternals.Data += string(decompressedBytes)
+			extension.Log.Debug("APM Payload processed")
+		} else if r.RequestURI == "/" {
+			w.WriteHeader(http.StatusOK)
+			infoPayload, err := json.Marshal(ApmInfo{
+				BuildDate:    time.Now(),
+				BuildSHA:     "7814d524d3602e70b703539c57568cba6964fc20",
+				PublishReady: true,
+				Version:      "8.1.2",
+			})
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+			w.Write(infoPayload)
+		}
+	}))
+	if err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", apmServer.URL); err != nil {
+		extension.Log.Fatalf("Could not set environment variable : %v", err)
+		return nil, nil, nil, nil
+	}
+	if err := os.Setenv("ELASTIC_APM_SECRET_TOKEN", "none"); err != nil {
+		extension.Log.Fatalf("Could not set environment variable : %v", err)
+		return nil, nil, nil, nil
+	}
+
+	// Mock Lambda Server
+	logsapi.ListenerHost = "localhost"
+	var lambdaServerInternals MockServerInternals
+	lambdaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.RequestURI {
+		// Extension registration request
+		case "/2020-01-01/extension/register":
+			w.Header().Set("Lambda-Extension-Identifier", "b03a29ec-ee63-44cd-8e53-3987a8e8aa8e")
+			if err := json.NewEncoder(w).Encode(extension.RegisterResponse{
+				FunctionName:    "UnitTestingMockLambda",
+				FunctionVersion: "$LATEST",
+				Handler:         "main_test.mock_lambda",
+			}); err != nil {
+				extension.Log.Fatalf("Could not encode registration response : %v", err)
+				return
+			}
+		case "/2020-01-01/extension/event/next":
+			currId := uuid.New().String()
+			select {
+			case nextEvent := <-eventsChannel:
+				sendNextEventInfo(w, currId, nextEvent)
+				go processMockEvent(currId, nextEvent, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), lambdaServerInternals)
+			default:
+				finalShutDown := MockEvent{
+					Type:              Shutdown,
+					ExecutionDuration: 0,
+					Timeout:           0,
+				}
+				sendNextEventInfo(w, currId, finalShutDown)
+				go processMockEvent(currId, finalShutDown, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), lambdaServerInternals)
+			}
+		// Logs API subscription request
+		case "/2020-08-15/logs":
+			w.WriteHeader(http.StatusOK)
+		}
+	}))
+
+	slicedLambdaURL := strings.Split(lambdaServer.URL, "//")
+	strippedLambdaURL := slicedLambdaURL[1]
+	if err := os.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL); err != nil {
+		extension.Log.Fatalf("Could not set environment variable : %v", err)
+		return nil, nil, nil, nil
+	}
+	extensionClient = extension.NewClient(os.Getenv("AWS_LAMBDA_RUNTIME_API"))
+
+	// Find unused port for the extension to listen to
+	extensionPort, err := e2eTesting.GetFreePort()
+	if err != nil {
+		extension.Log.Errorf("Could not find free port for the extension to listen on : %v", err)
+		extensionPort = 8200
+	}
+	if err = os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort)); err != nil {
+		extension.Log.Fatalf("Could not set environment variable : %v", err)
+		return nil, nil, nil, nil
+	}
+
+	return lambdaServer, apmServer, &apmServerInternals, &lambdaServerInternals
+}
+
+func processMockEvent(currId string, event MockEvent, extensionPort string, internals MockServerInternals) {
 	sendLogEvent(currId, "platform.start")
 	client := http.Client{}
 	switch event.Type {
@@ -222,6 +242,16 @@ func processMockEvent(currId string, event MockEvent, extensionPort string) {
 			}()
 		}
 		wg.Wait()
+	case InvokeStandardInfo:
+		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
+		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
+		res, _ := client.Do(req)
+		var rawBytes []byte
+		if res.Body != nil {
+			rawBytes, _ = ioutil.ReadAll(res.Body)
+		}
+		internals.Data += string(rawBytes)
+		extension.Log.Tracef("Response seen by the agent : %d", res.StatusCode)
 	case Shutdown:
 	}
 	sendLogEvent(currId, "platform.runtimeDone")
@@ -286,12 +316,13 @@ func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
 // TESTS
 type MainUnitTestsSuite struct {
 	suite.Suite
-	eventsChannel      chan MockEvent
-	lambdaServer       *httptest.Server
-	apmServer          *httptest.Server
-	apmServerInternals *APMServerInternals
-	ctx                context.Context
-	cancel             context.CancelFunc
+	eventsChannel         chan MockEvent
+	lambdaServer          *httptest.Server
+	apmServer             *httptest.Server
+	apmServerInternals    *MockServerInternals
+	lambdaServerInternals *MockServerInternals
+	ctx                   context.Context
+	cancel                context.CancelFunc
 }
 
 func TestMainUnitTestsSuite(t *testing.T) {
@@ -303,7 +334,7 @@ func (suite *MainUnitTestsSuite) SetupTest() {
 	suite.ctx, suite.cancel = context.WithCancel(context.Background())
 	http.DefaultServeMux = new(http.ServeMux)
 	suite.eventsChannel = make(chan MockEvent, 100)
-	suite.lambdaServer, suite.apmServer, suite.apmServerInternals = initMockServers(suite.eventsChannel)
+	suite.lambdaServer, suite.apmServer, suite.apmServerInternals, suite.lambdaServerInternals = initMockServers(suite.eventsChannel)
 	extension.SetApmServerTransportState(extension.Healthy, suite.ctx)
 }
 
@@ -449,4 +480,14 @@ func (suite *MainUnitTestsSuite) TestFullChannelSlowAPMServer() {
 	if err := os.Setenv("ELASTIC_APM_SEND_STRATEGY", "syncflush"); err != nil {
 		suite.T().Fail()
 	}
+}
+
+// TestStandardEventsChain checks a nominal sequence of events (fast APM server, only one standard event)
+func (suite *MainUnitTestsSuite) TestStandardEventsChainInfo() {
+	eventsChain := []MockEvent{
+		{Type: InvokeStandardInfo, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+	}
+	eventQueueGenerator(eventsChain, suite.eventsChannel)
+	assert.NotPanics(suite.T(), main)
+	assert.True(suite.T(), strings.Contains(suite.lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20"))
 }

@@ -18,10 +18,13 @@
 package extension
 
 import (
+	"context"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"time"
 )
 
 type AgentData struct {
@@ -30,10 +33,13 @@ type AgentData struct {
 }
 
 var AgentDoneSignal chan struct{}
+var mainExtensionContext context.Context
 
 // URL: http://server/
-func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.Request) {
+func handleInfoRequest(ctx context.Context, apmServerUrl string) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		mainExtensionContext = ctx
 
 		// Init reverse proxy
 		parsedApmServerUrl, err := url.Parse(apmServerUrl)
@@ -41,7 +47,19 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 			Log.Errorf("could not parse APM server URL: %v", err)
 			return
 		}
+
 		reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
+		reverseProxyTimeout := time.Duration(defaultDataForwarderTimeoutSeconds) * time.Second
+		reverseProxy.Transport = &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout:   reverseProxyTimeout,
+				KeepAlive: reverseProxyTimeout,
+			}).DialContext,
+			IdleConnTimeout:       reverseProxyTimeout,
+			TLSHandshakeTimeout:   reverseProxyTimeout,
+			ExpectContinueTimeout: reverseProxyTimeout,
+		}
+		reverseProxy.ErrorHandler = reverseProxyErrorHandler
 
 		// Process request (the Golang doc suggests removing any pre-existing X-Forwarded-For header coming
 		// from the client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
@@ -56,6 +74,11 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 		// Forward request to the APM server
 		reverseProxy.ServeHTTP(w, r)
 	}
+}
+
+func reverseProxyErrorHandler(res http.ResponseWriter, req *http.Request, err error) {
+	SetApmServerTransportState(Failing, mainExtensionContext)
+	Log.Errorf("Error querying version from the APM Server: %v", err)
 }
 
 // URL: http://server/intake/v2/events
