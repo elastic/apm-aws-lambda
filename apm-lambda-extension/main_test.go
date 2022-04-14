@@ -190,22 +190,22 @@ func processMockEvent(currId string, event MockEvent, extensionPort string) {
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		res, _ := client.Do(req)
-		extension.Log.Tracef("Response seen by the agent : %d", res.StatusCode)
+		extension.Log.Debugf("Response seen by the agent : %d", res.StatusCode)
 	case InvokeStandardFlush:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		if _, err := client.Do(reqData); err != nil {
-			extension.Log.Error(err)
+			extension.Log.Error(err.Error())
 		}
 	case InvokeWaitgroupsRace:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData0, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		reqData1, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		if _, err := client.Do(reqData0); err != nil {
-			extension.Log.Error(err)
+			extension.Log.Error(err.Error())
 		}
 		if _, err := client.Do(reqData1); err != nil {
-			extension.Log.Error(err)
+			extension.Log.Error(err.Error())
 		}
 		time.Sleep(650 * time.Microsecond)
 	case InvokeMultipleTransactionsOverload:
@@ -216,7 +216,7 @@ func processMockEvent(currId string, event MockEvent, extensionPort string) {
 				time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 				reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 				if _, err := client.Do(reqData); err != nil {
-					extension.Log.Error(err)
+					extension.Log.Error(err.Error())
 				}
 				wg.Done()
 			}()
