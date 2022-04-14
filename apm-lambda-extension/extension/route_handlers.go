@@ -20,7 +20,6 @@ package extension
 import (
 	"context"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -36,9 +35,10 @@ var AgentDoneSignal chan struct{}
 var mainExtensionContext context.Context
 
 // URL: http://server/
-func handleInfoRequest(ctx context.Context, apmServerUrl string) func(w http.ResponseWriter, r *http.Request) {
+func handleInfoRequest(ctx context.Context, apmServerUrl string, config *extensionConfig) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		Log.Debug("Handling APM Server Info Request")
 		mainExtensionContext = ctx
 
 		// Init reverse proxy
@@ -49,15 +49,9 @@ func handleInfoRequest(ctx context.Context, apmServerUrl string) func(w http.Res
 		}
 
 		reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
-		reverseProxyTimeout := time.Duration(defaultDataForwarderTimeoutSeconds) * time.Second
+		reverseProxyTimeout := time.Duration(config.DataForwarderTimeoutSeconds) * time.Second
 		reverseProxy.Transport = &http.Transport{
-			DialContext: (&net.Dialer{
-				Timeout:   reverseProxyTimeout,
-				KeepAlive: reverseProxyTimeout,
-			}).DialContext,
-			IdleConnTimeout:       reverseProxyTimeout,
-			TLSHandshakeTimeout:   reverseProxyTimeout,
-			ExpectContinueTimeout: reverseProxyTimeout,
+			ResponseHeaderTimeout: reverseProxyTimeout,
 		}
 		reverseProxy.ErrorHandler = reverseProxyErrorHandler
 
@@ -83,8 +77,9 @@ func reverseProxyErrorHandler(res http.ResponseWriter, req *http.Request, err er
 
 // URL: http://server/intake/v2/events
 func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWriter, r *http.Request) {
-
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		Log.Debug("Handling APM Data Intake")
 		rawBytes, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {

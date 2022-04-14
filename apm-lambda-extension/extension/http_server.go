@@ -29,7 +29,7 @@ var agentDataServer *http.Server
 // StartHttpServer starts the server listening for APM agent data.
 func StartHttpServer(ctx context.Context, agentDataChan chan AgentData, config *extensionConfig) (err error) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleInfoRequest(ctx, config.apmServerUrl))
+	mux.HandleFunc("/", handleInfoRequest(ctx, config.apmServerUrl, config))
 	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(agentDataChan))
 	timeout := time.Duration(config.dataReceiverTimeoutSeconds) * time.Second
 	agentDataServer = &http.Server{
@@ -48,8 +48,11 @@ func StartHttpServer(ctx context.Context, agentDataChan chan AgentData, config *
 	go func() {
 		Log.Infof("Extension listening for apm data on %s", agentDataServer.Addr)
 		if err = agentDataServer.Serve(ln); err != nil {
-			Log.Errorf("Error upon APM data server start : %v", err)
-			return
+			if err.Error() == "http: Server closed" {
+				Log.Debug(err)
+			} else {
+				Log.Errorf("Error upon APM data server start : %v", err)
+			}
 		}
 	}()
 	return nil

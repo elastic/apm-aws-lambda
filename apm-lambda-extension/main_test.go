@@ -162,7 +162,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 			select {
 			case nextEvent := <-eventsChannel:
 				sendNextEventInfo(w, currId, nextEvent)
-				go processMockEvent(currId, nextEvent, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), lambdaServerInternals)
+				go processMockEvent(currId, nextEvent, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals)
 			default:
 				finalShutDown := MockEvent{
 					Type:              Shutdown,
@@ -170,7 +170,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 					Timeout:           0,
 				}
 				sendNextEventInfo(w, currId, finalShutDown)
-				go processMockEvent(currId, finalShutDown, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), lambdaServerInternals)
+				go processMockEvent(currId, finalShutDown, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals)
 			}
 		// Logs API subscription request
 		case "/2020-08-15/logs":
@@ -200,7 +200,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 	return lambdaServer, apmServer, &apmServerInternals, &lambdaServerInternals
 }
 
-func processMockEvent(currId string, event MockEvent, extensionPort string, internals MockServerInternals) {
+func processMockEvent(currId string, event MockEvent, extensionPort string, internals *MockServerInternals) {
 	sendLogEvent(currId, "platform.start")
 	client := http.Client{}
 	switch event.Type {
@@ -251,7 +251,7 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 			rawBytes, _ = ioutil.ReadAll(res.Body)
 		}
 		internals.Data += string(rawBytes)
-		extension.Log.Tracef("Response seen by the agent : %d", res.StatusCode)
+		extension.Log.Debugf("Response seen by the agent : %d", res.StatusCode)
 	case Shutdown:
 	}
 	sendLogEvent(currId, "platform.runtimeDone")
@@ -331,6 +331,9 @@ func TestMainUnitTestsSuite(t *testing.T) {
 
 // This function executes before each test case
 func (suite *MainUnitTestsSuite) SetupTest() {
+	if err := os.Setenv("ELASTIC_APM_LOG_LEVEL", "trace"); err != nil {
+		suite.T().Fail()
+	}
 	suite.ctx, suite.cancel = context.WithCancel(context.Background())
 	http.DefaultServeMux = new(http.ServeMux)
 	suite.eventsChannel = make(chan MockEvent, 100)
@@ -389,7 +392,7 @@ func (suite *MainUnitTestsSuite) TestAPMServerDown() {
 // TestAPMServerHangs tests that main does not panic nor runs indefinitely when the APM server does not respond.
 func (suite *MainUnitTestsSuite) TestAPMServerHangs() {
 	eventsChain := []MockEvent{
-		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
+		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
@@ -402,9 +405,6 @@ func (suite *MainUnitTestsSuite) TestAPMServerHangs() {
 // Hence, the APM server is waked up just in time to process the TimelyResponse data frame.
 func (suite *MainUnitTestsSuite) TestAPMServerRecovery() {
 	if err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1"); err != nil {
-		suite.T().Fail()
-	}
-	if err := os.Setenv("ELASTIC_APM_LOG_LEVEL", "trace"); err != nil {
 		suite.T().Fail()
 	}
 
@@ -432,7 +432,7 @@ func (suite *MainUnitTestsSuite) TestGracePeriodHangs() {
 	extension.ApmServerTransportState.ReconnectionCount = 100
 
 	eventsChain := []MockEvent{
-		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
+		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
@@ -482,12 +482,23 @@ func (suite *MainUnitTestsSuite) TestFullChannelSlowAPMServer() {
 	}
 }
 
-// TestStandardEventsChain checks a nominal sequence of events (fast APM server, only one standard event)
-func (suite *MainUnitTestsSuite) TestStandardEventsChainInfo() {
+// TestInfoRequest checks if the extension is able to retrieve APM server info (/ endpoint) (fast APM server, only one standard event)
+func (suite *MainUnitTestsSuite) TestInfoRequest() {
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardInfo, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
 	assert.True(suite.T(), strings.Contains(suite.lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20"))
+}
+
+// TestInfoRequest checks if the extension times out when unable to retrieve APM server info (/ endpoint)
+func (suite *MainUnitTestsSuite) TestInfoRequestHangs() {
+	eventsChain := []MockEvent{
+		{Type: InvokeStandardInfo, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
+	}
+	eventQueueGenerator(eventsChain, suite.eventsChannel)
+	assert.NotPanics(suite.T(), main)
+	assert.False(suite.T(), strings.Contains(suite.lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20"))
+	suite.apmServerInternals.UnlockSignalChannel <- struct{}{}
 }
