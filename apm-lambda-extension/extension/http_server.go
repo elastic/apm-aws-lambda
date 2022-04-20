@@ -6,7 +6,7 @@
 // not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
@@ -25,6 +25,7 @@ import (
 
 var agentDataServer *http.Server
 
+// StartHttpServer starts the server listening for APM agent data.
 func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) (err error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleInfoRequest(config.apmServerUrl))
@@ -45,7 +46,10 @@ func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) (err
 
 	go func() {
 		Log.Infof("Extension listening for apm data on %s", agentDataServer.Addr)
-		agentDataServer.Serve(ln)
+		if err = agentDataServer.Serve(ln); err != nil {
+			Log.Errorf("Error upon APM data server start : %v", err)
+			return
+		}
 	}()
 	return nil
 }

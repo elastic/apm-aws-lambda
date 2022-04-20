@@ -6,7 +6,7 @@
 // not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
@@ -55,6 +55,7 @@ const (
 	Extension EventType = "extension"
 )
 
+// SubEventType is a Logs API sub event type
 type SubEventType string
 
 const (
@@ -83,7 +84,7 @@ type HttpMethod string
 const (
 	//HttpPost is to receive logs through POST.
 	HttpPost HttpMethod = "POST"
-	//HttpPUT is to receive logs through PUT.
+	// HttpPut is to receive logs through PUT.
 	HttpPut HttpMethod = "PUT"
 )
 
@@ -109,6 +110,7 @@ type Destination struct {
 	Encoding   HttpEncoding `json:"encoding"`
 }
 
+// SchemaVersion is the Lambda runtime API schema version
 type SchemaVersion string
 
 const (

@@ -6,7 +6,7 @@
 // not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
@@ -19,11 +19,10 @@ package extension
 
 import (
 	"fmt"
+	"go.uber.org/zap/zapcore"
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/sirupsen/logrus"
 )
 
 type extensionConfig struct {
@@ -34,7 +33,7 @@ type extensionConfig struct {
 	SendStrategy                SendStrategy
 	dataReceiverTimeoutSeconds  int
 	DataForwarderTimeoutSeconds int
-	LogLevel                    logrus.Level
+	LogLevel                    zapcore.Level
 }
 
 // SendStrategy represents the type of sending strategy the extension uses
@@ -63,7 +62,7 @@ func getIntFromEnv(name string) (int, error) {
 	return value, nil
 }
 
-// pull env into globals
+// ProcessEnv extracts ENV variables into globals
 func ProcessEnv() *extensionConfig {
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
@@ -83,9 +82,9 @@ func ProcessEnv() *extensionConfig {
 		normalizedApmLambdaServer = normalizedApmLambdaServer + "/"
 	}
 
-	logLevel, err := logrus.ParseLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
+	logLevel, err := ParseLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
 	if err != nil {
-		logLevel = logrus.InfoLevel
+		logLevel = zapcore.InfoLevel
 		Log.Warnf("Could not read ELASTIC_APM_LOG_LEVEL, defaulting to %s", logLevel)
 	}
 
@@ -111,10 +110,10 @@ func ProcessEnv() *extensionConfig {
 		config.dataReceiverServerPort = ":8200"
 	}
 	if config.apmServerUrl == "" {
-		Log.Fatalln("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
+		Log.Fatal("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
 	}
 	if config.apmServerSecretToken == "" && config.apmServerApiKey == "" {
-		Log.Fatalln("please set ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY, exiting")
+		Log.Warn("ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY not specified")
 	}
 
 	return config

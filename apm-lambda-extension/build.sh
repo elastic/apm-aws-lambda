@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # build the go extension, and then zip up
-make && cd bin && zip -r extension.zip extensions
+make all && cd bin && zip -r extension.zip extensions
 
 # then run this command with amazon stuff exported
 

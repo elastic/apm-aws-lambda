@@ -6,7 +6,7 @@
 // not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
@@ -42,7 +42,10 @@ func TestInfoProxy(t *testing.T) {
 			assert.Equal(t, headers[key], r.Header[key][0])
 		}
 		w.Header().Add("test", "header")
-		w.Write([]byte(`{"foo": "bar"}`))
+		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
+			t.Fail()
+			return
+		}
 	}))
 	defer apmServer.Close()
 
@@ -56,7 +59,10 @@ func TestInfoProxy(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	StartHttpServer(dataChannel, &config)
+	if err := StartHttpServer(dataChannel, &config); err != nil {
+		t.Fail()
+		return
+	}
 	defer agentDataServer.Close()
 
 	hosts, _ := net.LookupHost("localhost")
@@ -102,7 +108,10 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	StartHttpServer(dataChannel, &config)
+	if err := StartHttpServer(dataChannel, &config); err != nil {
+		t.Fail()
+		return
+	}
 	defer agentDataServer.Close()
 
 	hosts, _ := net.LookupHost("localhost")
@@ -143,7 +152,10 @@ func Test_handleInfoRequest(t *testing.T) {
 	}
 
 	// Start extension server
-	StartHttpServer(dataChannel, &config)
+	if err := StartHttpServer(dataChannel, &config); err != nil {
+		t.Fail()
+		return
+	}
 	defer agentDataServer.Close()
 
 	// Create a request to send to the extension
@@ -205,7 +217,10 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	StartHttpServer(dataChannel, &config)
+	if err := StartHttpServer(dataChannel, &config); err != nil {
+		t.Fail()
+		return
+	}
 	defer agentDataServer.Close()
 
 	hosts, _ := net.LookupHost("localhost")
@@ -220,8 +235,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	// Send the request to the extension
 	client := &http.Client{}
 	go func() {
-		_, err := client.Do(req)
-		if err != nil {
+		if _, err := client.Do(req); err != nil {
 			t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
 			t.Fail()
 		}
@@ -255,7 +269,10 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	StartHttpServer(dataChannel, &config)
+	if err := StartHttpServer(dataChannel, &config); err != nil {
+		t.Fail()
+		return
+	}
 	defer agentDataServer.Close()
 
 	hosts, _ := net.LookupHost("localhost")
@@ -296,7 +313,10 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	StartHttpServer(dataChannel, &config)
+	if err := StartHttpServer(dataChannel, &config); err != nil {
+		t.Fail()
+		return
+	}
 	defer agentDataServer.Close()
 
 	hosts, _ := net.LookupHost("localhost")
@@ -311,8 +331,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	// Send the request to the extension
 	client := &http.Client{}
 	go func() {
-		_, err := client.Do(req)
-		if err != nil {
+		if _, err := client.Do(req); err != nil {
 			t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
 			t.Fail()
 		}

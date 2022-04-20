@@ -1,8 +1,24 @@
-package e2e_testing
+// Licensed to Elasticsearch B.V. under one or more contributor
+// license agreements. See the NOTICE file distributed with
+// this work for additional information regarding copyright
+// ownership. Elasticsearch B.V. licenses this file to you under
+// the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package e2eTesting
 
 import (
 	"elastic/apm-lambda-extension/extension"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -17,7 +33,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,17 +48,19 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	if os.Getenv("ELASTIC_APM_LOG_LEVEL") != "" {
-		logLevel, _ := logrus.ParseLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
-		extension.Log.Logger.SetLevel(logLevel)
+		logLevel, _ := extension.ParseLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
+		extension.Log.Level.SetLevel(logLevel)
 	}
 	if GetEnvVarValueOrSetDefault("RUN_E2E_TESTS", "false") != "true" {
 		t.Skip("Skipping E2E tests. Please set the env. variable RUN_E2E_TESTS=true if you want to run them.")
 	}
 
+	extension.Log.Info("If the end-to-end tests are failing unexpectedly, please verify that Docker is running on your machine.")
+
 	languageName := strings.ToLower(*langPtr)
 	supportedLanguages := []string{"nodejs", "python", "java"}
 	if !IsStringInSlice(languageName, supportedLanguages) {
-		ProcessError(errors.New(fmt.Sprintf("Unsupported language %s ! Supported languages are %v", languageName, supportedLanguages)))
+		ProcessError(fmt.Errorf(fmt.Sprintf("Unsupported language %s ! Supported languages are %v", languageName, supportedLanguages)))
 	}
 
 	samPath := "sam-" + languageName
@@ -73,13 +90,13 @@ func TestEndToEnd(t *testing.T) {
 
 	resultsChan := make(chan string, 1)
 
-	uuid := runTestWithTimer(samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
-	extension.Log.Infof("UUID generated during the test : %s", uuid)
-	if uuid == "" {
+	testUuid := runTestWithTimer(samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
+	extension.Log.Infof("UUID generated during the test : %s", testUuid)
+	if testUuid == "" {
 		t.Fail()
 	}
 	extension.Log.Infof("Querying the mock server for transaction bound to %s...", samServiceName)
-	assert.True(t, strings.Contains(mockAPMServerLog, uuid))
+	assert.True(t, strings.Contains(mockAPMServerLog, testUuid))
 }
 
 func runTestWithTimer(path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) string {
@@ -87,8 +104,8 @@ func runTestWithTimer(path string, serviceName string, serverURL string, buildFl
 	defer timer.Stop()
 	go runTest(path, serviceName, serverURL, buildFlag, lambdaFuncTimeout, resultsChan)
 	select {
-	case uuid := <-resultsChan:
-		return uuid
+	case testUuid := <-resultsChan:
+		return testUuid
 	case <-timer.C:
 		return ""
 	}
@@ -132,7 +149,9 @@ func retrieveJavaAgent(samJavaPath string, version string) {
 	resp, err := http.Get(fmt.Sprintf("https://github.com/elastic/apm-agent-java/releases/download/v%[1]s/elastic-apm-java-aws-lambda-layer-%[1]s.zip", version))
 	ProcessError(err)
 	defer resp.Body.Close()
-	io.Copy(out, resp.Body)
+	if _, err = io.Copy(out, resp.Body); err != nil {
+		extension.Log.Errorf("Could not retrieve java agent : %v", err)
+	}
 
 	// Unzip archive and delete it
 	extension.Log.Info("Unzipping Java Agent archive...")
@@ -147,6 +166,8 @@ func changeJavaAgentPermissions(samJavaPath string) {
 	agentFiles, err := ioutil.ReadDir(agentFolderPath)
 	ProcessError(err)
 	for _, f := range agentFiles {
-		os.Chmod(filepath.Join(agentFolderPath, f.Name()), 0755)
+		if err = os.Chmod(filepath.Join(agentFolderPath, f.Name()), 0755); err != nil {
+			extension.Log.Errorf("Could not change java agent permissions : %v", err)
+		}
 	}
 }

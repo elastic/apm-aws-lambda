@@ -6,7 +6,7 @@
 // not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
@@ -33,6 +33,7 @@ var ListenerHost = "sandbox"
 var Server *http.Server
 var Listener net.Listener
 
+// LogEvent represents an event received from the Logs API
 type LogEvent struct {
 	Time         time.Time    `json:"time"`
 	Type         SubEventType `json:"type"`
@@ -40,6 +41,7 @@ type LogEvent struct {
 	Record       LogEventRecord
 }
 
+// LogEventRecord is a sub-object in a Logs API event
 type LogEventRecord struct {
 	RequestId string          `json:"requestId"`
 	Status    string          `json:"status"`
@@ -72,18 +74,16 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 	return err
 }
 
-// Starts the HTTP server listening for log events and subscribes to the Logs API
+// Subscribe starts the HTTP server listening for log events and subscribes to the Logs API
 func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, out chan LogEvent) (err error) {
 	if checkAWSSamLocal() {
 		return errors.New("Detected sam local environment")
 	}
-	err = startHTTPServer(out)
-	if err != nil {
+	if err = startHTTPServer(out); err != nil {
 		return
 	}
 
-	err = subscribe(extensionID, eventTypes)
-	if err != nil {
+	if err = subscribe(extensionID, eventTypes); err != nil {
 		return
 	}
 	return nil
@@ -98,14 +98,15 @@ func startHTTPServer(out chan LogEvent) error {
 		Handler: mux,
 	}
 
-	Listener, err = net.Listen("tcp", ListenerHost+":0")
-	if err != nil {
+	if Listener, err = net.Listen("tcp", ListenerHost+":0"); err != nil {
 		return err
 	}
 
 	go func() {
 		extension.Log.Infof("Extension listening for Lambda Logs API events on %s", Listener.Addr().String())
-		Server.Serve(Listener)
+		if err = Server.Serve(Listener); err != nil {
+			extension.Log.Errorf("Error upon Logs API server start : %v", err)
+		}
 	}()
 	return nil
 }

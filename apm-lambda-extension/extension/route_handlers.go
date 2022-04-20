@@ -6,7 +6,7 @@
 // not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
@@ -84,6 +84,8 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 		}
 
 		w.WriteHeader(http.StatusAccepted)
-		w.Write([]byte("ok"))
+		if _, err = w.Write([]byte("ok")); err != nil {
+			Log.Errorf("Failed to send intake response to APM agent : %v", err)
+		}
 	}
 }

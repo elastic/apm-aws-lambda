@@ -6,7 +6,7 @@
 // not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
@@ -115,7 +115,7 @@ func (e *Client) Register(ctx context.Context, filename string) (*RegisterRespon
 		return nil, err
 	}
 	e.ExtensionID = httpRes.Header.Get(extensionIdentiferHeader)
-	Log.Tracef("ExtensionID : %s", e.ExtensionID)
+	Log.Debugf("ExtensionID : %s", e.ExtensionID)
 	return &res, nil
 }
 
@@ -162,7 +162,7 @@ func (e *Client) InitError(ctx context.Context, errorType string) (*StatusRespon
 	}
 	defer httpRes.Body.Close()
 
-	if httpRes.StatusCode != 200 {
+	if httpRes.StatusCode > 299 {
 		return nil, fmt.Errorf("initialization error request failed with status %s", httpRes.Status)
 	}
 	res := StatusResponse{}
@@ -189,7 +189,7 @@ func (e *Client) ExitError(ctx context.Context, errorType string) (*StatusRespon
 	}
 	defer httpRes.Body.Close()
 
-	if httpRes.StatusCode != 200 {
+	if httpRes.StatusCode > 299 {
 		return nil, fmt.Errorf("exit error request failed with status %s", httpRes.Status)
 	}
 	res := StatusResponse{}

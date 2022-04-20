@@ -6,7 +6,7 @@
 // not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
@@ -39,6 +39,7 @@ var (
 /* --- elastic vars  --- */
 
 func main() {
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Trigger ctx.Done() in all relevant goroutines when main ends
@@ -54,12 +55,19 @@ func main() {
 
 	// pulls ELASTIC_ env variable into globals for easy access
 	config := extension.ProcessEnv()
-	extension.Log.Logger.SetLevel(config.LogLevel)
+	extension.Log.Level.SetLevel(config.LogLevel)
 
 	// register extension with AWS Extension API
 	res, err := extensionClient.Register(ctx, extensionName)
 	if err != nil {
-		panic(err)
+		status, errRuntime := extensionClient.InitError(ctx, err.Error())
+		if errRuntime != nil {
+			panic(errRuntime)
+		}
+		extension.Log.Errorf("Error: %s", err)
+		extension.Log.Infof("Init error signal sent to runtime : %s", status)
+		extension.Log.Infof("Exiting")
+		return
 	}
 	extension.Log.Debugf("Register response: %v", extension.PrettyPrint(res))
 
@@ -67,7 +75,9 @@ func main() {
 	agentDataChannel := make(chan extension.AgentData, 100)
 
 	// Start http server to receive data from agent
-	extension.StartHttpServer(agentDataChannel, config)
+	if err = extension.StartHttpServer(agentDataChannel, config); err != nil {
+		extension.Log.Errorf("Could not start APM data receiver : %v", err)
+	}
 
 	// Create a client to use for sending data to the apm server
 	client := &http.Client{
@@ -85,13 +95,12 @@ func main() {
 	// completes before signaling that the extension is ready for the next invocation.
 	var backgroundDataSendWg sync.WaitGroup
 
-	err = logsapi.Subscribe(
+	if err := logsapi.Subscribe(
 		ctx,
 		extensionClient.ExtensionID,
 		[]logsapi.EventType{logsapi.Platform},
 		logsChannel,
-	)
-	if err != nil {
+	); err != nil {
 		extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
 	}
 
@@ -107,11 +116,17 @@ func main() {
 			extension.Log.Infof("Waiting for next event...")
 			event, err := extensionClient.NextEvent(ctx)
 			if err != nil {
-				extension.Log.Errorf("Error: %v\n. Exiting.", err)
+				status, err := extensionClient.ExitError(ctx, err.Error())
+				if err != nil {
+					panic(err)
+				}
+				extension.Log.Errorf("Error: %s", err)
+				extension.Log.Infof("Exit signal sent to runtime : %s", status)
+				extension.Log.Infof("Exiting")
 				return
 			}
 
-      event.Timestamp = time.Now()
+			event.Timestamp = time.Now()
 			extension.Log.Debug("Received event.")
 			extension.Log.Debugf("%v", extension.PrettyPrint(event))
 
@@ -148,9 +163,7 @@ func main() {
 						if metadataContainer.Metadata == nil {
 							extension.ProcessMetadata(agentData, &metadataContainer)
 						}
-						err := extension.PostToApmServer(client, agentData, config, ctx)
-
-						if err != nil {
+						if err := extension.PostToApmServer(client, agentData, config, ctx); err != nil {
 							extension.Log.Errorf("Error sending to APM server, skipping: %v", err)
 							extension.EnqueueAPMData(agentDataChannel, agentData)
 							return

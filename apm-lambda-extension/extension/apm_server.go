@@ -6,7 +6,7 @@
 // not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
@@ -38,12 +38,16 @@ var bufferPool = sync.Pool{New: func() interface{} {
 
 type ApmServerTransportStatusType string
 
+// Constants for the state of the transport used in
+// the backoff implementation.
 const (
 	Failing ApmServerTransportStatusType = "Failing"
 	Pending ApmServerTransportStatusType = "Pending"
 	Healthy ApmServerTransportStatusType = "Healthy"
 )
 
+// A struct to track the state and status of sending
+// to the APM server. Used in the backoff implementation.
 type ApmServerTransportStateType struct {
 	sync.Mutex
 	Status            ApmServerTransportStatusType
@@ -51,14 +55,22 @@ type ApmServerTransportStateType struct {
 	GracePeriodTimer  *time.Timer
 }
 
+// The status of transport to the APM server.
+//
+// This instance of the ApmServerTransportStateType is public for use in tests.
 var ApmServerTransportState = ApmServerTransportStateType{
 	Status:            Healthy,
 	ReconnectionCount: -1,
 }
 
-// todo: can this be a streaming or streaming style call that keeps the
-//       connection open across invocations?
+// PostToApmServer takes a chunk of APM agent data and posts it to the APM server.
+//
+// The function compresses the APM agent data, if it's not already compressed.
+// It sets the APM transport status to failing upon errors, as part of the backoff
+// strategy.
 func PostToApmServer(client *http.Client, agentData AgentData, config *extensionConfig, ctx context.Context) error {
+	// todo: can this be a streaming or streaming style call that keeps the
+	//       connection open across invocations?
 	if !IsTransportStatusHealthyOrPending() {
 		return errors.New("transport status is unhealthy")
 	}
@@ -123,10 +135,21 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 	return nil
 }
 
+// IsTransportStatusHealthyOrPending returns true if the APM server transport status is 
+// healthy or pending, and false otherwise.
+//
+// This function is public for use in tests.
 func IsTransportStatusHealthyOrPending() bool {
 	return ApmServerTransportState.Status != Failing
 }
 
+// SetApmServerTransportState takes a state of the APM server transport and updates
+// the current state of the transport. For a change to a failing state, the grace period
+// is calculated and a go routine is started that waits for that period to complete
+// before changing the status to "pending". This would allow a subsequent send attempt
+// to the APM server.
+//
+// This function is public for use in tests.
 func SetApmServerTransportState(status ApmServerTransportStatusType, ctx context.Context) {
 	switch status {
 	case Healthy:
@@ -165,6 +188,8 @@ func computeGracePeriod() time.Duration {
 	return time.Duration((gracePeriodWithoutJitter + jitter*gracePeriodWithoutJitter) * float64(time.Second))
 }
 
+// EnqueueAPMData adds a AgentData struct to the agent data channel, effectively queueing for a send
+// to the APM server.
 func EnqueueAPMData(agentDataChannel chan AgentData, agentData AgentData) {
 	select {
 	case agentDataChannel <- agentData:

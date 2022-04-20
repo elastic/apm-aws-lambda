@@ -6,7 +6,7 @@
 // not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing,
 // software distributed under the License is distributed on an
@@ -44,7 +44,10 @@ func TestRegister(t *testing.T) {
 	runtimeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, expectedRequest, string(bytes))
-		w.Write([]byte(response))
+		if _, err := w.Write(response); err != nil {
+			t.Fail()
+			return
+		}
 	}))
 	defer runtimeServer.Close()
 
@@ -73,7 +76,10 @@ func TestNextEvent(t *testing.T) {
 	`)
 
 	runtimeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(response))
+		if _, err := w.Write(response); err != nil {
+			t.Fail()
+			return
+		}
 	}))
 	defer runtimeServer.Close()
 
