@@ -15,8 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package extension
+package model
 
-const (
-	Version = "0.0.3"
-)
+type StringMap map[string]interface{}

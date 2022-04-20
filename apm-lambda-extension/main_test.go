@@ -23,6 +23,7 @@ import (
 	e2eTesting "elastic/apm-lambda-extension/e2e-testing"
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/logsapi"
+	"elastic/apm-lambda-extension/model"
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/suite"
@@ -244,11 +245,11 @@ func sendNextEventInfo(w http.ResponseWriter, id string, event MockEvent) {
 	}
 }
 
-func sendLogEvent(requestId string, logEventType logsapi.SubEventType) {
-	record := logsapi.LogEventRecord{
+func sendLogEvent(requestId string, logEventType model.SubEventType) {
+	record := model.LogEventRecord{
 		RequestId: requestId,
 	}
-	logEvent := logsapi.LogEvent{
+	logEvent := model.LogEvent{
 		Time:   time.Now(),
 		Type:   logEventType,
 		Record: record,
@@ -264,7 +265,7 @@ func sendLogEvent(requestId string, logEventType logsapi.SubEventType) {
 
 	// Convert full log event to JSON
 	bufLogEvent := new(bytes.Buffer)
-	if err := json.NewEncoder(bufLogEvent).Encode([]logsapi.LogEvent{logEvent}); err != nil {
+	if err := json.NewEncoder(bufLogEvent).Encode([]model.LogEvent{logEvent}); err != nil {
 		extension.Log.Errorf("Could not encode record : %v", err)
 		return
 	}

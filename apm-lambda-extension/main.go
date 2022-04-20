@@ -19,6 +19,7 @@ package main
 
 import (
 	"context"
+	"elastic/apm-lambda-extension/model"
 	"net/http"
 	"os"
 	"os/signal"
@@ -88,8 +89,8 @@ func main() {
 	// Create a channel used
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
-	logsChannel := make(chan logsapi.LogEvent)
-	var metadataContainer extension.MetadataContainer
+	logsChannel := make(chan model.LogEvent)
+	var metadataContainer logsapi.MetadataContainer
 
 	// Use a wait group to ensure the background go routine sending to the APM server
 	// completes before signaling that the extension is ready for the next invocation.
@@ -98,7 +99,7 @@ func main() {
 	if err := logsapi.Subscribe(
 		ctx,
 		extensionClient.ExtensionID,
-		[]logsapi.EventType{logsapi.Platform},
+		[]model.EventType{logsapi.Platform},
 		logsChannel,
 	); err != nil {
 		extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
@@ -161,9 +162,9 @@ func main() {
 						return
 					case agentData := <-agentDataChannel:
 						if metadataContainer.Metadata == nil {
-							extension.ProcessMetadata(agentData, &metadataContainer)
+							logsapi.ProcessMetadata(agentData, &metadataContainer)
 						}
-						if err := extension.PostToApmServer(client, agentData, config, ctx); err != nil {
+						if err := extension.PostToApmServer(ctx, client, agentData, config); err != nil {
 							extension.Log.Errorf("Error sending to APM server, skipping: %v", err)
 							extension.EnqueueAPMData(agentDataChannel, agentData)
 							return
@@ -184,21 +185,21 @@ func main() {
 						extension.Log.Debugf("Received log event %v", logEvent.Type)
 						// Check the logEvent for runtimeDone and compare the RequestID
 						// to the id that came in via the Next API
-						switch logsapi.SubEventType(logEvent.Type) {
+						switch model.SubEventType(logEvent.Type) {
 						case logsapi.RuntimeDone:
 							if logEvent.Record.RequestId == event.RequestID {
 								extension.Log.Info("Received runtimeDone event for this function invocation")
 								runtimeDoneSignal <- struct{}{}
 								return
 							} else {
-								extension.Log.Warning("runtimeDone event request id didn't match the current event id")
+								extension.Log.Warn("runtimeDone event request id didn't match the current event id")
 							}
 						case logsapi.Report:
 							if logEvent.Record.RequestId == prevEvent.RequestID {
-								extension.ProcessPlatformReport(client, metadataContainer, prevEvent, logEvent, config)
+								logsapi.ProcessPlatformReport(ctx, client, metadataContainer, prevEvent, logEvent, config)
 								extension.Log.Debug("Received platform report for the previous function invocation")
 							} else {
-								extension.Log.Warning("report event request id didn't match the previous event id")
+								extension.Log.Warn("report event request id didn't match the previous event id")
 								extension.Log.Debug("Log API runtimeDone event request id didn't match")
 							}
 						}

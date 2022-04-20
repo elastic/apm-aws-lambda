@@ -19,15 +19,15 @@ package logsapi
 
 import (
 	"elastic/apm-lambda-extension/extension"
+	"elastic/apm-lambda-extension/model"
 	"encoding/json"
 	"net/http"
-	"time"
 )
 
-func handleLogEventsRequest(out chan LogEvent) func(w http.ResponseWriter, r *http.Request) {
+func handleLogEventsRequest(out chan model.LogEvent) func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		var logEvents []LogEvent
+		var logEvents []model.LogEvent
 		if err := json.NewDecoder(r.Body).Decode(&logEvents); err != nil {
 			extension.Log.Errorf("Error unmarshalling log events: %+v", err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -43,29 +43,4 @@ func handleLogEventsRequest(out chan LogEvent) func(w http.ResponseWriter, r *ht
 			out <- logEvents[idx]
 		}
 	}
-}
-
-func (le *LogEvent) UnmarshalJSON(data []byte) error {
-	b := struct {
-		Time   time.Time       `json:"time"`
-		Type   SubEventType    `json:"type"`
-		Record json.RawMessage `json:"record"`
-	}{}
-
-	if err := json.Unmarshal(data, &b); err != nil {
-		return err
-	}
-	le.Time = b.Time
-	le.Type = b.Type
-
-	if len(b.Record) > 0 && b.Record[0] == '{' {
-		if err := json.Unmarshal(b.Record, &(le.Record)); err != nil {
-			return err
-		}
-	} else {
-		if err := json.Unmarshal(b.Record, &(le.StringRecord)); err != nil {
-			return err
-		}
-	}
-	return nil
 }

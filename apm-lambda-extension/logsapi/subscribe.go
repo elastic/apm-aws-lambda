@@ -20,44 +20,20 @@ package logsapi
 import (
 	"context"
 	"elastic/apm-lambda-extension/extension"
+	"elastic/apm-lambda-extension/model"
 	"fmt"
+	"github.com/pkg/errors"
 	"net"
 	"net/http"
 	"os"
-	"time"
-
-	"github.com/pkg/errors"
 )
 
 var ListenerHost = "sandbox"
 var Server *http.Server
 var Listener net.Listener
 
-// LogEvent represents an event received from the Logs API
-type LogEvent struct {
-	Time         time.Time    `json:"time"`
-	Type         SubEventType `json:"type"`
-	StringRecord string
-	Record       LogEventRecord
-}
-
-// LogEventRecord is a sub-object in a Logs API event
-type LogEventRecord struct {
-	RequestId string          `json:"requestId"`
-	Status    string          `json:"status"`
-	Metrics   PlatformMetrics `json:"metrics"`
-}
-
-type PlatformMetrics struct {
-	DurationMs       float32 `json:"durationMs"`
-	BilledDurationMs int32   `json:"billedDurationMs"`
-	MemorySizeMB     int32   `json:"memorySizeMB"`
-	MaxMemoryUsedMB  int32   `json:"maxMemoryUsedMB"`
-	InitDurationMs   float32 `json:"initDurationMs"`
-}
-
 // Subscribes to the Logs API
-func subscribe(extensionID string, eventTypes []EventType) error {
+func subscribe(extensionID string, eventTypes []model.EventType) error {
 	extensionsAPIAddress, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API")
 	if !ok {
 		return errors.New("AWS_LAMBDA_RUNTIME_API is not set")
@@ -75,7 +51,7 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 }
 
 // Subscribe starts the HTTP server listening for log events and subscribes to the Logs API
-func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, out chan LogEvent) (err error) {
+func Subscribe(ctx context.Context, extensionID string, eventTypes []model.EventType, out chan model.LogEvent) (err error) {
 	if checkAWSSamLocal() {
 		return errors.New("Detected sam local environment")
 	}
@@ -89,7 +65,7 @@ func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, 
 	return nil
 }
 
-func startHTTPServer(out chan LogEvent) error {
+func startHTTPServer(out chan model.LogEvent) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleLogEventsRequest(out))
 	var err error

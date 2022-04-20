@@ -1,7 +1,25 @@
-package extension
+// Licensed to Elasticsearch B.V. under one or more contributor
+// license agreements. See the NOTICE file distributed with
+// this work for additional information regarding copyright
+// ownership. Elasticsearch B.V. licenses this file to you under
+// the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package logsapi
 
 import (
-	"elastic/apm-lambda-extension/logsapi"
+	"context"
+	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/model"
 	"fmt"
 	"gotest.tools/assert"
@@ -18,7 +36,7 @@ func Test_processPlatformReport(t *testing.T) {
 
 	timestamp := time.Now()
 
-	pm := logsapi.PlatformMetrics{
+	pm := model.PlatformMetrics{
 		DurationMs:       182.43,
 		BilledDurationMs: 183,
 		MemorySizeMB:     128,
@@ -26,26 +44,26 @@ func Test_processPlatformReport(t *testing.T) {
 		InitDurationMs:   422.97,
 	}
 
-	logEventRecord := logsapi.LogEventRecord{
+	logEventRecord := model.LogEventRecord{
 		RequestId: "6f7f0961f83442118a7af6fe80b88d56",
 		Status:    "Available",
 		Metrics:   pm,
 	}
 
-	logEvent := logsapi.LogEvent{
+	logEvent := model.LogEvent{
 		Time:         timestamp,
 		Type:         "platform.report",
 		StringRecord: "",
 		Record:       logEventRecord,
 	}
 
-	event := NextEventResponse{
+	event := extension.NextEventResponse{
 		Timestamp:          timestamp,
-		EventType:          Invoke,
+		EventType:          extension.Invoke,
 		DeadlineMs:         timestamp.UnixNano()/1e6 + 4584, // Milliseconds
 		RequestID:          "8476a536-e9f4-11e8-9739-2dfe598c3fcd",
 		InvokedFunctionArn: "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime",
-		Tracing: Tracing{
+		Tracing: extension.Tracing{
 			Type:  "None",
 			Value: "None",
 		},
@@ -59,7 +77,7 @@ func Test_processPlatformReport(t *testing.T) {
 		if r.Body != nil {
 			rawBytes, _ = ioutil.ReadAll(r.Body)
 		}
-		requestBytes, err := getUncompressedBytes(rawBytes, r.Header.Get("Content-Encoding"))
+		requestBytes, err := GetUncompressedBytes(rawBytes, r.Header.Get("Content-Encoding"))
 		if err != nil {
 			log.Println(err)
 			t.Fail()
@@ -75,8 +93,8 @@ func Test_processPlatformReport(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
+	config := extension.Config{
+		ApmServerUrl: apmServer.URL + "/",
 	}
 
 	mc := MetadataContainer{
@@ -92,5 +110,5 @@ func Test_processPlatformReport(t *testing.T) {
 	mc.Metadata.Process = model.Process{}
 	mc.Metadata.System = model.System{}
 
-	ProcessPlatformReport(apmServer.Client(), mc, &event, logEvent, &config)
+	ProcessPlatformReport(context.Background(), apmServer.Client(), mc, &event, logEvent, &config)
 }

@@ -65,11 +65,11 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
+	config := Config{
+		ApmServerUrl: apmServer.URL + "/",
 	}
 
-	err := PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
+	err := PostToApmServer(context.Background(), apmServer.Client(), agentData, &config)
 	assert.Equal(t, nil, err)
 }
 
@@ -110,11 +110,11 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
+	config := Config{
+		ApmServerUrl: apmServer.URL + "/",
 	}
 
-	err := PostToApmServer(apmServer.Client(), agentData, &config, context.Background())
+	err := PostToApmServer(context.Background(), apmServer.Client(), agentData, &config)
 	assert.Equal(t, nil, err)
 }
 
@@ -229,11 +229,11 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 	// Close the APM server early so that POST requests fail and that backoff is enabled
 	apmServer.Close()
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
+	config := Config{
+		ApmServerUrl: apmServer.URL + "/",
 	}
 
-	if err := PostToApmServer(apmServer.Client(), agentData, &config, context.Background()); err != nil {
+	if err := PostToApmServer(context.Background(), apmServer.Client(), agentData, &config); err != nil {
 		return
 	}
 	// No way to know for sure if failing or pending (0 sec grace period)
@@ -286,11 +286,11 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	// Close the APM server early so that POST requests fail and that backoff is enabled
 	apmServer.Close()
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
+	config := Config{
+		ApmServerUrl: apmServer.URL + "/",
 	}
 
-	assert.Error(t, PostToApmServer(apmServer.Client(), agentData, &config, context.Background()))
+	assert.Error(t, PostToApmServer(context.Background(), apmServer.Client(), agentData, &config))
 	assert.Equal(t, ApmServerTransportState.Status, Failing)
 	assert.Equal(t, ApmServerTransportState.ReconnectionCount, 1)
 }
@@ -338,11 +338,11 @@ func TestAPMServerRecovery(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
+	config := Config{
+		ApmServerUrl: apmServer.URL + "/",
 	}
 
-	assert.NoError(t, PostToApmServer(apmServer.Client(), agentData, &config, context.Background()))
+	assert.NoError(t, PostToApmServer(context.Background(), apmServer.Client(), agentData, &config))
 	assert.Equal(t, ApmServerTransportState.Status, Healthy)
 	assert.Equal(t, ApmServerTransportState.ReconnectionCount, -1)
 }
@@ -391,11 +391,11 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 	}))
 	apmServer.Close() // Close the APM server early so that POST requests fail and that backoff is enabled
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
+	config := Config{
+		ApmServerUrl: apmServer.URL + "/",
 	}
 
-	assert.Error(t, PostToApmServer(apmServer.Client(), agentData, &config, context.Background()))
+	assert.Error(t, PostToApmServer(context.Background(), apmServer.Client(), agentData, &config))
 	assert.Equal(t, ApmServerTransportState.Status, Failing)
 	assert.Equal(t, ApmServerTransportState.ReconnectionCount, 1)
 }
@@ -424,8 +424,8 @@ func BenchmarkPostToAPM(b *testing.B) {
 			return
 		}
 	}))
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
+	config := Config{
+		ApmServerUrl: apmServer.URL + "/",
 	}
 
 	client := &http.Client{
@@ -433,7 +433,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := PostToApmServer(client, agentData, &config, context.Background()); err != nil {
+		if err := PostToApmServer(context.Background(), client, agentData, &config); err != nil {
 			b.Fatal(err)
 		}
 	}

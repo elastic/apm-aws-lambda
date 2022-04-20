@@ -68,7 +68,7 @@ var ApmServerTransportState = ApmServerTransportStateType{
 // The function compresses the APM agent data, if it's not already compressed.
 // It sets the APM transport status to failing upon errors, as part of the backoff
 // strategy.
-func PostToApmServer(client *http.Client, agentData AgentData, config *extensionConfig, ctx context.Context) error {
+func PostToApmServer(ctx context.Context, client *http.Client, agentData AgentData, config *Config) error {
 	// todo: can this be a streaming or streaming style call that keeps the
 	//       connection open across invocations?
 	if !IsTransportStatusHealthyOrPending() {
@@ -101,16 +101,16 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 		r = buf
 	}
 
-	req, err := http.NewRequest("POST", config.apmServerUrl+endpointURI, r)
+	req, err := http.NewRequest("POST", config.ApmServerUrl+endpointURI, r)
 	if err != nil {
 		return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
 	}
 	req.Header.Add("Content-Encoding", encoding)
 	req.Header.Add("Content-Type", "application/x-ndjson")
-	if config.apmServerApiKey != "" {
-		req.Header.Add("Authorization", "ApiKey "+config.apmServerApiKey)
-	} else if config.apmServerSecretToken != "" {
-		req.Header.Add("Authorization", "Bearer "+config.apmServerSecretToken)
+	if config.ApmServerApiKey != "" {
+		req.Header.Add("Authorization", "ApiKey "+config.ApmServerApiKey)
+	} else if config.ApmServerSecretToken != "" {
+		req.Header.Add("Authorization", "Bearer "+config.ApmServerSecretToken)
 	}
 
 	Log.Debug("Sending data chunk to APM Server")
@@ -135,7 +135,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 	return nil
 }
 
-// IsTransportStatusHealthyOrPending returns true if the APM server transport status is 
+// IsTransportStatusHealthyOrPending returns true if the APM server transport status is
 // healthy or pending, and false otherwise.
 //
 // This function is public for use in tests.

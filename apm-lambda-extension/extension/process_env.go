@@ -25,13 +25,13 @@ import (
 	"strings"
 )
 
-type extensionConfig struct {
-	apmServerUrl                string
-	apmServerSecretToken        string
-	apmServerApiKey             string
-	dataReceiverServerPort      string
+type Config struct {
+	ApmServerUrl                string
+	ApmServerSecretToken        string
+	ApmServerApiKey             string
+	DataReceiverServerPort      string
 	SendStrategy                SendStrategy
-	dataReceiverTimeoutSeconds  int
+	DataReceiverTimeoutSeconds  int
 	DataForwarderTimeoutSeconds int
 	LogLevel                    zapcore.Level
 }
@@ -63,7 +63,7 @@ func getIntFromEnv(name string) (int, error) {
 }
 
 // ProcessEnv extracts ENV variables into globals
-func ProcessEnv() *extensionConfig {
+func ProcessEnv() *Config {
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
 		dataReceiverTimeoutSeconds = defaultDataReceiverTimeoutSeconds
@@ -95,24 +95,24 @@ func ProcessEnv() *extensionConfig {
 		normalizedSendStrategy = Background
 	}
 
-	config := &extensionConfig{
-		apmServerUrl:                normalizedApmLambdaServer,
-		apmServerSecretToken:        os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
-		apmServerApiKey:             os.Getenv("ELASTIC_APM_API_KEY"),
-		dataReceiverServerPort:      fmt.Sprintf(":%s", os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT")),
+	config := &Config{
+		ApmServerUrl:                normalizedApmLambdaServer,
+		ApmServerSecretToken:        os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
+		ApmServerApiKey:             os.Getenv("ELASTIC_APM_API_KEY"),
+		DataReceiverServerPort:      fmt.Sprintf(":%s", os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT")),
 		SendStrategy:                normalizedSendStrategy,
-		dataReceiverTimeoutSeconds:  dataReceiverTimeoutSeconds,
+		DataReceiverTimeoutSeconds:  dataReceiverTimeoutSeconds,
 		DataForwarderTimeoutSeconds: dataForwarderTimeoutSeconds,
 		LogLevel:                    logLevel,
 	}
 
-	if config.dataReceiverServerPort == ":" {
-		config.dataReceiverServerPort = ":8200"
+	if config.DataReceiverServerPort == ":" {
+		config.DataReceiverServerPort = ":8200"
 	}
-	if config.apmServerUrl == "" {
+	if config.ApmServerUrl == "" {
 		Log.Fatal("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
 	}
-	if config.apmServerSecretToken == "" && config.apmServerApiKey == "" {
+	if config.ApmServerSecretToken == "" && config.ApmServerApiKey == "" {
 		Log.Warn("ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY not specified")
 	}
 

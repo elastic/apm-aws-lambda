@@ -35,8 +35,8 @@ func TestProcessEnv(t *testing.T) {
 	config := ProcessEnv()
 	t.Logf("%v", config)
 
-	if config.apmServerUrl != "bar.example.com/" {
-		t.Logf("Endpoint not set correctly: %s", config.apmServerUrl)
+	if config.ApmServerUrl != "bar.example.com/" {
+		t.Logf("Endpoint not set correctly: %s", config.ApmServerUrl)
 		t.Fail()
 	}
 
@@ -53,22 +53,22 @@ func TestProcessEnv(t *testing.T) {
 	t.Logf("%v", config)
 
 	// config normalizes string to ensure it ends in a `/`
-	if config.apmServerUrl != "foo.example.com/" {
-		t.Logf("Endpoint not set correctly: %s", config.apmServerUrl)
+	if config.ApmServerUrl != "foo.example.com/" {
+		t.Logf("Endpoint not set correctly: %s", config.ApmServerUrl)
 		t.Fail()
 	}
 
-	if config.apmServerSecretToken != "bar" {
+	if config.ApmServerSecretToken != "bar" {
 		t.Log("Secret Token not set correctly")
 		t.Fail()
 	}
 
-	if config.dataReceiverServerPort != ":8200" {
+	if config.DataReceiverServerPort != ":8200" {
 		t.Log("Default port not set correctly")
 		t.Fail()
 	}
 
-	if config.dataReceiverTimeoutSeconds != 15 {
+	if config.DataReceiverTimeoutSeconds != 15 {
 		t.Log("Default timeout not set correctly")
 		t.Fail()
 	}
@@ -83,7 +83,7 @@ func TestProcessEnv(t *testing.T) {
 		return
 	}
 	config = ProcessEnv()
-	if config.dataReceiverServerPort != ":8201" {
+	if config.DataReceiverServerPort != ":8201" {
 		t.Log("Env port not set correctly")
 		t.Fail()
 	}
@@ -93,7 +93,7 @@ func TestProcessEnv(t *testing.T) {
 		return
 	}
 	config = ProcessEnv()
-	if config.dataReceiverTimeoutSeconds != 10 {
+	if config.DataReceiverTimeoutSeconds != 10 {
 		t.Log("APM data receiver timeout not set correctly")
 		t.Fail()
 	}
@@ -103,7 +103,7 @@ func TestProcessEnv(t *testing.T) {
 		return
 	}
 	config = ProcessEnv()
-	if config.dataReceiverTimeoutSeconds != 15 {
+	if config.DataReceiverTimeoutSeconds != 15 {
 		t.Log("APM data receiver timeout not set correctly")
 		t.Fail()
 	}
@@ -133,7 +133,7 @@ func TestProcessEnv(t *testing.T) {
 		return
 	}
 	config = ProcessEnv()
-	if config.apmServerApiKey != "foo" {
+	if config.ApmServerApiKey != "foo" {
 		t.Log("API Key not set correctly")
 		t.Fail()
 	}

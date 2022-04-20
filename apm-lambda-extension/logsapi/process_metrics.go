@@ -1,7 +1,25 @@
-package extension
+// Licensed to Elasticsearch B.V. under one or more contributor
+// license agreements. See the NOTICE file distributed with
+// this work for additional information regarding copyright
+// ownership. Elasticsearch B.V. licenses this file to you under
+// the Apache License, Version 2.0 (the "License"); you may
+// not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+package logsapi
 
 import (
-	"elastic/apm-lambda-extension/logsapi"
+	"context"
+	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/model"
 	"encoding/json"
 	"log"
@@ -28,7 +46,7 @@ func (mc MetricsContainer) addMetric(name string, metric model.Metric) {
 	mc.Metrics.Samples[name] = metric
 }
 
-func ProcessPlatformReport(client *http.Client, metadataContainer MetadataContainer, functionData *NextEventResponse, platformReport logsapi.LogEvent, config *extensionConfig) {
+func ProcessPlatformReport(ctx context.Context, client *http.Client, metadataContainer MetadataContainer, functionData *extension.NextEventResponse, platformReport model.LogEvent, config *extension.Config) {
 
 	metricsContainer := MetricsContainer{
 		Metrics: &model.Metrics{},
@@ -68,7 +86,7 @@ func ProcessPlatformReport(client *http.Client, metadataContainer MetadataContai
 	}
 
 	metadataContainer.Metadata.Service.Agent.Name = "aws-lambda-extension"
-	metadataContainer.Metadata.Service.Agent.Version = Version
+	metadataContainer.Metadata.Service.Agent.Version = extension.Version
 
 	metadataJson, err := json.Marshal(metadataContainer)
 	if err != nil {
@@ -79,7 +97,7 @@ func ProcessPlatformReport(client *http.Client, metadataContainer MetadataContai
 	metricsData := append(metadataJson, []byte("\n")...)
 	metricsData = append(metricsData, metricsJson...)
 
-	err = PostToApmServer(client, AgentData{Data: metricsData}, config)
+	err = extension.PostToApmServer(ctx, client, extension.AgentData{Data: metricsData}, config)
 	if err != nil {
 		log.Println(err)
 		return

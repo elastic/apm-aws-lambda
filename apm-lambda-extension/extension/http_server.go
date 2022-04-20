@@ -26,13 +26,13 @@ import (
 var agentDataServer *http.Server
 
 // StartHttpServer starts the server listening for APM agent data.
-func StartHttpServer(agentDataChan chan AgentData, config *extensionConfig) (err error) {
+func StartHttpServer(agentDataChan chan AgentData, config *Config) (err error) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleInfoRequest(config.apmServerUrl))
+	mux.HandleFunc("/", handleInfoRequest(config.ApmServerUrl))
 	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(agentDataChan))
-	timeout := time.Duration(config.dataReceiverTimeoutSeconds) * time.Second
+	timeout := time.Duration(config.DataReceiverTimeoutSeconds) * time.Second
 	agentDataServer = &http.Server{
-		Addr:           config.dataReceiverServerPort,
+		Addr:           config.DataReceiverServerPort,
 		Handler:        mux,
 		ReadTimeout:    timeout,
 		WriteTimeout:   timeout,

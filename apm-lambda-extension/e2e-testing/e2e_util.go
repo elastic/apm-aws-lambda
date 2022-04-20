@@ -20,10 +20,8 @@ package e2eTesting
 import (
 	"archive/zip"
 	"bufio"
-	"bytes"
-	"compress/gzip"
-	"compress/zlib"
 	"elastic/apm-lambda-extension/extension"
+	"elastic/apm-lambda-extension/logsapi"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -157,33 +155,7 @@ func GetDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 	if req.Body != nil {
 		rawBytes, _ = ioutil.ReadAll(req.Body)
 	}
-
-	switch req.Header.Get("Content-Encoding") {
-	case "deflate":
-		reader := bytes.NewReader(rawBytes)
-		zlibreader, err := zlib.NewReader(reader)
-		if err != nil {
-			return nil, fmt.Errorf("could not create zlib.NewReader: %v", err)
-		}
-		bodyBytes, err := ioutil.ReadAll(zlibreader)
-		if err != nil {
-			return nil, fmt.Errorf("could not read from zlib reader using ioutil.ReadAll: %v", err)
-		}
-		return bodyBytes, nil
-	case "gzip":
-		reader := bytes.NewReader(rawBytes)
-		zlibreader, err := gzip.NewReader(reader)
-		if err != nil {
-			return nil, fmt.Errorf("could not create gzip.NewReader: %v", err)
-		}
-		bodyBytes, err := ioutil.ReadAll(zlibreader)
-		if err != nil {
-			return nil, fmt.Errorf("could not read from gzip reader using ioutil.ReadAll: %v", err)
-		}
-		return bodyBytes, nil
-	default:
-		return rawBytes, nil
-	}
+	return logsapi.GetUncompressedBytes(rawBytes, req.Header.Get("Content-Encoding"))
 }
 
 // GetFreePort is a function that queries the kernel and obtains an unused port.

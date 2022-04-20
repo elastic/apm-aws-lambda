@@ -31,7 +31,7 @@ func ProcessShutdown() {
 }
 
 // FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
-func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *extensionConfig, ctx context.Context) {
+func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *Config, ctx context.Context) {
 	if !IsTransportStatusHealthyOrPending() {
 		Log.Debug("Flush skipped - Transport unhealthy")
 		return
@@ -41,7 +41,7 @@ func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *exten
 		select {
 		case agentData := <-dataChannel:
 			Log.Debug("Flush in progress - Processing agent data")
-			if err := PostToApmServer(client, agentData, config, ctx); err != nil {
+			if err := PostToApmServer(ctx, client, agentData, config); err != nil {
 				Log.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		default:

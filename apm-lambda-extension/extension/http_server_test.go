@@ -51,12 +51,12 @@ func TestInfoProxy(t *testing.T) {
 
 	// Create extension config and start the server
 	dataChannel := make(chan AgentData, 100)
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		apmServerSecretToken:       "foo",
-		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
+	config := Config{
+		ApmServerUrl:               apmServer.URL,
+		ApmServerSecretToken:       "foo",
+		ApmServerApiKey:            "bar",
+		DataReceiverServerPort:     ":1234",
+		DataReceiverTimeoutSeconds: 15,
 	}
 
 	if err := StartHttpServer(dataChannel, &config); err != nil {
@@ -100,12 +100,12 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 
 	// Create extension config and start the server
 	dataChannel := make(chan AgentData, 100)
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		apmServerSecretToken:       "foo",
-		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
+	config := Config{
+		ApmServerUrl:               apmServer.URL,
+		ApmServerSecretToken:       "foo",
+		ApmServerApiKey:            "bar",
+		DataReceiverServerPort:     ":1234",
+		DataReceiverTimeoutSeconds: 15,
 	}
 
 	if err := StartHttpServer(dataChannel, &config); err != nil {
@@ -144,11 +144,11 @@ func Test_handleInfoRequest(t *testing.T) {
 
 	// Create extension config
 	dataChannel := make(chan AgentData, 100)
-	config := extensionConfig{
-		apmServerSecretToken:       "foo",
-		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
+	config := Config{
+		ApmServerSecretToken:       "foo",
+		ApmServerApiKey:            "bar",
+		DataReceiverServerPort:     ":1234",
+		DataReceiverTimeoutSeconds: 15,
 	}
 
 	// Start extension server
@@ -211,10 +211,10 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 
 	// Create extension config and start the server
 	dataChannel := make(chan AgentData, 100)
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
+	config := Config{
+		ApmServerUrl:               apmServer.URL,
+		DataReceiverServerPort:     ":1234",
+		DataReceiverTimeoutSeconds: 15,
 	}
 
 	if err := StartHttpServer(dataChannel, &config); err != nil {
@@ -263,10 +263,10 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 
 	// Create extension config and start the server
 	dataChannel := make(chan AgentData, 100)
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
+	config := Config{
+		ApmServerUrl:               apmServer.URL,
+		DataReceiverServerPort:     ":1234",
+		DataReceiverTimeoutSeconds: 15,
 	}
 
 	if err := StartHttpServer(dataChannel, &config); err != nil {
@@ -307,10 +307,10 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 
 	// Create extension config and start the server
 	dataChannel := make(chan AgentData, 100)
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
+	config := Config{
+		ApmServerUrl:               apmServer.URL,
+		DataReceiverServerPort:     ":1234",
+		DataReceiverTimeoutSeconds: 15,
 	}
 
 	if err := StartHttpServer(dataChannel, &config); err != nil {

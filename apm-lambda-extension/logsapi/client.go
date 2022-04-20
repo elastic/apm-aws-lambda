@@ -19,12 +19,12 @@ package logsapi
 
 import (
 	"bytes"
+	"elastic/apm-lambda-extension/model"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/pkg/errors"
 )
 
 const lambdaAgentIdentifierHeaderKey string = "Lambda-Extension-Identifier"
@@ -43,26 +43,20 @@ func NewClient(logsAPIBaseUrl string) (*Client, error) {
 	}, nil
 }
 
-// EventType represents the type of logs in Lambda
-type EventType string
-
 const (
 	// Platform is to receive logs emitted by the platform
-	Platform EventType = "platform"
+	Platform model.EventType = "platform"
 	// Function is to receive logs emitted by the function
-	Function EventType = "function"
+	Function model.EventType = "function"
 	// Extension is to receive logs emitted by the extension
-	Extension EventType = "extension"
+	Extension model.EventType = "extension"
 )
-
-// SubEventType is a Logs API sub event type
-type SubEventType string
 
 const (
 	// RuntimeDone event is sent when lambda function is finished it's execution
-	RuntimeDone SubEventType = "platform.runtimeDone"
-	Fault       SubEventType = "platform.fault"
-	Report      SubEventType = "platform.report"
+	RuntimeDone model.SubEventType = "platform.runtimeDone"
+	Fault       model.SubEventType = "platform.fault"
+	Report      model.SubEventType = "platform.report"
 )
 
 // BufferingCfg is the configuration set for receiving logs from Logs API. Whichever of the conditions below is met first, the logs will be sent
@@ -120,10 +114,10 @@ const (
 
 // SubscribeRequest is the request body that is sent to Logs API on subscribe
 type SubscribeRequest struct {
-	SchemaVersion SchemaVersion `json:"schemaVersion"`
-	EventTypes    []EventType   `json:"types"`
-	BufferingCfg  BufferingCfg  `json:"buffering"`
-	Destination   Destination   `json:"destination"`
+	SchemaVersion SchemaVersion     `json:"schemaVersion"`
+	EventTypes    []model.EventType `json:"types"`
+	BufferingCfg  BufferingCfg      `json:"buffering"`
+	Destination   Destination       `json:"destination"`
 }
 
 // SubscribeResponse is the response body that is received from Logs API on subscribe
@@ -132,7 +126,7 @@ type SubscribeResponse struct {
 }
 
 // Subscribe calls the Logs API to subscribe for the log events.
-func (c *Client) Subscribe(types []EventType, destinationURI URI, extensionId string) (*SubscribeResponse, error) {
+func (c *Client) Subscribe(types []model.EventType, destinationURI URI, extensionId string) (*SubscribeResponse, error) {
 	bufferingCfg := BufferingCfg{
 		MaxItems:  10000,
 		MaxBytes:  262144,

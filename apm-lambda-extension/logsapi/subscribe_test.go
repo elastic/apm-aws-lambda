@@ -20,6 +20,7 @@ package logsapi
 import (
 	"bytes"
 	"context"
+	"elastic/apm-lambda-extension/model"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -41,9 +42,9 @@ func TestSubscribeWithSamLocalEnv(t *testing.T) {
 			t.Fail()
 		}
 	})
-	out := make(chan LogEvent)
+	out := make(chan model.LogEvent)
 
-	err := Subscribe(ctx, "testID", []EventType{Platform}, out)
+	err := Subscribe(ctx, "testID", []model.EventType{Platform}, out)
 	assert.Error(t, err)
 }
 
@@ -51,9 +52,9 @@ func TestSubscribeAWSRequest(t *testing.T) {
 	ListenerHost = "localhost"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	out := make(chan LogEvent, 1)
+	out := make(chan model.LogEvent, 1)
 	// For subscription request
-	expectedTypes := []EventType{Platform}
+	expectedTypes := []model.EventType{Platform}
 	expectedBufferingCfg := BufferingCfg{
 		MaxItems:  10000,
 		MaxBytes:  262144,
@@ -77,7 +78,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 	}
 
 	// Subscribe to the logs api and start the http server listening for events
-	if err := Subscribe(ctx, "testID", []EventType{Platform}, out); err != nil {
+	if err := Subscribe(ctx, "testID", []model.EventType{Platform}, out); err != nil {
 		t.Logf("Error subscribing, %v", err)
 		t.Fail()
 		return
@@ -114,7 +115,7 @@ func TestSubscribeWithBadLogsRequest(t *testing.T) {
 	ListenerHost = "localhost"
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	out := make(chan LogEvent)
+	out := make(chan model.LogEvent)
 
 	// Create aws runtime API server and handler
 	awsRuntimeApiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
@@ -127,7 +128,7 @@ func TestSubscribeWithBadLogsRequest(t *testing.T) {
 	}
 
 	// Subscribe to the logs api and start the http server listening for events
-	if err := Subscribe(ctx, "testID", []EventType{Platform}, out); err != nil {
+	if err := Subscribe(ctx, "testID", []model.EventType{Platform}, out); err != nil {
 		t.Logf("Error subscribing, %v", err)
 		t.Fail()
 		return
