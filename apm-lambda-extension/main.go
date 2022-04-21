@@ -157,7 +157,6 @@ func main() {
 					case agentData := <-agentDataChannel:
 						if err := extension.PostToApmServer(client, agentData, config, ctx); err != nil {
 							extension.Log.Errorf("Error sending to APM server, skipping: %v", err)
-							extension.EnqueueAPMData(agentDataChannel, agentData)
 							return
 						}
 					}
