@@ -18,10 +18,12 @@
 package extension
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"time"
 )
 
 type AgentData struct {
@@ -30,10 +32,14 @@ type AgentData struct {
 }
 
 var AgentDoneSignal chan struct{}
+var mainExtensionContext context.Context
 
 // URL: http://server/
-func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.Request) {
+func handleInfoRequest(ctx context.Context, apmServerUrl string, config *extensionConfig) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		Log.Debug("Handling APM Server Info Request")
+		mainExtensionContext = ctx
 
 		// Init reverse proxy
 		parsedApmServerUrl, err := url.Parse(apmServerUrl)
@@ -41,7 +47,14 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 			Log.Errorf("could not parse APM server URL: %v", err)
 			return
 		}
+
 		reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
+
+		reverseProxyTimeout := time.Duration(config.DataForwarderTimeoutSeconds) * time.Second
+		reverseProxy.Transport = http.DefaultTransport
+		reverseProxy.Transport.(*http.Transport).ResponseHeaderTimeout = reverseProxyTimeout
+
+		reverseProxy.ErrorHandler = reverseProxyErrorHandler
 
 		// Process request (the Golang doc suggests removing any pre-existing X-Forwarded-For header coming
 		// from the client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
@@ -58,10 +71,16 @@ func handleInfoRequest(apmServerUrl string) func(w http.ResponseWriter, r *http.
 	}
 }
 
+func reverseProxyErrorHandler(res http.ResponseWriter, req *http.Request, err error) {
+	SetApmServerTransportState(Failing, mainExtensionContext)
+	Log.Errorf("Error querying version from the APM Server: %v", err)
+}
+
 // URL: http://server/intake/v2/events
 func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWriter, r *http.Request) {
-
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		Log.Debug("Handling APM Data Intake")
 		rawBytes, err := ioutil.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {

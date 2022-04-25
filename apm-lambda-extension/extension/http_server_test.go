@@ -19,6 +19,7 @@ package extension
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io/ioutil"
 	"net"
@@ -59,7 +60,7 @@ func TestInfoProxy(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	if err := StartHttpServer(dataChannel, &config); err != nil {
+	if err := StartHttpServer(context.Background(), dataChannel, &config); err != nil {
 		t.Fail()
 		return
 	}
@@ -108,7 +109,7 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	if err := StartHttpServer(dataChannel, &config); err != nil {
+	if err := StartHttpServer(context.Background(), dataChannel, &config); err != nil {
 		t.Fail()
 		return
 	}
@@ -152,7 +153,7 @@ func Test_handleInfoRequest(t *testing.T) {
 	}
 
 	// Start extension server
-	if err := StartHttpServer(dataChannel, &config); err != nil {
+	if err := StartHttpServer(context.Background(), dataChannel, &config); err != nil {
 		t.Fail()
 		return
 	}
@@ -217,7 +218,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	if err := StartHttpServer(dataChannel, &config); err != nil {
+	if err := StartHttpServer(context.Background(), dataChannel, &config); err != nil {
 		t.Fail()
 		return
 	}
@@ -269,7 +270,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	if err := StartHttpServer(dataChannel, &config); err != nil {
+	if err := StartHttpServer(context.Background(), dataChannel, &config); err != nil {
 		t.Fail()
 		return
 	}
@@ -313,7 +314,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 
-	if err := StartHttpServer(dataChannel, &config); err != nil {
+	if err := StartHttpServer(context.Background(), dataChannel, &config); err != nil {
 		t.Fail()
 		return
 	}
