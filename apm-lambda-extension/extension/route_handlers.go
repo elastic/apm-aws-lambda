@@ -49,10 +49,11 @@ func handleInfoRequest(ctx context.Context, apmServerUrl string, config *extensi
 		}
 
 		reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
+
 		reverseProxyTimeout := time.Duration(config.DataForwarderTimeoutSeconds) * time.Second
-		reverseProxy.Transport = &http.Transport{
-			ResponseHeaderTimeout: reverseProxyTimeout,
-		}
+		reverseProxy.Transport = http.DefaultTransport
+		reverseProxy.Transport.(*http.Transport).ResponseHeaderTimeout = reverseProxyTimeout
+
 		reverseProxy.ErrorHandler = reverseProxyErrorHandler
 
 		// Process request (the Golang doc suggests removing any pre-existing X-Forwarded-For header coming

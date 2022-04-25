@@ -248,7 +248,11 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 	case InvokeStandardInfo:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
-		res, _ := client.Do(req)
+		res, err := client.Do(req)
+		if err != nil {
+			extension.Log.Errorf("No response following info request : %v", err)
+			break
+		}
 		var rawBytes []byte
 		if res.Body != nil {
 			rawBytes, _ = ioutil.ReadAll(res.Body)
