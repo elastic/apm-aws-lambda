@@ -51,7 +51,6 @@ func TestInfoProxy(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	dataChannel := make(chan AgentData, 100)
 	config := extensionConfig{
 		apmServerUrl:               apmServer.URL,
 		apmServerSecretToken:       "foo",
@@ -59,8 +58,8 @@ func TestInfoProxy(t *testing.T) {
 		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
-
-	if err := StartHttpServer(context.Background(), dataChannel, &config); err != nil {
+	transport := InitApmServerTransport(context.Background(), &config)
+	if err := StartHttpServer(transport); err != nil {
 		t.Fail()
 		return
 	}
@@ -100,7 +99,6 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	dataChannel := make(chan AgentData, 100)
 	config := extensionConfig{
 		apmServerUrl:               apmServer.URL,
 		apmServerSecretToken:       "foo",
@@ -108,8 +106,9 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
+	transport := InitApmServerTransport(context.Background(), &config)
 
-	if err := StartHttpServer(context.Background(), dataChannel, &config); err != nil {
+	if err := StartHttpServer(transport); err != nil {
 		t.Fail()
 		return
 	}
@@ -144,16 +143,16 @@ func Test_handleInfoRequest(t *testing.T) {
 `
 
 	// Create extension config
-	dataChannel := make(chan AgentData, 100)
 	config := extensionConfig{
 		apmServerSecretToken:       "foo",
 		apmServerApiKey:            "bar",
 		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
+	transport := InitApmServerTransport(context.Background(), &config)
 
 	// Start extension server
-	if err := StartHttpServer(context.Background(), dataChannel, &config); err != nil {
+	if err := StartHttpServer(transport); err != nil {
 		t.Fail()
 		return
 	}
@@ -211,14 +210,14 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	dataChannel := make(chan AgentData, 100)
 	config := extensionConfig{
 		apmServerUrl:               apmServer.URL,
 		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
+	transport := InitApmServerTransport(context.Background(), &config)
 
-	if err := StartHttpServer(context.Background(), dataChannel, &config); err != nil {
+	if err := StartHttpServer(transport); err != nil {
 		t.Fail()
 		return
 	}
@@ -247,7 +246,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 
 	select {
 	case <-AgentDoneSignal:
-		<-dataChannel
+		<-transport.DataChannel
 	case <-timer.C:
 		t.Log("Timed out waiting for server to send FuncDone signal")
 		t.Fail()
@@ -263,14 +262,14 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	dataChannel := make(chan AgentData, 100)
 	config := extensionConfig{
 		apmServerUrl:               apmServer.URL,
 		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
+	transport := InitApmServerTransport(context.Background(), &config)
 
-	if err := StartHttpServer(context.Background(), dataChannel, &config); err != nil {
+	if err := StartHttpServer(transport); err != nil {
 		t.Fail()
 		return
 	}
@@ -292,7 +291,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
 		t.Fail()
 	}
-	<-dataChannel
+	<-transport.DataChannel
 	assert.Equal(t, 202, resp.StatusCode)
 }
 
@@ -307,14 +306,14 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	dataChannel := make(chan AgentData, 100)
 	config := extensionConfig{
 		apmServerUrl:               apmServer.URL,
 		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
+	transport := InitApmServerTransport(context.Background(), &config)
 
-	if err := StartHttpServer(context.Background(), dataChannel, &config); err != nil {
+	if err := StartHttpServer(transport); err != nil {
 		t.Fail()
 		return
 	}

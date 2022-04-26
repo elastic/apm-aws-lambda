@@ -345,7 +345,6 @@ func (suite *MainUnitTestsSuite) SetupTest() {
 	http.DefaultServeMux = new(http.ServeMux)
 	suite.eventsChannel = make(chan MockEvent, 100)
 	suite.lambdaServer, suite.apmServer, suite.apmServerInternals, suite.lambdaServerInternals = initMockServers(suite.eventsChannel)
-	extension.SetApmServerTransportState(extension.Healthy, suite.ctx)
 }
 
 // This function executes after each test case
@@ -435,9 +434,6 @@ func (suite *MainUnitTestsSuite) TestAPMServerRecovery() {
 // TestGracePeriodHangs verifies that the WaitforGracePeriod goroutine ends when main() ends.
 // This can be checked by asserting that apmTransportStatus is pending after the execution of main.
 func (suite *MainUnitTestsSuite) TestGracePeriodHangs() {
-	extension.ApmServerTransportState.Status = extension.Pending
-	extension.ApmServerTransportState.ReconnectionCount = 100
-
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
@@ -446,7 +442,6 @@ func (suite *MainUnitTestsSuite) TestGracePeriodHangs() {
 
 	time.Sleep(100 * time.Millisecond)
 	suite.apmServerInternals.UnlockSignalChannel <- struct{}{}
-	defer assert.Equal(suite.T(), extension.IsTransportStatusHealthyOrPending(), true)
 }
 
 // TestAPMServerCrashesDuringExecution tests that main does not panic nor runs indefinitely when the APM server crashes

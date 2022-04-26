@@ -19,7 +19,6 @@ package main
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -71,21 +70,13 @@ func main() {
 	}
 	extension.Log.Debugf("Register response: %v", extension.PrettyPrint(res))
 
-	// Create a channel to buffer apm agent data
-	agentDataChannel := make(chan extension.AgentData, 100)
+	// Init APM Server Transport struct
+	apmServerTransport := extension.InitApmServerTransport(ctx, config)
 
 	// Start http server to receive data from agent
-	if err = extension.StartHttpServer(ctx, agentDataChannel, config); err != nil {
+	if err = extension.StartHttpServer(apmServerTransport); err != nil {
 		extension.Log.Errorf("Could not start APM data receiver : %v", err)
 	}
-
-	// Create a client to use for sending data to the apm server
-	client := &http.Client{
-		Timeout:   time.Duration(config.DataForwarderTimeoutSeconds) * time.Second,
-		Transport: http.DefaultTransport.(*http.Transport).Clone(),
-	}
-
-	// Create a channel used
 
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	logsChannel := make(chan logsapi.LogEvent)
@@ -144,7 +135,7 @@ func main() {
 			// Stop checking for, and sending agent data when the function invocation
 			// has completed, signaled via a channel.
 			backgroundDataSendWg.Add(1)
-			extension.StartBackgroundSending(ctx, agentDataChannel, client, config, funcDone, &backgroundDataSendWg)
+			extension.StartBackgroundSending(apmServerTransport, funcDone, &backgroundDataSendWg)
 
 			// Receive Logs API events
 			// Send to the runtimeDoneSignal channel to signal when a runtimeDone event is received
@@ -192,7 +183,7 @@ func main() {
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
 				// Flush APM data now that the function invocation has completed
-				extension.FlushAPMData(client, agentDataChannel, config, ctx)
+				extension.FlushAPMData(apmServerTransport)
 			}
 		}
 	}

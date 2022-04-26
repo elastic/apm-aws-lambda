@@ -18,9 +18,7 @@
 package extension
 
 import (
-	"context"
 	"encoding/json"
-	"net/http"
 )
 
 // ProcessShutdown processes the Shutdown event received from the
@@ -31,17 +29,17 @@ func ProcessShutdown() {
 }
 
 // FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
-func FlushAPMData(client *http.Client, dataChannel chan AgentData, config *extensionConfig, ctx context.Context) {
-	if !IsTransportStatusHealthyOrPending() {
-		Log.Debug("Flush skipped - Transport unhealthy")
+func FlushAPMData(transport *ApmServerTransport) {
+	if transport.Status == Failing {
+		Log.Debug("Flush skipped - Transport failing")
 		return
 	}
 	Log.Debug("Flush started - Checking for agent data")
 	for {
 		select {
-		case agentData := <-dataChannel:
+		case agentData := <-transport.DataChannel:
 			Log.Debug("Flush in progress - Processing agent data")
-			if err := PostToApmServer(client, agentData, config, ctx); err != nil {
+			if err := PostToApmServer(transport, agentData); err != nil {
 				Log.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		default:
