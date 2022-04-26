@@ -63,6 +63,27 @@ var ApmServerTransportState = ApmServerTransportStateType{
 	ReconnectionCount: -1,
 }
 
+func StartBackgroundSending(ctx context.Context, agentDataChannel chan AgentData, client *http.Client, config *extensionConfig, funcDone chan struct{}, backgroundDataSendWg *sync.WaitGroup) {
+	go func() {
+		defer backgroundDataSendWg.Done()
+		if !IsTransportStatusHealthyOrPending() {
+			return
+		}
+		for {
+			select {
+			case <-funcDone:
+				Log.Debug("Received signal that function has completed, not processing any more agent data")
+				return
+			case agentData := <-agentDataChannel:
+				if err := PostToApmServer(client, agentData, config, ctx); err != nil {
+					Log.Errorf("Error sending to APM server, skipping: %v", err)
+					return
+				}
+			}
+		}
+	}()
+}
+
 // PostToApmServer takes a chunk of APM agent data and posts it to the APM server.
 //
 // The function compresses the APM agent data, if it's not already compressed.
@@ -135,7 +156,7 @@ func PostToApmServer(client *http.Client, agentData AgentData, config *extension
 	return nil
 }
 
-// IsTransportStatusHealthyOrPending returns true if the APM server transport status is 
+// IsTransportStatusHealthyOrPending returns true if the APM server transport status is
 // healthy or pending, and false otherwise.
 //
 // This function is public for use in tests.

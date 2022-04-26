@@ -144,24 +144,7 @@ func main() {
 			// Stop checking for, and sending agent data when the function invocation
 			// has completed, signaled via a channel.
 			backgroundDataSendWg.Add(1)
-			go func() {
-				defer backgroundDataSendWg.Done()
-				if !extension.IsTransportStatusHealthyOrPending() {
-					return
-				}
-				for {
-					select {
-					case <-funcDone:
-						extension.Log.Debug("Received signal that function has completed, not processing any more agent data")
-						return
-					case agentData := <-agentDataChannel:
-						if err := extension.PostToApmServer(client, agentData, config, ctx); err != nil {
-							extension.Log.Errorf("Error sending to APM server, skipping: %v", err)
-							return
-						}
-					}
-				}
-			}()
+			extension.StartBackgroundSending(ctx, agentDataChannel, client, config, funcDone, &backgroundDataSendWg)
 
 			// Receive Logs API events
 			// Send to the runtimeDoneSignal channel to signal when a runtimeDone event is received
