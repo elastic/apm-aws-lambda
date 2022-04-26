@@ -30,7 +30,6 @@ type AgentData struct {
 	ContentEncoding string
 }
 
-var AgentDoneSignal chan struct{}
 var currApmServerTransport *ApmServerTransport
 
 // URL: http://server/
@@ -77,7 +76,7 @@ func reverseProxyErrorHandler(res http.ResponseWriter, req *http.Request, err er
 }
 
 // URL: http://server/intake/v2/events
-func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWriter, r *http.Request) {
+func handleIntakeV2Events(transport *ApmServerTransport) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		Log.Debug("Handling APM Data Intake")
@@ -95,11 +94,11 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 				ContentEncoding: r.Header.Get("Content-Encoding"),
 			}
 
-			EnqueueAPMData(agentDataChan, agentData)
+			EnqueueAPMData(transport.DataChannel, agentData)
 		}
 
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {
-			AgentDoneSignal <- struct{}{}
+			transport.AgentDoneSignal <- struct{}{}
 		}
 
 		w.WriteHeader(http.StatusAccepted)

@@ -145,7 +145,6 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 	}
 
 	// Mock Lambda Server
-	logsapi.ListenerHost = "localhost"
 	var lambdaServerInternals MockServerInternals
 	lambdaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.RequestURI {
@@ -305,7 +304,7 @@ func sendLogEvent(requestId string, logEventType logsapi.SubEventType) {
 		extension.Log.Errorf("Could not encode record : %v", err)
 		return
 	}
-	host, port, _ := net.SplitHostPort(logsapi.Listener.Addr().String())
+	host, port, _ := net.SplitHostPort(logsapi.TestListenerAddr.String())
 	req, _ := http.NewRequest("POST", "http://"+host+":"+port, bufLogEvent)
 	client := http.Client{}
 	if _, err := client.Do(req); err != nil {

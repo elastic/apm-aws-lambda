@@ -29,9 +29,26 @@ import (
 	"github.com/pkg/errors"
 )
 
-var ListenerHost = "sandbox"
-var Server *http.Server
-var Listener net.Listener
+// TestListenerAddr For e2e testing purposes
+var TestListenerAddr net.Addr
+
+type LogsTransport struct {
+	ctx               context.Context
+	LogsChannel       chan LogEvent
+	Listener          net.Listener
+	ListenerHost      string
+	RuntimeDoneSignal chan struct{}
+	Server            *http.Server
+}
+
+func InitLogsTransport(ctx context.Context) *LogsTransport {
+	var transport LogsTransport
+	transport.ctx = ctx
+	transport.ListenerHost = "localhost"
+	transport.LogsChannel = make(chan LogEvent, 100)
+	transport.RuntimeDoneSignal = make(chan struct{}, 1)
+	return &transport
+}
 
 // LogEvent represents an event received from the Logs API
 type LogEvent struct {
@@ -48,7 +65,7 @@ type LogEventRecord struct {
 }
 
 // Subscribes to the Logs API
-func subscribe(extensionID string, eventTypes []EventType) error {
+func subscribe(transport *LogsTransport, extensionID string, eventTypes []EventType) error {
 	extensionsAPIAddress, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API")
 	if !ok {
 		return errors.New("AWS_LAMBDA_RUNTIME_API is not set")
@@ -60,42 +77,43 @@ func subscribe(extensionID string, eventTypes []EventType) error {
 		return err
 	}
 
-	_, port, _ := net.SplitHostPort(Listener.Addr().String())
-	_, err = logsAPIClient.Subscribe(eventTypes, URI("http://"+ListenerHost+":"+port), extensionID)
+	_, port, _ := net.SplitHostPort(transport.Listener.Addr().String())
+	_, err = logsAPIClient.Subscribe(eventTypes, URI("http://"+transport.ListenerHost+":"+port), extensionID)
 	return err
 }
 
 // Subscribe starts the HTTP server listening for log events and subscribes to the Logs API
-func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType, out chan LogEvent) (err error) {
+func Subscribe(transport *LogsTransport, extensionID string, eventTypes []EventType) (err error) {
 	if checkAWSSamLocal() {
 		return errors.New("Detected sam local environment")
 	}
-	if err = startHTTPServer(out); err != nil {
+	if err = startHTTPServer(transport); err != nil {
 		return
 	}
 
-	if err = subscribe(extensionID, eventTypes); err != nil {
+	if err = subscribe(transport, extensionID, eventTypes); err != nil {
 		return
 	}
 	return nil
 }
 
-func startHTTPServer(out chan LogEvent) error {
+func startHTTPServer(transport *LogsTransport) error {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleLogEventsRequest(out))
+	mux.HandleFunc("/", handleLogEventsRequest(transport))
 	var err error
 
-	Server = &http.Server{
+	transport.Server = &http.Server{
 		Handler: mux,
 	}
 
-	if Listener, err = net.Listen("tcp", ListenerHost+":0"); err != nil {
+	if transport.Listener, err = net.Listen("tcp", transport.ListenerHost+":0"); err != nil {
 		return err
 	}
+	TestListenerAddr = transport.Listener.Addr()
 
 	go func() {
-		extension.Log.Infof("Extension listening for Lambda Logs API events on %s", Listener.Addr().String())
-		if err = Server.Serve(Listener); err != nil {
+		extension.Log.Infof("Extension listening for Lambda Logs API events on %s", transport.Listener.Addr().String())
+		if err = transport.Server.Serve(transport.Listener); err != nil {
 			extension.Log.Errorf("Error upon Logs API server start : %v", err)
 		}
 	}()
@@ -109,4 +127,31 @@ func checkAWSSamLocal() bool {
 	}
 
 	return false
+}
+
+// StartBackgroundLogsProcessing Receive Logs API events
+// Send to the runtimeDoneSignal channel to signal when a runtimeDone event is received
+func StartBackgroundLogsProcessing(transport *LogsTransport, funcDone chan struct{}, requestID string) {
+	go func() {
+		for {
+			select {
+			case <-funcDone:
+				extension.Log.Debug("Received signal that function has completed, not processing any more log events")
+				return
+			case logEvent := <-transport.LogsChannel:
+				extension.Log.Debugf("Received log event %v", logEvent.Type)
+				// Check the logEvent for runtimeDone and compare the RequestID
+				// to the id that came in via the Next API
+				if logEvent.Type == RuntimeDone {
+					if logEvent.Record.RequestId == requestID {
+						extension.Log.Info("Received runtimeDone event for this function invocation")
+						transport.RuntimeDoneSignal <- struct{}{}
+						return
+					} else {
+						extension.Log.Debug("Log API runtimeDone event request id didn't match")
+					}
+				}
+			}
+		}
+	}()
 }

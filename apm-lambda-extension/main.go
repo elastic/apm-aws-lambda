@@ -74,22 +74,23 @@ func main() {
 	apmServerTransport := extension.InitApmServerTransport(ctx, config)
 
 	// Start http server to receive data from agent
-	if err = extension.StartHttpServer(apmServerTransport); err != nil {
+	agentDataServer, err := extension.StartHttpServer(apmServerTransport)
+	if err != nil {
 		extension.Log.Errorf("Could not start APM data receiver : %v", err)
 	}
 
+	// Init APM Server Transport struct
 	// Make channel for collecting logs and create a HTTP server to listen for them
-	logsChannel := make(chan logsapi.LogEvent)
+	logsTransport := logsapi.InitLogsTransport(ctx)
 
 	// Use a wait group to ensure the background go routine sending to the APM server
 	// completes before signaling that the extension is ready for the next invocation.
 	var backgroundDataSendWg sync.WaitGroup
 
 	if err := logsapi.Subscribe(
-		ctx,
+		logsTransport,
 		extensionClient.ExtensionID,
 		[]logsapi.EventType{logsapi.Platform},
-		logsChannel,
 	); err != nil {
 		extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
 	}
@@ -116,51 +117,20 @@ func main() {
 			extension.Log.Debug("Received event.")
 			extension.Log.Debugf("%v", extension.PrettyPrint(event))
 
-			// Make a channel for signaling that we received the agent flushed signal
-			extension.AgentDoneSignal = make(chan struct{})
-			// Make a channel for signaling that we received the runtimeDone logs API event
-			runtimeDoneSignal := make(chan struct{})
 			// Make a channel for signaling that the function invocation is complete
 			funcDone := make(chan struct{})
 
 			// A shutdown event indicates the execution environment is shutting down.
 			// This is usually due to inactivity.
 			if event.EventType == extension.Shutdown {
-				extension.ProcessShutdown()
+				extension.ProcessShutdown(agentDataServer, logsTransport.Server)
 				cancel()
 				return
 			}
 
-			// Receive agent data as it comes in and post it to the APM server.
-			// Stop checking for, and sending agent data when the function invocation
-			// has completed, signaled via a channel.
 			backgroundDataSendWg.Add(1)
-			extension.StartBackgroundSending(apmServerTransport, funcDone, &backgroundDataSendWg)
-
-			// Receive Logs API events
-			// Send to the runtimeDoneSignal channel to signal when a runtimeDone event is received
-			go func() {
-				for {
-					select {
-					case <-funcDone:
-						extension.Log.Debug("Received signal that function has completed, not processing any more log events")
-						return
-					case logEvent := <-logsChannel:
-						extension.Log.Debugf("Received log event %v", logEvent.Type)
-						// Check the logEvent for runtimeDone and compare the RequestID
-						// to the id that came in via the Next API
-						if logEvent.Type == logsapi.RuntimeDone {
-							if logEvent.Record.RequestId == event.RequestID {
-								extension.Log.Info("Received runtimeDone event for this function invocation")
-								runtimeDoneSignal <- struct{}{}
-								return
-							} else {
-								extension.Log.Debug("Log API runtimeDone event request id didn't match")
-							}
-						}
-					}
-				}
-			}()
+			extension.StartBackgroundApmDataForwarding(apmServerTransport, funcDone, &backgroundDataSendWg)
+			logsapi.StartBackgroundLogsProcessing(logsTransport, funcDone, event.RequestID)
 
 			// Calculate how long to wait for a runtimeDoneSignal or AgentDoneSignal signal
 			flushDeadlineMs := event.DeadlineMs - 100
@@ -171,9 +141,9 @@ func main() {
 			defer timer.Stop()
 
 			select {
-			case <-extension.AgentDoneSignal:
+			case <-apmServerTransport.AgentDoneSignal:
 				extension.Log.Debug("Received agent done signal")
-			case <-runtimeDoneSignal:
+			case <-logsTransport.RuntimeDoneSignal:
 				extension.Log.Debug("Received runtimeDone signal")
 			case <-timer.C:
 				extension.Log.Info("Time expired waiting for agent signal or runtimeDone event")

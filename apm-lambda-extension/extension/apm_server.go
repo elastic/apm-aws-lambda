@@ -32,10 +32,6 @@ import (
 	"time"
 )
 
-var bufferPool = sync.Pool{New: func() interface{} {
-	return &bytes.Buffer{}
-}}
-
 // Constants for the state of the transport used in
 // the backoff implementation.
 type ApmServerTransportStatusType string
@@ -49,10 +45,11 @@ const (
 // A struct to track the state and status of sending
 // to the APM server. Used in the backoff implementation.
 type ApmServerTransport struct {
-	sync.Pool
 	sync.Mutex
+	bufferPool        sync.Pool
 	ctx               context.Context
 	config            *extensionConfig
+	AgentDoneSignal   chan struct{}
 	DataChannel       chan AgentData
 	Client            *http.Client
 	Status            ApmServerTransportStatusType
@@ -62,6 +59,10 @@ type ApmServerTransport struct {
 
 func InitApmServerTransport(ctx context.Context, config *extensionConfig) *ApmServerTransport {
 	var transport ApmServerTransport
+	transport.bufferPool = sync.Pool{New: func() interface{} {
+		return &bytes.Buffer{}
+	}}
+	transport.AgentDoneSignal = make(chan struct{}, 1)
 	transport.DataChannel = make(chan AgentData, 100)
 	transport.Client = &http.Client{
 		Timeout:   time.Duration(config.DataForwarderTimeoutSeconds) * time.Second,
@@ -74,7 +75,10 @@ func InitApmServerTransport(ctx context.Context, config *extensionConfig) *ApmSe
 	return &transport
 }
 
-func StartBackgroundSending(transport *ApmServerTransport, funcDone chan struct{}, backgroundDataSendWg *sync.WaitGroup) {
+// StartBackgroundApmDataForwarding Receive agent data as it comes in and post it to the APM server.
+// Stop checking for, and sending agent data when the function invocation
+// has completed, signaled via a channel.
+func StartBackgroundApmDataForwarding(transport *ApmServerTransport, funcDone chan struct{}, backgroundDataSendWg *sync.WaitGroup) {
 	go func() {
 		defer backgroundDataSendWg.Done()
 		if transport.Status == Failing {
@@ -115,10 +119,10 @@ func PostToApmServer(transport *ApmServerTransport, agentData AgentData) error {
 		r = bytes.NewReader(agentData.Data)
 	} else {
 		encoding = "gzip"
-		buf := bufferPool.Get().(*bytes.Buffer)
+		buf := transport.bufferPool.Get().(*bytes.Buffer)
 		defer func() {
 			buf.Reset()
-			bufferPool.Put(buf)
+			transport.bufferPool.Put(buf)
 		}()
 		gw, err := gzip.NewWriterLevel(buf, gzip.BestSpeed)
 		if err != nil {

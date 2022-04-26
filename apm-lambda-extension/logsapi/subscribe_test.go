@@ -31,8 +31,7 @@ import (
 )
 
 func TestSubscribeWithSamLocalEnv(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	transport := InitLogsTransport(context.Background())
 	if err := os.Setenv("AWS_SAM_LOCAL", "true"); err != nil {
 		t.Fail()
 	}
@@ -41,17 +40,13 @@ func TestSubscribeWithSamLocalEnv(t *testing.T) {
 			t.Fail()
 		}
 	})
-	out := make(chan LogEvent)
 
-	err := Subscribe(ctx, "testID", []EventType{Platform}, out)
+	err := Subscribe(transport, "testID", []EventType{Platform})
 	assert.Error(t, err)
 }
 
 func TestSubscribeAWSRequest(t *testing.T) {
-	ListenerHost = "localhost"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	out := make(chan LogEvent, 1)
+	transport := InitLogsTransport(context.Background())
 	// For subscription request
 	expectedTypes := []EventType{Platform}
 	expectedBufferingCfg := BufferingCfg{
@@ -77,12 +72,12 @@ func TestSubscribeAWSRequest(t *testing.T) {
 	}
 
 	// Subscribe to the logs api and start the http server listening for events
-	if err := Subscribe(ctx, "testID", []EventType{Platform}, out); err != nil {
+	if err := Subscribe(transport, "testID", []EventType{Platform}); err != nil {
 		t.Logf("Error subscribing, %v", err)
 		t.Fail()
 		return
 	}
-	defer Server.Close()
+	defer transport.Server.Close()
 
 	// Create a request to send to the logs listener
 	platformDoneEvent := `{
@@ -94,7 +89,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 		}
 	}`
 	body := []byte(`[` + platformDoneEvent + `]`)
-	url := "http://" + Listener.Addr().String()
+	url := "http://" + transport.Listener.Addr().String()
 	req, err := http.NewRequest("GET", url, bytes.NewReader(body))
 	if err != nil {
 		t.Log("Could not create request")
@@ -106,15 +101,12 @@ func TestSubscribeAWSRequest(t *testing.T) {
 		t.Logf("Error fetching %s, [%v]", url, err)
 		t.Fail()
 	}
-	event := <-out
+	event := <-transport.LogsChannel
 	assert.Equal(t, event.Record.RequestId, "6f7f0961f83442118a7af6fe80b88")
 }
 
 func TestSubscribeWithBadLogsRequest(t *testing.T) {
-	ListenerHost = "localhost"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	out := make(chan LogEvent)
+	transport := InitLogsTransport(context.Background())
 
 	// Create aws runtime API server and handler
 	awsRuntimeApiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
@@ -127,17 +119,17 @@ func TestSubscribeWithBadLogsRequest(t *testing.T) {
 	}
 
 	// Subscribe to the logs api and start the http server listening for events
-	if err := Subscribe(ctx, "testID", []EventType{Platform}, out); err != nil {
+	if err := Subscribe(transport, "testID", []EventType{Platform}); err != nil {
 		t.Logf("Error subscribing, %v", err)
 		t.Fail()
 		return
 	}
-	defer Server.Close()
+	defer transport.Server.Close()
 
 	// Create a request to send to the logs listener
 	logEvent := `{"invalid": "json"}`
 	body := []byte(`[` + logEvent + `]`)
-	url := "http://" + Listener.Addr().String()
+	url := "http://" + transport.Listener.Addr().String()
 	req, err := http.NewRequest("GET", url, bytes.NewReader(body))
 	if err != nil {
 		t.Log("Could not create request")

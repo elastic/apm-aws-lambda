@@ -24,7 +24,7 @@ import (
 	"time"
 )
 
-func handleLogEventsRequest(out chan LogEvent) func(w http.ResponseWriter, r *http.Request) {
+func handleLogEventsRequest(transport *LogsTransport) func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var logEvents []LogEvent
@@ -40,7 +40,7 @@ func handleLogEventsRequest(out chan LogEvent) func(w http.ResponseWriter, r *ht
 				w.WriteHeader(http.StatusInternalServerError)
 				continue
 			}
-			out <- logEvents[idx]
+			transport.LogsChannel <- logEvents[idx]
 		}
 	}
 }

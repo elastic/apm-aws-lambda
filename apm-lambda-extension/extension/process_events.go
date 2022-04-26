@@ -19,13 +19,15 @@ package extension
 
 import (
 	"encoding/json"
+	"net/http"
 )
 
 // ProcessShutdown processes the Shutdown event received from the
 // Lambda runtime API.
-func ProcessShutdown() {
+func ProcessShutdown(agentDataServer *http.Server, logsServer *http.Server) {
 	Log.Info("Received SHUTDOWN event, exiting")
 	agentDataServer.Close()
+	logsServer.Close()
 }
 
 // FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
