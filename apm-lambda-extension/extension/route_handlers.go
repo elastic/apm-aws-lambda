@@ -51,8 +51,9 @@ func handleInfoRequest(ctx context.Context, apmServerUrl string, config *extensi
 		reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
 
 		reverseProxyTimeout := time.Duration(config.DataForwarderTimeoutSeconds) * time.Second
-		reverseProxy.Transport = http.DefaultTransport
-		reverseProxy.Transport.(*http.Transport).ResponseHeaderTimeout = reverseProxyTimeout
+		customTransport := http.DefaultTransport.(*http.Transport).Clone()
+		customTransport.ResponseHeaderTimeout = reverseProxyTimeout
+		reverseProxy.Transport = customTransport
 
 		reverseProxy.ErrorHandler = reverseProxyErrorHandler
 
