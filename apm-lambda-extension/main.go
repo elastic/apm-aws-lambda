@@ -76,7 +76,7 @@ func main() {
 	agentDataChannel := make(chan extension.AgentData, 100)
 
 	// Start http server to receive data from agent
-	if err = extension.StartHttpServer(agentDataChannel, config); err != nil {
+	if err = extension.StartHttpServer(ctx, agentDataChannel, config); err != nil {
 		extension.Log.Errorf("Could not start APM data receiver : %v", err)
 	}
 
@@ -166,7 +166,6 @@ func main() {
 						}
 						if err := extension.PostToApmServer(ctx, client, agentData, config); err != nil {
 							extension.Log.Errorf("Error sending to APM server, skipping: %v", err)
-							extension.EnqueueAPMData(agentDataChannel, agentData)
 							return
 						}
 					}
