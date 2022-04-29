@@ -35,7 +35,7 @@ var AgentDoneSignal chan struct{}
 var mainExtensionContext context.Context
 
 // URL: http://server/
-func handleInfoRequest(ctx context.Context, apmServerUrl string, config *extensionConfig) func(w http.ResponseWriter, r *http.Request) {
+func handleInfoRequest(ctx context.Context, apmServerUrl string, config *Config) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		Log.Debug("Handling APM Server Info Request")

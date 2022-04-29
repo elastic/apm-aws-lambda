@@ -27,9 +27,9 @@ import (
 var agentDataServer *http.Server
 
 // StartHttpServer starts the server listening for APM agent data.
-func StartHttpServer(ctx context.Context, agentDataChan chan AgentData, config *extensionConfig) (err error) {
+func StartHttpServer(ctx context.Context, agentDataChan chan AgentData, config *Config) (err error) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleInfoRequest(ctx, config.apmServerUrl, config))
+	mux.HandleFunc("/", handleInfoRequest(ctx, config.ApmServerUrl, config))
 	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(agentDataChan))
 	timeout := time.Duration(config.DataReceiverTimeoutSeconds) * time.Second
 	agentDataServer = &http.Server{
