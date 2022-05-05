@@ -18,6 +18,7 @@
 package extension
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 )
@@ -31,7 +32,7 @@ func ProcessShutdown(agentDataServer *http.Server, logsServer *http.Server) {
 }
 
 // FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
-func FlushAPMData(transport *ApmServerTransport) {
+func FlushAPMData(ctx context.Context, transport *ApmServerTransport) {
 	if transport.Status == Failing {
 		Log.Debug("Flush skipped - Transport failing")
 		return
@@ -41,7 +42,7 @@ func FlushAPMData(transport *ApmServerTransport) {
 		select {
 		case agentData := <-transport.DataChannel:
 			Log.Debug("Flush in progress - Processing agent data")
-			if err := PostToApmServer(transport, agentData); err != nil {
+			if err := PostToApmServer(ctx, transport, agentData); err != nil {
 				Log.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		default:

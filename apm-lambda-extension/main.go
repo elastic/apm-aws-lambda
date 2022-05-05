@@ -71,23 +71,24 @@ func main() {
 	extension.Log.Debugf("Register response: %v", extension.PrettyPrint(res))
 
 	// Init APM Server Transport struct
-	apmServerTransport := extension.InitApmServerTransport(ctx, config)
+	apmServerTransport := extension.InitApmServerTransport(config)
 
 	// Start http server to receive data from agent
-	agentDataServer, err := extension.StartHttpServer(apmServerTransport)
+	agentDataServer, err := extension.StartHttpServer(ctx, apmServerTransport)
 	if err != nil {
 		extension.Log.Errorf("Could not start APM data receiver : %v", err)
 	}
 
 	// Init APM Server Transport struct
 	// Make channel for collecting logs and create a HTTP server to listen for them
-	logsTransport := logsapi.InitLogsTransport(ctx)
+	logsTransport := logsapi.InitLogsTransport()
 
 	// Use a wait group to ensure the background go routine sending to the APM server
 	// completes before signaling that the extension is ready for the next invocation.
 	var backgroundDataSendWg sync.WaitGroup
 
 	if err := logsapi.Subscribe(
+		ctx,
 		logsTransport,
 		extensionClient.ExtensionID,
 		[]logsapi.EventType{logsapi.Platform},
@@ -129,7 +130,7 @@ func main() {
 			}
 
 			backgroundDataSendWg.Add(1)
-			extension.StartBackgroundApmDataForwarding(apmServerTransport, funcDone, &backgroundDataSendWg)
+			extension.StartBackgroundApmDataForwarding(ctx, apmServerTransport, funcDone, &backgroundDataSendWg)
 			logsapi.StartBackgroundLogsProcessing(logsTransport, funcDone, event.RequestID)
 
 			// Calculate how long to wait for a runtimeDoneSignal or AgentDoneSignal signal
@@ -153,7 +154,7 @@ func main() {
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
 				// Flush APM data now that the function invocation has completed
-				extension.FlushAPMData(apmServerTransport)
+				extension.FlushAPMData(ctx, apmServerTransport)
 			}
 		}
 	}

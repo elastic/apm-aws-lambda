@@ -18,6 +18,7 @@
 package extension
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -31,9 +32,10 @@ type AgentData struct {
 }
 
 var currApmServerTransport *ApmServerTransport
+var currContext context.Context
 
 // URL: http://server/
-func handleInfoRequest(apmServerTransport *ApmServerTransport) func(w http.ResponseWriter, r *http.Request) {
+func handleInfoRequest(ctx context.Context, apmServerTransport *ApmServerTransport) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		Log.Debug("Handling APM Server Info Request")
@@ -53,6 +55,7 @@ func handleInfoRequest(apmServerTransport *ApmServerTransport) func(w http.Respo
 		reverseProxy.Transport = customTransport
 
 		currApmServerTransport = apmServerTransport
+		currContext = ctx
 		reverseProxy.ErrorHandler = reverseProxyErrorHandler
 
 		// Process request (the Golang doc suggests removing any pre-existing X-Forwarded-For header coming
@@ -71,7 +74,7 @@ func handleInfoRequest(apmServerTransport *ApmServerTransport) func(w http.Respo
 }
 
 func reverseProxyErrorHandler(res http.ResponseWriter, req *http.Request, err error) {
-	SetApmServerTransportState(currApmServerTransport, Failing)
+	SetApmServerTransportState(currContext, currApmServerTransport, Failing)
 	Log.Errorf("Error querying version from the APM Server: %v", err)
 }
 

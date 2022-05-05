@@ -47,7 +47,6 @@ const (
 type ApmServerTransport struct {
 	sync.Mutex
 	bufferPool        sync.Pool
-	ctx               context.Context
 	config            *extensionConfig
 	AgentDoneSignal   chan struct{}
 	DataChannel       chan AgentData
@@ -57,7 +56,7 @@ type ApmServerTransport struct {
 	GracePeriodTimer  *time.Timer
 }
 
-func InitApmServerTransport(ctx context.Context, config *extensionConfig) *ApmServerTransport {
+func InitApmServerTransport(config *extensionConfig) *ApmServerTransport {
 	var transport ApmServerTransport
 	transport.bufferPool = sync.Pool{New: func() interface{} {
 		return &bytes.Buffer{}
@@ -69,7 +68,6 @@ func InitApmServerTransport(ctx context.Context, config *extensionConfig) *ApmSe
 		Transport: http.DefaultTransport.(*http.Transport).Clone(),
 	}
 	transport.config = config
-	transport.ctx = ctx
 	transport.Status = Healthy
 	transport.ReconnectionCount = -1
 	return &transport
@@ -78,7 +76,7 @@ func InitApmServerTransport(ctx context.Context, config *extensionConfig) *ApmSe
 // StartBackgroundApmDataForwarding Receive agent data as it comes in and post it to the APM server.
 // Stop checking for, and sending agent data when the function invocation
 // has completed, signaled via a channel.
-func StartBackgroundApmDataForwarding(transport *ApmServerTransport, funcDone chan struct{}, backgroundDataSendWg *sync.WaitGroup) {
+func StartBackgroundApmDataForwarding(ctx context.Context, transport *ApmServerTransport, funcDone chan struct{}, backgroundDataSendWg *sync.WaitGroup) {
 	go func() {
 		defer backgroundDataSendWg.Done()
 		if transport.Status == Failing {
@@ -90,7 +88,7 @@ func StartBackgroundApmDataForwarding(transport *ApmServerTransport, funcDone ch
 				Log.Debug("Received signal that function has completed, not processing any more agent data")
 				return
 			case agentData := <-transport.DataChannel:
-				if err := PostToApmServer(transport, agentData); err != nil {
+				if err := PostToApmServer(ctx, transport, agentData); err != nil {
 					Log.Errorf("Error sending to APM server, skipping: %v", err)
 					return
 				}
@@ -104,7 +102,7 @@ func StartBackgroundApmDataForwarding(transport *ApmServerTransport, funcDone ch
 // The function compresses the APM agent data, if it's not already compressed.
 // It sets the APM transport status to failing upon errors, as part of the backoff
 // strategy.
-func PostToApmServer(transport *ApmServerTransport, agentData AgentData) error {
+func PostToApmServer(ctx context.Context, transport *ApmServerTransport, agentData AgentData) error {
 	// todo: can this be a streaming or streaming style call that keeps the
 	//       connection open across invocations?
 	if transport.Status == Failing {
@@ -152,7 +150,7 @@ func PostToApmServer(transport *ApmServerTransport, agentData AgentData) error {
 	Log.Debug("Sending data chunk to APM Server")
 	resp, err := transport.Client.Do(req)
 	if err != nil {
-		SetApmServerTransportState(transport, Failing)
+		SetApmServerTransportState(ctx, transport, Failing)
 		return fmt.Errorf("failed to post to APM server: %v", err)
 	}
 
@@ -160,11 +158,11 @@ func PostToApmServer(transport *ApmServerTransport, agentData AgentData) error {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		SetApmServerTransportState(transport, Failing)
+		SetApmServerTransportState(ctx, transport, Failing)
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
-	SetApmServerTransportState(transport, Healthy)
+	SetApmServerTransportState(ctx, transport, Healthy)
 	Log.Debug("Transport status set to healthy")
 	Log.Debugf("APM server response body: %v", string(body))
 	Log.Debugf("APM server response status code: %v", resp.StatusCode)
@@ -178,7 +176,7 @@ func PostToApmServer(transport *ApmServerTransport, agentData AgentData) error {
 // to the APM server.
 //
 // This function is public for use in tests.
-func SetApmServerTransportState(transport *ApmServerTransport, status ApmServerTransportStatusType) {
+func SetApmServerTransportState(ctx context.Context, transport *ApmServerTransport, status ApmServerTransportStatusType) {
 	switch status {
 	case Healthy:
 		transport.Lock()
@@ -197,7 +195,7 @@ func SetApmServerTransportState(transport *ApmServerTransport, status ApmServerT
 			select {
 			case <-transport.GracePeriodTimer.C:
 				Log.Debug("Grace period over - timer timed out")
-			case <-transport.ctx.Done():
+			case <-ctx.Done():
 				Log.Debug("Grace period over - context done")
 			}
 			transport.Status = Pending

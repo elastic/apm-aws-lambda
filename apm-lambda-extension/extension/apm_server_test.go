@@ -69,8 +69,8 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 	config := extensionConfig{
 		apmServerUrl: apmServer.URL + "/",
 	}
-	transport := InitApmServerTransport(context.Background(), &config)
-	err := PostToApmServer(transport, agentData)
+	transport := InitApmServerTransport(&config)
+	err := PostToApmServer(context.Background(), transport, agentData)
 	assert.Equal(t, nil, err)
 }
 
@@ -114,13 +114,13 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 	config := extensionConfig{
 		apmServerUrl: apmServer.URL + "/",
 	}
-	transport := InitApmServerTransport(context.Background(), &config)
-	err := PostToApmServer(transport, agentData)
+	transport := InitApmServerTransport(&config)
+	err := PostToApmServer(context.Background(), transport, agentData)
 	assert.Equal(t, nil, err)
 }
 
 func TestGracePeriod(t *testing.T) {
-	transport := InitApmServerTransport(context.Background(), &extensionConfig{})
+	transport := InitApmServerTransport(&extensionConfig{})
 
 	transport.ReconnectionCount = 0
 	val0 := computeGracePeriod(transport).Seconds()
@@ -156,8 +156,8 @@ func TestGracePeriod(t *testing.T) {
 }
 
 func TestSetHealthyTransport(t *testing.T) {
-	transport := InitApmServerTransport(context.Background(), &extensionConfig{})
-	SetApmServerTransportState(transport, Healthy)
+	transport := InitApmServerTransport(&extensionConfig{})
+	SetApmServerTransportState(context.Background(), transport, Healthy)
 	assert.True(t, transport.Status == Healthy)
 	assert.Equal(t, transport.ReconnectionCount, -1)
 }
@@ -165,17 +165,17 @@ func TestSetHealthyTransport(t *testing.T) {
 func TestSetFailingTransport(t *testing.T) {
 	// By explicitly setting the reconnection count to 0, we ensure that the grace period will not be 0
 	// and avoid a race between reaching the pending status and the test assertion.
-	transport := InitApmServerTransport(context.Background(), &extensionConfig{})
+	transport := InitApmServerTransport(&extensionConfig{})
 	transport.ReconnectionCount = 0
-	SetApmServerTransportState(transport, Failing)
+	SetApmServerTransportState(context.Background(), transport, Failing)
 	assert.True(t, transport.Status == Failing)
 	assert.Equal(t, transport.ReconnectionCount, 1)
 }
 
 func TestSetPendingTransport(t *testing.T) {
-	transport := InitApmServerTransport(context.Background(), &extensionConfig{})
-	SetApmServerTransportState(transport, Healthy)
-	SetApmServerTransportState(transport, Failing)
+	transport := InitApmServerTransport(&extensionConfig{})
+	SetApmServerTransportState(context.Background(), transport, Healthy)
+	SetApmServerTransportState(context.Background(), transport, Failing)
 	for {
 		if transport.Status != Failing {
 			break
@@ -186,17 +186,17 @@ func TestSetPendingTransport(t *testing.T) {
 }
 
 func TestSetPendingTransportExplicitly(t *testing.T) {
-	transport := InitApmServerTransport(context.Background(), &extensionConfig{})
-	SetApmServerTransportState(transport, Healthy)
-	SetApmServerTransportState(transport, Pending)
+	transport := InitApmServerTransport(&extensionConfig{})
+	SetApmServerTransportState(context.Background(), transport, Healthy)
+	SetApmServerTransportState(context.Background(), transport, Pending)
 	assert.True(t, transport.Status == Healthy)
 	assert.Equal(t, transport.ReconnectionCount, -1)
 }
 
 func TestSetInvalidTransport(t *testing.T) {
-	transport := InitApmServerTransport(context.Background(), &extensionConfig{})
-	SetApmServerTransportState(transport, Healthy)
-	SetApmServerTransportState(transport, "Invalid")
+	transport := InitApmServerTransport(&extensionConfig{})
+	SetApmServerTransportState(context.Background(), transport, Healthy)
+	SetApmServerTransportState(context.Background(), transport, "Invalid")
 	assert.True(t, transport.Status == Healthy)
 	assert.Equal(t, transport.ReconnectionCount, -1)
 }
@@ -236,13 +236,13 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 	config := extensionConfig{
 		apmServerUrl: apmServer.URL + "/",
 	}
-	transport := InitApmServerTransport(context.Background(), &config)
-	SetApmServerTransportState(transport, Healthy)
+	transport := InitApmServerTransport(&config)
+	SetApmServerTransportState(context.Background(), transport, Healthy)
 
 	// Close the APM server early so that POST requests fail and that backoff is enabled
 	apmServer.Close()
 
-	if err := PostToApmServer(transport, agentData); err != nil {
+	if err := PostToApmServer(context.Background(), transport, agentData); err != nil {
 		return
 	}
 	// No way to know for sure if failing or pending (0 sec grace period)
@@ -290,9 +290,9 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	transport := InitApmServerTransport(context.Background(), &config)
-	SetApmServerTransportState(transport, Healthy)
-	SetApmServerTransportState(transport, Failing)
+	transport := InitApmServerTransport(&config)
+	SetApmServerTransportState(context.Background(), transport, Healthy)
+	SetApmServerTransportState(context.Background(), transport, Failing)
 	for {
 		if transport.Status != Failing {
 			break
@@ -300,7 +300,7 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	}
 	assert.Equal(t, transport.Status, Pending)
 
-	assert.Error(t, PostToApmServer(transport, agentData))
+	assert.Error(t, PostToApmServer(context.Background(), transport, agentData))
 	assert.Equal(t, transport.Status, Failing)
 	assert.Equal(t, transport.ReconnectionCount, 1)
 }
@@ -343,9 +343,9 @@ func TestAPMServerRecovery(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	transport := InitApmServerTransport(context.Background(), &config)
-	SetApmServerTransportState(transport, Healthy)
-	SetApmServerTransportState(transport, Failing)
+	transport := InitApmServerTransport(&config)
+	SetApmServerTransportState(context.Background(), transport, Healthy)
+	SetApmServerTransportState(context.Background(), transport, Failing)
 	for {
 		if transport.Status != Failing {
 			break
@@ -353,7 +353,7 @@ func TestAPMServerRecovery(t *testing.T) {
 	}
 	assert.Equal(t, transport.Status, Pending)
 
-	assert.NoError(t, PostToApmServer(transport, agentData))
+	assert.NoError(t, PostToApmServer(context.Background(), transport, agentData))
 	assert.Equal(t, transport.Status, Healthy)
 	assert.Equal(t, transport.ReconnectionCount, -1)
 }
@@ -396,16 +396,16 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	transport := InitApmServerTransport(context.Background(), &config)
-	SetApmServerTransportState(transport, Healthy)
-	SetApmServerTransportState(transport, Failing)
+	transport := InitApmServerTransport(&config)
+	SetApmServerTransportState(context.Background(), transport, Healthy)
+	SetApmServerTransportState(context.Background(), transport, Failing)
 	for {
 		if transport.Status != Failing {
 			break
 		}
 	}
 	assert.Equal(t, transport.Status, Pending)
-	assert.Error(t, PostToApmServer(transport, agentData))
+	assert.Error(t, PostToApmServer(context.Background(), transport, agentData))
 	assert.Equal(t, transport.Status, Failing)
 	assert.Equal(t, transport.ReconnectionCount, 1)
 }
@@ -429,7 +429,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 
-	transport := InitApmServerTransport(context.Background(), &config)
+	transport := InitApmServerTransport(&config)
 
 	// Copied from https://github.com/elastic/apm-server/blob/master/testdata/intake-v2/transactions.ndjson.
 	benchBody := []byte(`{"metadata": {"service": {"name": "1234_service-12a3","node": {"configured_name": "node-123"},"version": "5.1.3","environment": "staging","language": {"name": "ecmascript","version": "8"},"runtime": {"name": "node","version": "8.0.0"},"framework": {"name": "Express","version": "1.2.3"},"agent": {"name": "elastic-node","version": "3.14.0"}},"user": {"id": "123user", "username": "bar", "email": "bar@user.com"}, "labels": {"tag0": null, "tag1": "one", "tag2": 2}, "process": {"pid": 1234,"ppid": 6789,"title": "node","argv": ["node","server.js"]},"system": {"hostname": "prod1.example.com","architecture": "x64","platform": "darwin", "container": {"id": "container-id"}, "kubernetes": {"namespace": "namespace1", "pod": {"uid": "pod-uid", "name": "pod-name"}, "node": {"name": "node-name"}}},"cloud":{"account":{"id":"account_id","name":"account_name"},"availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"project":{"id":"project_id","name":"project_name"},"provider":"cloud_provider","region":"cloud_region","service":{"name":"lambda"}}}}
@@ -443,7 +443,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := PostToApmServer(transport, agentData); err != nil {
+		if err := PostToApmServer(context.Background(), transport, agentData); err != nil {
 			b.Fatal(err)
 		}
 	}

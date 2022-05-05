@@ -33,7 +33,6 @@ import (
 var TestListenerAddr net.Addr
 
 type LogsTransport struct {
-	ctx               context.Context
 	LogsChannel       chan LogEvent
 	Listener          net.Listener
 	ListenerHost      string
@@ -41,9 +40,8 @@ type LogsTransport struct {
 	Server            *http.Server
 }
 
-func InitLogsTransport(ctx context.Context) *LogsTransport {
+func InitLogsTransport() *LogsTransport {
 	var transport LogsTransport
-	transport.ctx = ctx
 	transport.ListenerHost = "localhost"
 	transport.LogsChannel = make(chan LogEvent, 100)
 	transport.RuntimeDoneSignal = make(chan struct{}, 1)
@@ -83,11 +81,11 @@ func subscribe(transport *LogsTransport, extensionID string, eventTypes []EventT
 }
 
 // Subscribe starts the HTTP server listening for log events and subscribes to the Logs API
-func Subscribe(transport *LogsTransport, extensionID string, eventTypes []EventType) (err error) {
+func Subscribe(ctx context.Context, transport *LogsTransport, extensionID string, eventTypes []EventType) (err error) {
 	if checkAWSSamLocal() {
 		return errors.New("Detected sam local environment")
 	}
-	if err = startHTTPServer(transport); err != nil {
+	if err = startHTTPServer(ctx, transport); err != nil {
 		return
 	}
 
@@ -97,7 +95,7 @@ func Subscribe(transport *LogsTransport, extensionID string, eventTypes []EventT
 	return nil
 }
 
-func startHTTPServer(transport *LogsTransport) error {
+func startHTTPServer(ctx context.Context, transport *LogsTransport) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleLogEventsRequest(transport))
 	var err error
@@ -117,6 +115,12 @@ func startHTTPServer(transport *LogsTransport) error {
 			extension.Log.Errorf("Error upon Logs API server start : %v", err)
 		}
 	}()
+
+	go func() {
+		<-ctx.Done()
+		transport.Server.Close()
+	}()
+
 	return nil
 }
 
