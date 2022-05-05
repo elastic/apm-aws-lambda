@@ -139,29 +139,27 @@ func checkAWSSamLocal() bool {
 	return false
 }
 
-// StartBackgroundLogsProcessing Receive Logs API events
-// Send to the runtimeDoneSignal channel to signal when a runtimeDone event is received
-func StartBackgroundLogsProcessing(transport *LogsTransport, funcDone chan struct{}, requestID string) {
-	go func() {
-		for {
-			select {
-			case <-funcDone:
-				extension.Log.Debug("Received signal that function has completed, not processing any more log events")
-				return
-			case logEvent := <-transport.LogsChannel:
-				extension.Log.Debugf("Received log event %v", logEvent.Type)
-				// Check the logEvent for runtimeDone and compare the RequestID
-				// to the id that came in via the Next API
-				if logEvent.Type == RuntimeDone {
-					if logEvent.Record.RequestId == requestID {
-						extension.Log.Info("Received runtimeDone event for this function invocation")
-						transport.RuntimeDoneSignal <- struct{}{}
-						return
-					} else {
-						extension.Log.Debug("Log API runtimeDone event request id didn't match")
-					}
+// WaitRuntimeDone consumes events until a RuntimeDone event corresponding
+// to requestID is received, or ctx is cancelled, and then returns.
+func WaitRuntimeDone(ctx context.Context, requestID string, transport *LogsTransport) error {
+	for {
+		select {
+		case logEvent := <-transport.LogsChannel:
+			extension.Log.Debugf("Received log event %v", logEvent.Type)
+			// Check the logEvent for runtimeDone and compare the RequestID
+			// to the id that came in via the Next API
+			if logEvent.Type == RuntimeDone {
+				if logEvent.Record.RequestId == requestID {
+					extension.Log.Info("Received runtimeDone event for this function invocation")
+					transport.RuntimeDoneSignal <- struct{}{}
+					return nil
+				} else {
+					extension.Log.Debug("Log API runtimeDone event request id didn't match")
 				}
 			}
+		case <-ctx.Done():
+			extension.Log.Debug("Current invocation over. Interrupting logs processing goroutine")
+			return nil
 		}
-	}()
+	}
 }

@@ -76,7 +76,7 @@ func InitApmServerTransport(config *extensionConfig) *ApmServerTransport {
 // StartBackgroundApmDataForwarding Receive agent data as it comes in and post it to the APM server.
 // Stop checking for, and sending agent data when the function invocation
 // has completed, signaled via a channel.
-func StartBackgroundApmDataForwarding(ctx context.Context, transport *ApmServerTransport, funcDone chan struct{}, backgroundDataSendWg *sync.WaitGroup) {
+func StartBackgroundApmDataForwarding(ctx context.Context, transport *ApmServerTransport, backgroundDataSendWg *sync.WaitGroup) {
 	go func() {
 		defer backgroundDataSendWg.Done()
 		if transport.Status == Failing {
@@ -84,8 +84,8 @@ func StartBackgroundApmDataForwarding(ctx context.Context, transport *ApmServerT
 		}
 		for {
 			select {
-			case <-funcDone:
-				Log.Debug("Received signal that function has completed, not processing any more agent data")
+			case <-ctx.Done():
+				Log.Debug("Invocation context cancelled, not processing any more agent data")
 				return
 			case agentData := <-transport.DataChannel:
 				if err := PostToApmServer(ctx, transport, agentData); err != nil {
