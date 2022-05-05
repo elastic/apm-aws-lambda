@@ -79,20 +79,12 @@ func main() {
 		extension.Log.Errorf("Could not start APM data receiver : %v", err)
 	}
 
-	// Init APM Server Transport struct
-	// Make channel for collecting logs and create a HTTP server to listen for them
-	logsTransport := logsapi.InitLogsTransport()
-
 	// Use a wait group to ensure the background go routine sending to the APM server
 	// completes before signaling that the extension is ready for the next invocation.
 	var backgroundDataSendWg sync.WaitGroup
 
-	if err := logsapi.Subscribe(
-		ctx,
-		logsTransport,
-		extensionClient.ExtensionID,
-		[]logsapi.EventType{logsapi.Platform},
-	); err != nil {
+	logsTransport, err := logsapi.Subscribe(ctx, extensionClient.ExtensionID, []logsapi.EventType{logsapi.Platform})
+	if err != nil {
 		extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
 	}
 
@@ -124,7 +116,7 @@ func main() {
 			// A shutdown event indicates the execution environment is shutting down.
 			// This is usually due to inactivity.
 			if event.EventType == extension.Shutdown {
-				extension.ProcessShutdown(agentDataServer, logsTransport.Server)
+				extension.ProcessShutdown(agentDataServer)
 				cancel()
 				return
 			}

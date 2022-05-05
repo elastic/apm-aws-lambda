@@ -64,6 +64,7 @@ type LogEventRecord struct {
 
 // Subscribes to the Logs API
 func subscribe(transport *LogsTransport, extensionID string, eventTypes []EventType) error {
+
 	extensionsAPIAddress, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API")
 	if !ok {
 		return errors.New("AWS_LAMBDA_RUNTIME_API is not set")
@@ -81,18 +82,23 @@ func subscribe(transport *LogsTransport, extensionID string, eventTypes []EventT
 }
 
 // Subscribe starts the HTTP server listening for log events and subscribes to the Logs API
-func Subscribe(ctx context.Context, transport *LogsTransport, extensionID string, eventTypes []EventType) (err error) {
+func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType) (transport *LogsTransport, err error) {
 	if checkAWSSamLocal() {
-		return errors.New("Detected sam local environment")
+		return nil, errors.New("Detected sam local environment")
 	}
+
+	// Init APM Server Transport struct
+	// Make channel for collecting logs and create a HTTP server to listen for them
+	transport = InitLogsTransport()
+
 	if err = startHTTPServer(ctx, transport); err != nil {
-		return
+		return nil, err
 	}
 
 	if err = subscribe(transport, extensionID, eventTypes); err != nil {
-		return
+		return nil, err
 	}
-	return nil
+	return transport, nil
 }
 
 func startHTTPServer(ctx context.Context, transport *LogsTransport) error {

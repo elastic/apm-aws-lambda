@@ -31,7 +31,6 @@ import (
 )
 
 func TestSubscribeWithSamLocalEnv(t *testing.T) {
-	transport := InitLogsTransport()
 	if err := os.Setenv("AWS_SAM_LOCAL", "true"); err != nil {
 		t.Fail()
 	}
@@ -41,12 +40,12 @@ func TestSubscribeWithSamLocalEnv(t *testing.T) {
 		}
 	})
 
-	err := Subscribe(context.Background(), transport, "testID", []EventType{Platform})
+	_, err := Subscribe(context.Background(), "testID", []EventType{Platform})
 	assert.Error(t, err)
 }
 
 func TestSubscribeAWSRequest(t *testing.T) {
-	transport := InitLogsTransport()
+
 	// For subscription request
 	expectedTypes := []EventType{Platform}
 	expectedBufferingCfg := BufferingCfg{
@@ -72,7 +71,8 @@ func TestSubscribeAWSRequest(t *testing.T) {
 	}
 
 	// Subscribe to the logs api and start the http server listening for events
-	if err := Subscribe(context.Background(), transport, "testID", []EventType{Platform}); err != nil {
+	transport, err := Subscribe(context.Background(), "testID", []EventType{Platform})
+	if err != nil {
 		t.Logf("Error subscribing, %v", err)
 		t.Fail()
 		return
@@ -106,8 +106,6 @@ func TestSubscribeAWSRequest(t *testing.T) {
 }
 
 func TestSubscribeWithBadLogsRequest(t *testing.T) {
-	transport := InitLogsTransport()
-
 	// Create aws runtime API server and handler
 	awsRuntimeApiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer awsRuntimeApiServer.Close()
@@ -119,7 +117,8 @@ func TestSubscribeWithBadLogsRequest(t *testing.T) {
 	}
 
 	// Subscribe to the logs api and start the http server listening for events
-	if err := Subscribe(context.Background(), transport, "testID", []EventType{Platform}); err != nil {
+	transport, err := Subscribe(context.Background(), "testID", []EventType{Platform});
+	if err != nil {
 		t.Logf("Error subscribing, %v", err)
 		t.Fail()
 		return
