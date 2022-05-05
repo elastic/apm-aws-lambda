@@ -18,30 +18,8 @@
 package extension
 
 import (
-	"context"
 	"encoding/json"
 )
-
-// FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
-func FlushAPMData(ctx context.Context, transport *ApmServerTransport) {
-	if transport.Status == Failing {
-		Log.Debug("Flush skipped - Transport failing")
-		return
-	}
-	Log.Debug("Flush started - Checking for agent data")
-	for {
-		select {
-		case agentData := <-transport.DataChannel:
-			Log.Debug("Flush in progress - Processing agent data")
-			if err := PostToApmServer(ctx, transport, agentData); err != nil {
-				Log.Errorf("Error sending to APM server, skipping: %v", err)
-			}
-		default:
-			Log.Debug("Flush ended - No agent data on buffer")
-			return
-		}
-	}
-}
 
 // PrettyPrint prints formatted, legible json data.
 func PrettyPrint(v interface{}) string {

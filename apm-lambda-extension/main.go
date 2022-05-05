@@ -132,7 +132,11 @@ func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTrans
 
 	// APM Data Processing
 	backgroundDataSendWg.Add(1)
-	extension.StartBackgroundApmDataForwarding(invocationCtx, apmServerTransport, backgroundDataSendWg)
+	go func() {
+		if err := apmServerTransport.ForwardApmData(invocationCtx, backgroundDataSendWg); err != nil {
+			extension.Log.Error(err)
+		}
+	}()
 
 	// Lambda Service Logs Processing
 	runtimeDone := make(chan struct{})

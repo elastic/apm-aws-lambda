@@ -76,25 +76,43 @@ func InitApmServerTransport(config *extensionConfig) *ApmServerTransport {
 // StartBackgroundApmDataForwarding Receive agent data as it comes in and post it to the APM server.
 // Stop checking for, and sending agent data when the function invocation
 // has completed, signaled via a channel.
-func StartBackgroundApmDataForwarding(ctx context.Context, transport *ApmServerTransport, backgroundDataSendWg *sync.WaitGroup) {
-	go func() {
-		defer backgroundDataSendWg.Done()
-		if transport.Status == Failing {
-			return
-		}
-		for {
-			select {
-			case <-ctx.Done():
-				Log.Debug("Invocation context cancelled, not processing any more agent data")
-				return
-			case agentData := <-transport.DataChannel:
-				if err := PostToApmServer(ctx, transport, agentData); err != nil {
-					Log.Errorf("Error sending to APM server, skipping: %v", err)
-					return
-				}
+func (transport *ApmServerTransport) ForwardApmData(ctx context.Context, backgroundDataSendWg *sync.WaitGroup) error {
+	defer backgroundDataSendWg.Done()
+	if transport.Status == Failing {
+		return nil
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			Log.Debug("Invocation context cancelled, not processing any more agent data")
+			return nil
+		case agentData := <-transport.DataChannel:
+			if err := PostToApmServer(ctx, transport, agentData); err != nil {
+				return errors.New(fmt.Sprintf("Error sending to APM server, skipping: %v", err))
 			}
 		}
-	}()
+	}
+}
+
+// FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
+func FlushAPMData(ctx context.Context, transport *ApmServerTransport) {
+	if transport.Status == Failing {
+		Log.Debug("Flush skipped - Transport failing")
+		return
+	}
+	Log.Debug("Flush started - Checking for agent data")
+	for {
+		select {
+		case agentData := <-transport.DataChannel:
+			Log.Debug("Flush in progress - Processing agent data")
+			if err := PostToApmServer(ctx, transport, agentData); err != nil {
+				Log.Errorf("Error sending to APM server, skipping: %v", err)
+			}
+		default:
+			Log.Debug("Flush ended - No agent data on buffer")
+			return
+		}
+	}
 }
 
 // PostToApmServer takes a chunk of APM agent data and posts it to the APM server.
