@@ -88,7 +88,7 @@ func (transport *ApmServerTransport) ForwardApmData(ctx context.Context, backgro
 			return nil
 		case agentData := <-transport.DataChannel:
 			if err := PostToApmServer(ctx, transport, agentData); err != nil {
-				return errors.New(fmt.Sprintf("Error sending to APM server, skipping: %v", err))
+				return fmt.Errorf("error sending to APM server, skipping: %v", err)
 			}
 		}
 	}
