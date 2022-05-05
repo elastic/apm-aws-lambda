@@ -38,7 +38,7 @@ var currContext context.Context
 func handleInfoRequest(ctx context.Context, apmServerTransport *ApmServerTransport) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		Log.Debug("Handling APM Server Info Request")
+		Log.Debug("Handling APM server Info Request")
 
 		// Init reverse proxy
 		parsedApmServerUrl, err := url.Parse(apmServerTransport.config.apmServerUrl)
@@ -59,7 +59,7 @@ func handleInfoRequest(ctx context.Context, apmServerTransport *ApmServerTranspo
 		reverseProxy.ErrorHandler = reverseProxyErrorHandler
 
 		// Process request (the Golang doc suggests removing any pre-existing X-Forwarded-For header coming
-		// from the Client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
+		// from the client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
 		r.Header.Del("X-Forwarded-For")
 
 		// Update headers to allow for SSL redirection
@@ -75,7 +75,7 @@ func handleInfoRequest(ctx context.Context, apmServerTransport *ApmServerTranspo
 
 func reverseProxyErrorHandler(res http.ResponseWriter, req *http.Request, err error) {
 	SetApmServerTransportState(currContext, currApmServerTransport, Failing)
-	Log.Errorf("Error querying version from the APM Server: %v", err)
+	Log.Errorf("Error querying version from the APM server: %v", err)
 }
 
 // URL: http://server/intake/v2/events
@@ -97,7 +97,7 @@ func handleIntakeV2Events(transport *ApmServerTransport) func(w http.ResponseWri
 				ContentEncoding: r.Header.Get("Content-Encoding"),
 			}
 
-			EnqueueAPMData(transport.DataChannel, agentData)
+			EnqueueAPMData(transport.dataChannel, agentData)
 		}
 
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {

@@ -33,17 +33,17 @@ import (
 var TestListenerAddr net.Addr
 
 type LogsTransport struct {
-	LogsChannel       chan LogEvent
-	Listener          net.Listener
-	ListenerHost      string
+	logsChannel       chan LogEvent
+	listener          net.Listener
+	listenerHost      string
 	RuntimeDoneSignal chan struct{}
-	Server            *http.Server
+	server            *http.Server
 }
 
 func InitLogsTransport() *LogsTransport {
 	var transport LogsTransport
-	transport.ListenerHost = "localhost"
-	transport.LogsChannel = make(chan LogEvent, 100)
+	transport.listenerHost = "localhost"
+	transport.logsChannel = make(chan LogEvent, 100)
 	transport.RuntimeDoneSignal = make(chan struct{}, 1)
 	return &transport
 }
@@ -76,8 +76,8 @@ func subscribe(transport *LogsTransport, extensionID string, eventTypes []EventT
 		return err
 	}
 
-	_, port, _ := net.SplitHostPort(transport.Listener.Addr().String())
-	_, err = logsAPIClient.Subscribe(eventTypes, URI("http://"+transport.ListenerHost+":"+port), extensionID)
+	_, port, _ := net.SplitHostPort(transport.listener.Addr().String())
+	_, err = logsAPIClient.Subscribe(eventTypes, URI("http://"+transport.listenerHost+":"+port), extensionID)
 	return err
 }
 
@@ -87,7 +87,7 @@ func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType) 
 		return nil, errors.New("Detected sam local environment")
 	}
 
-	// Init APM Server Transport struct
+	// Init APM server Transport struct
 	// Make channel for collecting logs and create a HTTP server to listen for them
 	transport = InitLogsTransport()
 
@@ -106,25 +106,25 @@ func startHTTPServer(ctx context.Context, transport *LogsTransport) error {
 	mux.HandleFunc("/", handleLogEventsRequest(transport))
 	var err error
 
-	transport.Server = &http.Server{
+	transport.server = &http.Server{
 		Handler: mux,
 	}
 
-	if transport.Listener, err = net.Listen("tcp", transport.ListenerHost+":0"); err != nil {
+	if transport.listener, err = net.Listen("tcp", transport.listenerHost+":0"); err != nil {
 		return err
 	}
-	TestListenerAddr = transport.Listener.Addr()
+	TestListenerAddr = transport.listener.Addr()
 
 	go func() {
-		extension.Log.Infof("Extension listening for Lambda Logs API events on %s", transport.Listener.Addr().String())
-		if err = transport.Server.Serve(transport.Listener); err != nil {
+		extension.Log.Infof("Extension listening for Lambda Logs API events on %s", transport.listener.Addr().String())
+		if err = transport.server.Serve(transport.listener); err != nil {
 			extension.Log.Errorf("Error upon Logs API server start : %v", err)
 		}
 	}()
 
 	go func() {
 		<-ctx.Done()
-		transport.Server.Close()
+		transport.server.Close()
 	}()
 
 	return nil
@@ -144,7 +144,7 @@ func checkAWSSamLocal() bool {
 func WaitRuntimeDone(ctx context.Context, requestID string, transport *LogsTransport) error {
 	for {
 		select {
-		case logEvent := <-transport.LogsChannel:
+		case logEvent := <-transport.logsChannel:
 			extension.Log.Debugf("Received log event %v", logEvent.Type)
 			// Check the logEvent for runtimeDone and compare the RequestID
 			// to the id that came in via the Next API

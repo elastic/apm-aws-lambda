@@ -248,7 +248,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 
 	select {
 	case <-transport.AgentDoneSignal:
-		<-transport.DataChannel
+		<-transport.dataChannel
 	case <-timer.C:
 		t.Log("Timed out waiting for server to send FuncDone signal")
 		t.Fail()
@@ -294,7 +294,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
 		t.Fail()
 	}
-	<-transport.DataChannel
+	<-transport.dataChannel
 	assert.Equal(t, 202, resp.StatusCode)
 }
 

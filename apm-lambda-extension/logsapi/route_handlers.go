@@ -40,7 +40,7 @@ func handleLogEventsRequest(transport *LogsTransport) func(w http.ResponseWriter
 				w.WriteHeader(http.StatusInternalServerError)
 				continue
 			}
-			transport.LogsChannel <- logEvents[idx]
+			transport.logsChannel <- logEvents[idx]
 		}
 	}
 }

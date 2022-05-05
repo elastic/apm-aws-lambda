@@ -46,7 +46,7 @@ func StartHttpServer(ctx context.Context, transport *ApmServerTransport) (agentD
 	go func() {
 		Log.Infof("Extension listening for apm data on %s", server.Addr)
 		if err = server.Serve(ln); err != nil {
-			if err.Error() == "http: Server closed" {
+			if err.Error() == "http: server closed" {
 				Log.Debug(err)
 			} else {
 				Log.Errorf("Error upon APM data server start : %v", err)

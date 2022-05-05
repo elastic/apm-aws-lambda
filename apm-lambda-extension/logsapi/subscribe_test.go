@@ -77,7 +77,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 		t.Fail()
 		return
 	}
-	defer transport.Server.Close()
+	defer transport.server.Close()
 
 	// Create a request to send to the logs listener
 	platformDoneEvent := `{
@@ -89,7 +89,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 		}
 	}`
 	body := []byte(`[` + platformDoneEvent + `]`)
-	url := "http://" + transport.Listener.Addr().String()
+	url := "http://" + transport.listener.Addr().String()
 	req, err := http.NewRequest("GET", url, bytes.NewReader(body))
 	if err != nil {
 		t.Log("Could not create request")
@@ -101,7 +101,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 		t.Logf("Error fetching %s, [%v]", url, err)
 		t.Fail()
 	}
-	event := <-transport.LogsChannel
+	event := <-transport.logsChannel
 	assert.Equal(t, event.Record.RequestId, "6f7f0961f83442118a7af6fe80b88")
 }
 
@@ -117,18 +117,18 @@ func TestSubscribeWithBadLogsRequest(t *testing.T) {
 	}
 
 	// Subscribe to the logs api and start the http server listening for events
-	transport, err := Subscribe(context.Background(), "testID", []EventType{Platform});
+	transport, err := Subscribe(context.Background(), "testID", []EventType{Platform})
 	if err != nil {
 		t.Logf("Error subscribing, %v", err)
 		t.Fail()
 		return
 	}
-	defer transport.Server.Close()
+	defer transport.server.Close()
 
 	// Create a request to send to the logs listener
 	logEvent := `{"invalid": "json"}`
 	body := []byte(`[` + logEvent + `]`)
-	url := "http://" + transport.Listener.Addr().String()
+	url := "http://" + transport.listener.Addr().String()
 	req, err := http.NewRequest("GET", url, bytes.NewReader(body))
 	if err != nil {
 		t.Log("Could not create request")

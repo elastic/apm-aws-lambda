@@ -49,11 +49,11 @@ type ApmServerTransport struct {
 	bufferPool        sync.Pool
 	config            *extensionConfig
 	AgentDoneSignal   chan struct{}
-	DataChannel       chan AgentData
-	Client            *http.Client
-	Status            ApmServerTransportStatusType
-	ReconnectionCount int
-	GracePeriodTimer  *time.Timer
+	dataChannel       chan AgentData
+	client            *http.Client
+	status            ApmServerTransportStatusType
+	reconnectionCount int
+	gracePeriodTimer  *time.Timer
 }
 
 func InitApmServerTransport(config *extensionConfig) *ApmServerTransport {
@@ -62,14 +62,14 @@ func InitApmServerTransport(config *extensionConfig) *ApmServerTransport {
 		return &bytes.Buffer{}
 	}}
 	transport.AgentDoneSignal = make(chan struct{}, 1)
-	transport.DataChannel = make(chan AgentData, 100)
-	transport.Client = &http.Client{
+	transport.dataChannel = make(chan AgentData, 100)
+	transport.client = &http.Client{
 		Timeout:   time.Duration(config.DataForwarderTimeoutSeconds) * time.Second,
 		Transport: http.DefaultTransport.(*http.Transport).Clone(),
 	}
 	transport.config = config
-	transport.Status = Healthy
-	transport.ReconnectionCount = -1
+	transport.status = Healthy
+	transport.reconnectionCount = -1
 	return &transport
 }
 
@@ -78,7 +78,7 @@ func InitApmServerTransport(config *extensionConfig) *ApmServerTransport {
 // has completed, signaled via a channel.
 func (transport *ApmServerTransport) ForwardApmData(ctx context.Context, backgroundDataSendWg *sync.WaitGroup) error {
 	defer backgroundDataSendWg.Done()
-	if transport.Status == Failing {
+	if transport.status == Failing {
 		return nil
 	}
 	for {
@@ -86,7 +86,7 @@ func (transport *ApmServerTransport) ForwardApmData(ctx context.Context, backgro
 		case <-ctx.Done():
 			Log.Debug("Invocation context cancelled, not processing any more agent data")
 			return nil
-		case agentData := <-transport.DataChannel:
+		case agentData := <-transport.dataChannel:
 			if err := PostToApmServer(ctx, transport, agentData); err != nil {
 				return fmt.Errorf("error sending to APM server, skipping: %v", err)
 			}
@@ -96,14 +96,14 @@ func (transport *ApmServerTransport) ForwardApmData(ctx context.Context, backgro
 
 // FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
 func FlushAPMData(ctx context.Context, transport *ApmServerTransport) {
-	if transport.Status == Failing {
+	if transport.status == Failing {
 		Log.Debug("Flush skipped - Transport failing")
 		return
 	}
 	Log.Debug("Flush started - Checking for agent data")
 	for {
 		select {
-		case agentData := <-transport.DataChannel:
+		case agentData := <-transport.dataChannel:
 			Log.Debug("Flush in progress - Processing agent data")
 			if err := PostToApmServer(ctx, transport, agentData); err != nil {
 				Log.Errorf("Error sending to APM server, skipping: %v", err)
@@ -123,7 +123,7 @@ func FlushAPMData(ctx context.Context, transport *ApmServerTransport) {
 func PostToApmServer(ctx context.Context, transport *ApmServerTransport, agentData AgentData) error {
 	// todo: can this be a streaming or streaming style call that keeps the
 	//       connection open across invocations?
-	if transport.Status == Failing {
+	if transport.status == Failing {
 		return errors.New("transport status is unhealthy")
 	}
 
@@ -165,8 +165,8 @@ func PostToApmServer(ctx context.Context, transport *ApmServerTransport, agentDa
 		req.Header.Add("Authorization", "Bearer "+transport.config.apmServerSecretToken)
 	}
 
-	Log.Debug("Sending data chunk to APM Server")
-	resp, err := transport.Client.Do(req)
+	Log.Debug("Sending data chunk to APM server")
+	resp, err := transport.client.Do(req)
 	if err != nil {
 		SetApmServerTransportState(ctx, transport, Failing)
 		return fmt.Errorf("failed to post to APM server: %v", err)
@@ -198,36 +198,36 @@ func SetApmServerTransportState(ctx context.Context, transport *ApmServerTranspo
 	switch status {
 	case Healthy:
 		transport.Lock()
-		transport.Status = status
-		Log.Debugf("APM Server Transport status set to %s", transport.Status)
-		transport.ReconnectionCount = -1
+		transport.status = status
+		Log.Debugf("APM server Transport status set to %s", transport.status)
+		transport.reconnectionCount = -1
 		transport.Unlock()
 	case Failing:
 		transport.Lock()
-		transport.Status = status
-		Log.Debugf("APM Server Transport status set to %s", transport.Status)
-		transport.ReconnectionCount++
-		transport.GracePeriodTimer = time.NewTimer(computeGracePeriod(transport))
-		Log.Debugf("Grace period entered, reconnection count : %d", transport.ReconnectionCount)
+		transport.status = status
+		Log.Debugf("APM server Transport status set to %s", transport.status)
+		transport.reconnectionCount++
+		transport.gracePeriodTimer = time.NewTimer(computeGracePeriod(transport))
+		Log.Debugf("Grace period entered, reconnection count : %d", transport.reconnectionCount)
 		go func() {
 			select {
-			case <-transport.GracePeriodTimer.C:
+			case <-transport.gracePeriodTimer.C:
 				Log.Debug("Grace period over - timer timed out")
 			case <-ctx.Done():
 				Log.Debug("Grace period over - context done")
 			}
-			transport.Status = Pending
-			Log.Debugf("APM Server Transport status set to %s", transport.Status)
+			transport.status = Pending
+			Log.Debugf("APM server Transport status set to %s", transport.status)
 			transport.Unlock()
 		}()
 	default:
-		Log.Errorf("Cannot set APM Server Transport status to %s", status)
+		Log.Errorf("Cannot set APM server Transport status to %s", status)
 	}
 }
 
 // ComputeGracePeriod https://github.com/elastic/apm/blob/main/specs/agents/transport.md#transport-errors
 func computeGracePeriod(transport *ApmServerTransport) time.Duration {
-	gracePeriodWithoutJitter := math.Pow(math.Min(float64(transport.ReconnectionCount), 6), 2)
+	gracePeriodWithoutJitter := math.Pow(math.Min(float64(transport.reconnectionCount), 6), 2)
 	jitter := rand.Float64()/5 - 0.1
 	return time.Duration((gracePeriodWithoutJitter + jitter*gracePeriodWithoutJitter) * float64(time.Second))
 }
