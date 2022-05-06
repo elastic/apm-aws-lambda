@@ -29,6 +29,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TODO: Remove global variable and find another way to retrieve Logs Listener network info when testing main
 // TestListenerAddr For e2e testing purposes
 var TestListenerAddr net.Addr
 
