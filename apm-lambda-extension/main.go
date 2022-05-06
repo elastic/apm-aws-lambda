@@ -141,7 +141,7 @@ func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTrans
 	// Lambda Service Logs Processing
 	runtimeDone := make(chan struct{})
 	go func() {
-		if err := logsapi.WaitRuntimeDone(invocationCtx, event.RequestID, logsTransport); err != nil {
+		if err := logsapi.WaitRuntimeDone(invocationCtx, event.RequestID, logsTransport, runtimeDone); err != nil {
 			extension.Log.Errorf("Error while processing Lambda Logs ; %v", err)
 		} else {
 			close(runtimeDone)

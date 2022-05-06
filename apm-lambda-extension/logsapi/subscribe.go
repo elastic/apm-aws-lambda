@@ -33,18 +33,16 @@ import (
 var TestListenerAddr net.Addr
 
 type LogsTransport struct {
-	logsChannel       chan LogEvent
-	listener          net.Listener
-	listenerHost      string
-	RuntimeDoneSignal chan struct{}
-	server            *http.Server
+	logsChannel  chan LogEvent
+	listener     net.Listener
+	listenerHost string
+	server       *http.Server
 }
 
 func InitLogsTransport() *LogsTransport {
 	var transport LogsTransport
 	transport.listenerHost = "localhost"
 	transport.logsChannel = make(chan LogEvent, 100)
-	transport.RuntimeDoneSignal = make(chan struct{}, 1)
 	return &transport
 }
 
@@ -141,7 +139,7 @@ func checkAWSSamLocal() bool {
 
 // WaitRuntimeDone consumes events until a RuntimeDone event corresponding
 // to requestID is received, or ctx is cancelled, and then returns.
-func WaitRuntimeDone(ctx context.Context, requestID string, transport *LogsTransport) error {
+func WaitRuntimeDone(ctx context.Context, requestID string, transport *LogsTransport, runtimeDoneSignal chan struct{}) error {
 	for {
 		select {
 		case logEvent := <-transport.logsChannel:
@@ -151,7 +149,7 @@ func WaitRuntimeDone(ctx context.Context, requestID string, transport *LogsTrans
 			if logEvent.Type == RuntimeDone {
 				if logEvent.Record.RequestId == requestID {
 					extension.Log.Info("Received runtimeDone event for this function invocation")
-					transport.RuntimeDoneSignal <- struct{}{}
+					runtimeDoneSignal <- struct{}{}
 					return nil
 				} else {
 					extension.Log.Debug("Log API runtimeDone event request id didn't match")
