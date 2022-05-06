@@ -157,6 +157,12 @@ func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTrans
 	timer := time.NewTimer(durationUntilFlushDeadline)
 	defer timer.Stop()
 
+	// The extension relies on 3 independent mechanisms to minimize the time interval between the end of the execution of
+	// the lambda function and the end of the execution of processEvent()
+	// 1) AgentDoneSignal is triggered upon reception of a `flushed=true` query from the agent
+	// 2) [Backup 1] RuntimeDone is triggered upon reception of a Lambda log entry certifying the end of the execution of the current function
+	// 3) [Backup 2] If all else fails, the extension relies of the timeout of the Lambda function to interrupt itself 100 ms before the specified deadline.
+	// This time interval is large enough to attempt a last flush attempt (if SendStrategy == syncFlush) before the environment gets shut down.
 	select {
 	case <-apmServerTransport.AgentDoneSignal:
 		extension.Log.Debug("Received agent done signal")
