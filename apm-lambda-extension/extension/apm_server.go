@@ -76,8 +76,7 @@ func InitApmServerTransport(config *extensionConfig) *ApmServerTransport {
 // StartBackgroundApmDataForwarding Receive agent data as it comes in and post it to the APM server.
 // Stop checking for, and sending agent data when the function invocation
 // has completed, signaled via a channel.
-func (transport *ApmServerTransport) ForwardApmData(ctx context.Context, backgroundDataSendWg *sync.WaitGroup) error {
-	defer backgroundDataSendWg.Done()
+func (transport *ApmServerTransport) ForwardApmData(ctx context.Context) error {
 	if transport.status == Failing {
 		return nil
 	}

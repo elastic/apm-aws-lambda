@@ -133,7 +133,8 @@ func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTrans
 	// APM Data Processing
 	backgroundDataSendWg.Add(1)
 	go func() {
-		if err := apmServerTransport.ForwardApmData(invocationCtx, backgroundDataSendWg); err != nil {
+		defer backgroundDataSendWg.Done()
+		if err := apmServerTransport.ForwardApmData(invocationCtx); err != nil {
 			extension.Log.Error(err)
 		}
 	}()
