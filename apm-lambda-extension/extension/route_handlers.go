@@ -31,9 +31,6 @@ type AgentData struct {
 	ContentEncoding string
 }
 
-var currApmServerTransport *ApmServerTransport
-var currContext context.Context
-
 // URL: http://server/
 func handleInfoRequest(ctx context.Context, apmServerTransport *ApmServerTransport) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -54,9 +51,10 @@ func handleInfoRequest(ctx context.Context, apmServerTransport *ApmServerTranspo
 		customTransport.ResponseHeaderTimeout = reverseProxyTimeout
 		reverseProxy.Transport = customTransport
 
-		currApmServerTransport = apmServerTransport
-		currContext = ctx
-		reverseProxy.ErrorHandler = reverseProxyErrorHandler
+		reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+			SetApmServerTransportState(ctx, apmServerTransport, Failing)
+			Log.Errorf("Error querying version from the APM server: %v", err)
+		}
 
 		// Process request (the Golang doc suggests removing any pre-existing X-Forwarded-For header coming
 		// from the client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
@@ -71,11 +69,6 @@ func handleInfoRequest(ctx context.Context, apmServerTransport *ApmServerTranspo
 		// Forward request to the APM server
 		reverseProxy.ServeHTTP(w, r)
 	}
-}
-
-func reverseProxyErrorHandler(res http.ResponseWriter, req *http.Request, err error) {
-	SetApmServerTransportState(currContext, currApmServerTransport, Failing)
-	Log.Errorf("Error querying version from the APM server: %v", err)
 }
 
 // URL: http://server/intake/v2/events
