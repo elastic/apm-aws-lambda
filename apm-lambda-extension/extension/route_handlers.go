@@ -52,7 +52,7 @@ func handleInfoRequest(ctx context.Context, apmServerTransport *ApmServerTranspo
 		reverseProxy.Transport = customTransport
 
 		reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-			SetApmServerTransportState(ctx, apmServerTransport, Failing)
+			apmServerTransport.SetApmServerTransportState(ctx, Failing)
 			Log.Errorf("Error querying version from the APM server: %v", err)
 		}
 
@@ -90,7 +90,7 @@ func handleIntakeV2Events(transport *ApmServerTransport) func(w http.ResponseWri
 				ContentEncoding: r.Header.Get("Content-Encoding"),
 			}
 
-			EnqueueAPMData(transport.dataChannel, agentData)
+			transport.EnqueueAPMData(agentData)
 		}
 
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {

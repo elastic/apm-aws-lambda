@@ -70,7 +70,7 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 	transport := InitApmServerTransport(&config)
-	err := PostToApmServer(context.Background(), transport, agentData)
+	err := transport.PostToApmServer(context.Background(), agentData)
 	assert.Equal(t, nil, err)
 }
 
@@ -115,7 +115,7 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 	transport := InitApmServerTransport(&config)
-	err := PostToApmServer(context.Background(), transport, agentData)
+	err := transport.PostToApmServer(context.Background(), agentData)
 	assert.Equal(t, nil, err)
 }
 
@@ -123,41 +123,41 @@ func TestGracePeriod(t *testing.T) {
 	transport := InitApmServerTransport(&extensionConfig{})
 
 	transport.reconnectionCount = 0
-	val0 := computeGracePeriod(transport).Seconds()
+	val0 := transport.computeGracePeriod().Seconds()
 	assert.Equal(t, val0, float64(0))
 
 	transport.reconnectionCount = 1
-	val1 := computeGracePeriod(transport).Seconds()
+	val1 := transport.computeGracePeriod().Seconds()
 	assert.InDelta(t, val1, float64(1), 0.1*1)
 
 	transport.reconnectionCount = 2
-	val2 := computeGracePeriod(transport).Seconds()
+	val2 := transport.computeGracePeriod().Seconds()
 	assert.InDelta(t, val2, float64(4), 0.1*4)
 
 	transport.reconnectionCount = 3
-	val3 := computeGracePeriod(transport).Seconds()
+	val3 := transport.computeGracePeriod().Seconds()
 	assert.InDelta(t, val3, float64(9), 0.1*9)
 
 	transport.reconnectionCount = 4
-	val4 := computeGracePeriod(transport).Seconds()
+	val4 := transport.computeGracePeriod().Seconds()
 	assert.InDelta(t, val4, float64(16), 0.1*16)
 
 	transport.reconnectionCount = 5
-	val5 := computeGracePeriod(transport).Seconds()
+	val5 := transport.computeGracePeriod().Seconds()
 	assert.InDelta(t, val5, float64(25), 0.1*25)
 
 	transport.reconnectionCount = 6
-	val6 := computeGracePeriod(transport).Seconds()
+	val6 := transport.computeGracePeriod().Seconds()
 	assert.InDelta(t, val6, float64(36), 0.1*36)
 
 	transport.reconnectionCount = 7
-	val7 := computeGracePeriod(transport).Seconds()
+	val7 := transport.computeGracePeriod().Seconds()
 	assert.InDelta(t, val7, float64(36), 0.1*36)
 }
 
 func TestSetHealthyTransport(t *testing.T) {
 	transport := InitApmServerTransport(&extensionConfig{})
-	SetApmServerTransportState(context.Background(), transport, Healthy)
+	transport.SetApmServerTransportState(context.Background(), Healthy)
 	assert.True(t, transport.status == Healthy)
 	assert.Equal(t, transport.reconnectionCount, -1)
 }
@@ -167,15 +167,15 @@ func TestSetFailingTransport(t *testing.T) {
 	// and avoid a race between reaching the pending status and the test assertion.
 	transport := InitApmServerTransport(&extensionConfig{})
 	transport.reconnectionCount = 0
-	SetApmServerTransportState(context.Background(), transport, Failing)
+	transport.SetApmServerTransportState(context.Background(), Failing)
 	assert.True(t, transport.status == Failing)
 	assert.Equal(t, transport.reconnectionCount, 1)
 }
 
 func TestSetPendingTransport(t *testing.T) {
 	transport := InitApmServerTransport(&extensionConfig{})
-	SetApmServerTransportState(context.Background(), transport, Healthy)
-	SetApmServerTransportState(context.Background(), transport, Failing)
+	transport.SetApmServerTransportState(context.Background(), Healthy)
+	transport.SetApmServerTransportState(context.Background(), Failing)
 	for {
 		if transport.status != Failing {
 			break
@@ -187,16 +187,16 @@ func TestSetPendingTransport(t *testing.T) {
 
 func TestSetPendingTransportExplicitly(t *testing.T) {
 	transport := InitApmServerTransport(&extensionConfig{})
-	SetApmServerTransportState(context.Background(), transport, Healthy)
-	SetApmServerTransportState(context.Background(), transport, Pending)
+	transport.SetApmServerTransportState(context.Background(), Healthy)
+	transport.SetApmServerTransportState(context.Background(), Pending)
 	assert.True(t, transport.status == Healthy)
 	assert.Equal(t, transport.reconnectionCount, -1)
 }
 
 func TestSetInvalidTransport(t *testing.T) {
 	transport := InitApmServerTransport(&extensionConfig{})
-	SetApmServerTransportState(context.Background(), transport, Healthy)
-	SetApmServerTransportState(context.Background(), transport, "Invalid")
+	transport.SetApmServerTransportState(context.Background(), Healthy)
+	transport.SetApmServerTransportState(context.Background(), "Invalid")
 	assert.True(t, transport.status == Healthy)
 	assert.Equal(t, transport.reconnectionCount, -1)
 }
@@ -237,12 +237,12 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 		apmServerUrl: apmServer.URL + "/",
 	}
 	transport := InitApmServerTransport(&config)
-	SetApmServerTransportState(context.Background(), transport, Healthy)
+	transport.SetApmServerTransportState(context.Background(), Healthy)
 
 	// Close the APM server early so that POST requests fail and that backoff is enabled
 	apmServer.Close()
 
-	if err := PostToApmServer(context.Background(), transport, agentData); err != nil {
+	if err := transport.PostToApmServer(context.Background(), agentData); err != nil {
 		return
 	}
 	// No way to know for sure if failing or pending (0 sec grace period)
@@ -291,8 +291,8 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	}
 
 	transport := InitApmServerTransport(&config)
-	SetApmServerTransportState(context.Background(), transport, Healthy)
-	SetApmServerTransportState(context.Background(), transport, Failing)
+	transport.SetApmServerTransportState(context.Background(), Healthy)
+	transport.SetApmServerTransportState(context.Background(), Failing)
 	for {
 		if transport.status != Failing {
 			break
@@ -300,7 +300,7 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	}
 	assert.Equal(t, transport.status, Pending)
 
-	assert.Error(t, PostToApmServer(context.Background(), transport, agentData))
+	assert.Error(t, transport.PostToApmServer(context.Background(), agentData))
 	assert.Equal(t, transport.status, Failing)
 	assert.Equal(t, transport.reconnectionCount, 1)
 }
@@ -344,8 +344,8 @@ func TestAPMServerRecovery(t *testing.T) {
 	}
 
 	transport := InitApmServerTransport(&config)
-	SetApmServerTransportState(context.Background(), transport, Healthy)
-	SetApmServerTransportState(context.Background(), transport, Failing)
+	transport.SetApmServerTransportState(context.Background(), Healthy)
+	transport.SetApmServerTransportState(context.Background(), Failing)
 	for {
 		if transport.status != Failing {
 			break
@@ -353,7 +353,7 @@ func TestAPMServerRecovery(t *testing.T) {
 	}
 	assert.Equal(t, transport.status, Pending)
 
-	assert.NoError(t, PostToApmServer(context.Background(), transport, agentData))
+	assert.NoError(t, transport.PostToApmServer(context.Background(), agentData))
 	assert.Equal(t, transport.status, Healthy)
 	assert.Equal(t, transport.reconnectionCount, -1)
 }
@@ -397,15 +397,15 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 	}
 
 	transport := InitApmServerTransport(&config)
-	SetApmServerTransportState(context.Background(), transport, Healthy)
-	SetApmServerTransportState(context.Background(), transport, Failing)
+	transport.SetApmServerTransportState(context.Background(), Healthy)
+	transport.SetApmServerTransportState(context.Background(), Failing)
 	for {
 		if transport.status != Failing {
 			break
 		}
 	}
 	assert.Equal(t, transport.status, Pending)
-	assert.Error(t, PostToApmServer(context.Background(), transport, agentData))
+	assert.Error(t, transport.PostToApmServer(context.Background(), agentData))
 	assert.Equal(t, transport.status, Failing)
 	assert.Equal(t, transport.reconnectionCount, 1)
 }
@@ -443,7 +443,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := PostToApmServer(context.Background(), transport, agentData); err != nil {
+		if err := transport.PostToApmServer(context.Background(), agentData); err != nil {
 			b.Fatal(err)
 		}
 	}
