@@ -159,7 +159,7 @@ func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTrans
 	select {
 	case <-apmServerTransport.AgentDoneSignal:
 		extension.Log.Debug("Received agent done signal")
-	case <-logsTransport.RuntimeDoneSignal:
+	case <-runtimeDone:
 		extension.Log.Debug("Received runtimeDone signal")
 	case <-timer.C:
 		extension.Log.Info("Time expired waiting for agent signal or runtimeDone event")
