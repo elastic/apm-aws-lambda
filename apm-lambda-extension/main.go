@@ -131,6 +131,8 @@ func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTrans
 	}
 
 	// APM Data Processing
+	apmServerTransport.AgentDoneSignal = make(chan struct{})
+	defer close(apmServerTransport.AgentDoneSignal)
 	backgroundDataSendWg.Add(1)
 	go func() {
 		defer backgroundDataSendWg.Done()

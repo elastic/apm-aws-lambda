@@ -61,7 +61,6 @@ func InitApmServerTransport(config *extensionConfig) *ApmServerTransport {
 	transport.bufferPool = sync.Pool{New: func() interface{} {
 		return &bytes.Buffer{}
 	}}
-	transport.AgentDoneSignal = make(chan struct{}, 1)
 	transport.dataChannel = make(chan AgentData, 100)
 	transport.client = &http.Client{
 		Timeout:   time.Duration(config.DataForwarderTimeoutSeconds) * time.Second,

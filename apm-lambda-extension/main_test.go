@@ -57,6 +57,7 @@ type MockServerInternals struct {
 	Data                string
 	WaitForUnlockSignal bool
 	UnlockSignalChannel chan struct{}
+	WaitGroup           sync.WaitGroup
 }
 
 type APMServerBehavior string
@@ -161,6 +162,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 				return
 			}
 		case "/2020-01-01/extension/event/next":
+			lambdaServerInternals.WaitGroup.Wait()
 			currId := uuid.New().String()
 			select {
 			case nextEvent := <-eventsChannel:
@@ -224,10 +226,12 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 	case InvokeLateFlush:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
+		internals.WaitGroup.Add(1)
 		go func() {
 			if _, err := client.Do(reqData); err != nil {
 				extension.Log.Error(err.Error())
 			}
+			internals.WaitGroup.Done()
 		}()
 	case InvokeWaitgroupsRace:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)

@@ -217,7 +217,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 	transport := InitApmServerTransport(&config)
-
+	transport.AgentDoneSignal = make(chan struct{}, 1)
 	agentDataServer, err := StartHttpServer(context.Background(), transport)
 	if err != nil {
 		t.Fail()
@@ -270,7 +270,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 	transport := InitApmServerTransport(&config)
-
+	transport.AgentDoneSignal = make(chan struct{}, 1)
 	agentDataServer, err := StartHttpServer(context.Background(), transport)
 	if err != nil {
 		t.Fail()
@@ -313,7 +313,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 		dataReceiverTimeoutSeconds: 15,
 	}
 	transport := InitApmServerTransport(&config)
-
+	transport.AgentDoneSignal = make(chan struct{}, 1)
 	agentDataServer, err := StartHttpServer(context.Background(), transport)
 	if err != nil {
 		t.Fail()
