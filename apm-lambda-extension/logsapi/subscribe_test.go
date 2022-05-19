@@ -44,6 +44,20 @@ func TestSubscribeWithSamLocalEnv(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestSubscribeWithLambdaFunction(t *testing.T) {
+	if err := os.Setenv("AWS_LAMBDA_FUNCTION_NAME", "mock"); err != nil {
+		t.Fail()
+	}
+	t.Cleanup(func() {
+		if err := os.Unsetenv("AWS_LAMBDA_FUNCTION_NAME"); err != nil {
+			t.Fail()
+		}
+	})
+
+	_, err := Subscribe(context.Background(), "testID", []EventType{Platform})
+	assert.Error(t, err, "listen tcp: lookup sandbox: no such host")
+}
+
 func TestSubscribeAWSRequest(t *testing.T) {
 
 	// For subscription request

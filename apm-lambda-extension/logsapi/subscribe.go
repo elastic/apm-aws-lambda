@@ -148,8 +148,8 @@ func checkAWSSamLocal() bool {
 // It is currently used together with checkAWSSamLocal as a best effort solution to determine if
 // the extension actually runs in dev (unit tests), SAM, or in a local Lambda environment.
 func checkLambdaFunction() bool {
-	_, ok := os.LookupEnv("AWS_LAMBDA_FUNCTION_NAME")
-	if ok {
+	lambdaName, ok := os.LookupEnv("AWS_LAMBDA_FUNCTION_NAME")
+	if ok && lambdaName != "" {
 		return true
 	}
 
