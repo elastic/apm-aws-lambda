@@ -142,14 +142,20 @@ func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTrans
 	}()
 
 	// Lambda Service Logs Processing
+	// This goroutine should not be started if subscription failed
 	runtimeDone := make(chan struct{})
-	go func() {
-		if err := logsapi.WaitRuntimeDone(invocationCtx, event.RequestID, logsTransport, runtimeDone); err != nil {
-			extension.Log.Errorf("Error while processing Lambda Logs ; %v", err)
-		} else {
-			close(runtimeDone)
-		}
-	}()
+	if logsTransport != nil {
+		go func() {
+			if err := logsapi.WaitRuntimeDone(invocationCtx, event.RequestID, logsTransport, runtimeDone); err != nil {
+				extension.Log.Errorf("Error while processing Lambda Logs ; %v", err)
+			} else {
+				close(runtimeDone)
+			}
+		}()
+	} else {
+		extension.Log.Warn("Logs collection not started due to earlier subscription failure")
+		close(runtimeDone)
+	}
 
 	// Calculate how long to wait for a runtimeDoneSignal or AgentDoneSignal signal
 	flushDeadlineMs := event.DeadlineMs - 100

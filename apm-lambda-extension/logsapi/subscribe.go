@@ -40,9 +40,9 @@ type LogsTransport struct {
 	server       *http.Server
 }
 
-func InitLogsTransport() *LogsTransport {
+func InitLogsTransport(listenerHost string) *LogsTransport {
 	var transport LogsTransport
-	transport.listenerHost = "localhost"
+	transport.listenerHost = listenerHost
 	transport.logsChannel = make(chan LogEvent, 100)
 	return &transport
 }
@@ -88,7 +88,11 @@ func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType) 
 
 	// Init APM server Transport struct
 	// Make channel for collecting logs and create a HTTP server to listen for them
-	transport = InitLogsTransport()
+	if checkLambdaFunction() {
+		transport = InitLogsTransport("sandbox")
+	} else {
+		transport = InitLogsTransport("localhost")
+	}
 
 	if err = startHTTPServer(ctx, transport); err != nil {
 		return nil, err
@@ -129,9 +133,23 @@ func startHTTPServer(ctx context.Context, transport *LogsTransport) error {
 	return nil
 }
 
+// checkAWSSamLocal checks if the extension is running in a SAM CLI container.
+// The Logs API is not supported in that scenario.
 func checkAWSSamLocal() bool {
 	envAWSLocal, ok := os.LookupEnv("AWS_SAM_LOCAL")
 	if ok && envAWSLocal == "true" {
+		return true
+	}
+
+	return false
+}
+
+// checkLambdaFunction checks if the extension is together with an actual Lambda function.
+// It is currently used together with checkAWSSamLocal as a best effort solution to determine if
+// the extension actually runs in dev (unit tests), SAM, or in a local Lambda environment.
+func checkLambdaFunction() bool {
+	_, ok := os.LookupEnv("AWS_LAMBDA_FUNCTION_NAME")
+	if ok {
 		return true
 	}
 
