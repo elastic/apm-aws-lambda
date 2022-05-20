@@ -67,14 +67,14 @@ const (
 	extensionErrorType       = "Lambda-Extension-Function-Error-Type"
 )
 
-// Client is a simple client for the Lambda Extensions API
+// Client is a simple Client for the Lambda Extensions API
 type Client struct {
 	baseURL     string
 	httpClient  *http.Client
 	ExtensionID string
 }
 
-// NewClient returns a Lambda Extensions API client
+// NewClient returns a Lambda Extensions API Client
 func NewClient(awsLambdaRuntimeAPI string) *Client {
 	baseURL := fmt.Sprintf("http://%s/2020-01-01/extension", awsLambdaRuntimeAPI)
 	return &Client{

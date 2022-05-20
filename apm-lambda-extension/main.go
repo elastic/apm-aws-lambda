@@ -19,7 +19,6 @@ package main
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -40,9 +39,8 @@ var (
 
 func main() {
 
+	// Global context
 	ctx, cancel := context.WithCancel(context.Background())
-
-	// Trigger ctx.Done() in all relevant goroutines when main ends
 	defer cancel()
 
 	sigs := make(chan os.Signal, 1)
@@ -71,35 +69,19 @@ func main() {
 	}
 	extension.Log.Debugf("Register response: %v", extension.PrettyPrint(res))
 
-	// Create a channel to buffer apm agent data
-	agentDataChannel := make(chan extension.AgentData, 100)
-
-	// Start http server to receive data from agent
-	if err = extension.StartHttpServer(ctx, agentDataChannel, config); err != nil {
+	// Init APM Server Transport struct and start http server to receive data from agent
+	apmServerTransport := extension.InitApmServerTransport(config)
+	agentDataServer, err := extension.StartHttpServer(ctx, apmServerTransport)
+	if err != nil {
 		extension.Log.Errorf("Could not start APM data receiver : %v", err)
 	}
-
-	// Create a client to use for sending data to the apm server
-	client := &http.Client{
-		Timeout:   time.Duration(config.DataForwarderTimeoutSeconds) * time.Second,
-		Transport: http.DefaultTransport.(*http.Transport).Clone(),
-	}
-
-	// Create a channel used
-
-	// Make channel for collecting logs and create a HTTP server to listen for them
-	logsChannel := make(chan logsapi.LogEvent)
+	defer agentDataServer.Close()
 
 	// Use a wait group to ensure the background go routine sending to the APM server
 	// completes before signaling that the extension is ready for the next invocation.
-	var backgroundDataSendWg sync.WaitGroup
 
-	if err := logsapi.Subscribe(
-		ctx,
-		extensionClient.ExtensionID,
-		[]logsapi.EventType{logsapi.Platform},
-		logsChannel,
-	); err != nil {
+	logsTransport, err := logsapi.Subscribe(ctx, extensionClient.ExtensionID, []logsapi.EventType{logsapi.Platform})
+	if err != nil {
 		extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
 	}
 
@@ -108,109 +90,93 @@ func main() {
 		case <-ctx.Done():
 			return
 		default:
-			// call Next method of extension API.  This long polling HTTP method
-			// will block until there's an invocation of the function
-			extension.Log.Infof("Waiting for next event...")
-			event, err := extensionClient.NextEvent(ctx)
-			if err != nil {
-				status, err := extensionClient.ExitError(ctx, err.Error())
-				if err != nil {
-					panic(err)
-				}
-				extension.Log.Errorf("Error: %s", err)
-				extension.Log.Infof("Exit signal sent to runtime : %s", status)
-				extension.Log.Infof("Exiting")
-				return
-			}
-			extension.Log.Debug("Received event.")
-			extension.Log.Debugf("%v", extension.PrettyPrint(event))
-
-			// Make a channel for signaling that we received the agent flushed signal
-			extension.AgentDoneSignal = make(chan struct{})
-			// Make a channel for signaling that we received the runtimeDone logs API event
-			runtimeDoneSignal := make(chan struct{})
-			// Make a channel for signaling that the function invocation is complete
-			funcDone := make(chan struct{})
-
-			// A shutdown event indicates the execution environment is shutting down.
-			// This is usually due to inactivity.
-			if event.EventType == extension.Shutdown {
-				extension.ProcessShutdown()
-				cancel()
-				return
-			}
-
-			// Receive agent data as it comes in and post it to the APM server.
-			// Stop checking for, and sending agent data when the function invocation
-			// has completed, signaled via a channel.
-			backgroundDataSendWg.Add(1)
-			go func() {
-				defer backgroundDataSendWg.Done()
-				if !extension.IsTransportStatusHealthyOrPending() {
-					return
-				}
-				for {
-					select {
-					case <-funcDone:
-						extension.Log.Debug("Received signal that function has completed, not processing any more agent data")
-						return
-					case agentData := <-agentDataChannel:
-						if err := extension.PostToApmServer(client, agentData, config, ctx); err != nil {
-							extension.Log.Errorf("Error sending to APM server, skipping: %v", err)
-							return
-						}
-					}
-				}
-			}()
-
-			// Receive Logs API events
-			// Send to the runtimeDoneSignal channel to signal when a runtimeDone event is received
-			go func() {
-				for {
-					select {
-					case <-funcDone:
-						extension.Log.Debug("Received signal that function has completed, not processing any more log events")
-						return
-					case logEvent := <-logsChannel:
-						extension.Log.Debugf("Received log event %v", logEvent.Type)
-						// Check the logEvent for runtimeDone and compare the RequestID
-						// to the id that came in via the Next API
-						if logEvent.Type == logsapi.RuntimeDone {
-							if logEvent.Record.RequestId == event.RequestID {
-								extension.Log.Info("Received runtimeDone event for this function invocation")
-								runtimeDoneSignal <- struct{}{}
-								return
-							} else {
-								extension.Log.Debug("Log API runtimeDone event request id didn't match")
-							}
-						}
-					}
-				}
-			}()
-
-			// Calculate how long to wait for a runtimeDoneSignal or AgentDoneSignal signal
-			flushDeadlineMs := event.DeadlineMs - 100
-			durationUntilFlushDeadline := time.Until(time.Unix(flushDeadlineMs/1000, 0))
-
-			// Create a timer that expires after durationUntilFlushDeadline
-			timer := time.NewTimer(durationUntilFlushDeadline)
-			defer timer.Stop()
-
-			select {
-			case <-extension.AgentDoneSignal:
-				extension.Log.Debug("Received agent done signal")
-			case <-runtimeDoneSignal:
-				extension.Log.Debug("Received runtimeDone signal")
-			case <-timer.C:
-				extension.Log.Info("Time expired waiting for agent signal or runtimeDone event")
-			}
-
-			close(funcDone)
+			var backgroundDataSendWg sync.WaitGroup
+			processEvent(ctx, cancel, apmServerTransport, logsTransport, &backgroundDataSendWg)
+			extension.Log.Debug("Waiting for background data send to end")
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
 				// Flush APM data now that the function invocation has completed
-				extension.FlushAPMData(client, agentDataChannel, config, ctx)
+				apmServerTransport.FlushAPMData(ctx)
 			}
 		}
+	}
+}
+
+func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTransport *extension.ApmServerTransport, logsTransport *logsapi.LogsTransport, backgroundDataSendWg *sync.WaitGroup) {
+	// Invocation context
+	invocationCtx, invocationCancel := context.WithCancel(ctx)
+	defer invocationCancel()
+
+	// call Next method of extension API.  This long polling HTTP method
+	// will block until there's an invocation of the function
+	extension.Log.Infof("Waiting for next event...")
+	event, err := extensionClient.NextEvent(ctx)
+	if err != nil {
+		status, err := extensionClient.ExitError(ctx, err.Error())
+		if err != nil {
+			panic(err)
+		}
+		extension.Log.Errorf("Error: %s", err)
+		extension.Log.Infof("Exit signal sent to runtime : %s", status)
+		extension.Log.Infof("Exiting")
+		return
+	}
+
+	extension.Log.Debug("Received event.")
+	extension.Log.Debugf("%v", extension.PrettyPrint(event))
+
+	if event.EventType == extension.Shutdown {
+		cancel()
+		return
+	}
+
+	// APM Data Processing
+	apmServerTransport.AgentDoneSignal = make(chan struct{})
+	defer close(apmServerTransport.AgentDoneSignal)
+	backgroundDataSendWg.Add(1)
+	go func() {
+		defer backgroundDataSendWg.Done()
+		if err := apmServerTransport.ForwardApmData(invocationCtx); err != nil {
+			extension.Log.Error(err)
+		}
+	}()
+
+	// Lambda Service Logs Processing
+	// This goroutine should not be started if subscription failed
+	runtimeDone := make(chan struct{})
+	if logsTransport != nil {
+		go func() {
+			if err := logsapi.WaitRuntimeDone(invocationCtx, event.RequestID, logsTransport, runtimeDone); err != nil {
+				extension.Log.Errorf("Error while processing Lambda Logs ; %v", err)
+			} else {
+				close(runtimeDone)
+			}
+		}()
+	} else {
+		extension.Log.Warn("Logs collection not started due to earlier subscription failure")
+		close(runtimeDone)
+	}
+
+	// Calculate how long to wait for a runtimeDoneSignal or AgentDoneSignal signal
+	flushDeadlineMs := event.DeadlineMs - 100
+	durationUntilFlushDeadline := time.Until(time.Unix(flushDeadlineMs/1000, 0))
+
+	// Create a timer that expires after durationUntilFlushDeadline
+	timer := time.NewTimer(durationUntilFlushDeadline)
+	defer timer.Stop()
+
+	// The extension relies on 3 independent mechanisms to minimize the time interval between the end of the execution of
+	// the lambda function and the end of the execution of processEvent()
+	// 1) AgentDoneSignal is triggered upon reception of a `flushed=true` query from the agent
+	// 2) [Backup 1] RuntimeDone is triggered upon reception of a Lambda log entry certifying the end of the execution of the current function
+	// 3) [Backup 2] If all else fails, the extension relies of the timeout of the Lambda function to interrupt itself 100 ms before the specified deadline.
+	// This time interval is large enough to attempt a last flush attempt (if SendStrategy == syncFlush) before the environment gets shut down.
+	select {
+	case <-apmServerTransport.AgentDoneSignal:
+		extension.Log.Debug("Received agent done signal")
+	case <-runtimeDone:
+		extension.Log.Debug("Received runtimeDone signal")
+	case <-timer.C:
+		extension.Log.Info("Time expired waiting for agent signal or runtimeDone event")
 	}
 }

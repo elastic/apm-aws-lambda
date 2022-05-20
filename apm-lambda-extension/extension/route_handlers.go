@@ -31,18 +31,14 @@ type AgentData struct {
 	ContentEncoding string
 }
 
-var AgentDoneSignal chan struct{}
-var mainExtensionContext context.Context
-
 // URL: http://server/
-func handleInfoRequest(ctx context.Context, apmServerUrl string, config *extensionConfig) func(w http.ResponseWriter, r *http.Request) {
+func handleInfoRequest(ctx context.Context, apmServerTransport *ApmServerTransport) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		Log.Debug("Handling APM Server Info Request")
-		mainExtensionContext = ctx
+		Log.Debug("Handling APM server Info Request")
 
 		// Init reverse proxy
-		parsedApmServerUrl, err := url.Parse(apmServerUrl)
+		parsedApmServerUrl, err := url.Parse(apmServerTransport.config.apmServerUrl)
 		if err != nil {
 			Log.Errorf("could not parse APM server URL: %v", err)
 			return
@@ -50,12 +46,15 @@ func handleInfoRequest(ctx context.Context, apmServerUrl string, config *extensi
 
 		reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
 
-		reverseProxyTimeout := time.Duration(config.DataForwarderTimeoutSeconds) * time.Second
+		reverseProxyTimeout := time.Duration(apmServerTransport.config.DataForwarderTimeoutSeconds) * time.Second
 		customTransport := http.DefaultTransport.(*http.Transport).Clone()
 		customTransport.ResponseHeaderTimeout = reverseProxyTimeout
 		reverseProxy.Transport = customTransport
 
-		reverseProxy.ErrorHandler = reverseProxyErrorHandler
+		reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+			apmServerTransport.SetApmServerTransportState(ctx, Failing)
+			Log.Errorf("Error querying version from the APM server: %v", err)
+		}
 
 		// Process request (the Golang doc suggests removing any pre-existing X-Forwarded-For header coming
 		// from the client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
@@ -72,13 +71,8 @@ func handleInfoRequest(ctx context.Context, apmServerUrl string, config *extensi
 	}
 }
 
-func reverseProxyErrorHandler(res http.ResponseWriter, req *http.Request, err error) {
-	SetApmServerTransportState(Failing, mainExtensionContext)
-	Log.Errorf("Error querying version from the APM Server: %v", err)
-}
-
 // URL: http://server/intake/v2/events
-func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWriter, r *http.Request) {
+func handleIntakeV2Events(transport *ApmServerTransport) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		Log.Debug("Handling APM Data Intake")
@@ -96,11 +90,11 @@ func handleIntakeV2Events(agentDataChan chan AgentData) func(w http.ResponseWrit
 				ContentEncoding: r.Header.Get("Content-Encoding"),
 			}
 
-			EnqueueAPMData(agentDataChan, agentData)
+			transport.EnqueueAPMData(agentData)
 		}
 
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {
-			AgentDoneSignal <- struct{}{}
+			transport.AgentDoneSignal <- struct{}{}
 		}
 
 		w.WriteHeader(http.StatusAccepted)

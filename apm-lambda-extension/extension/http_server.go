@@ -24,36 +24,34 @@ import (
 	"time"
 )
 
-var agentDataServer *http.Server
-
 // StartHttpServer starts the server listening for APM agent data.
-func StartHttpServer(ctx context.Context, agentDataChan chan AgentData, config *extensionConfig) (err error) {
+func StartHttpServer(ctx context.Context, transport *ApmServerTransport) (agentDataServer *http.Server, err error) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleInfoRequest(ctx, config.apmServerUrl, config))
-	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(agentDataChan))
-	timeout := time.Duration(config.dataReceiverTimeoutSeconds) * time.Second
-	agentDataServer = &http.Server{
-		Addr:           config.dataReceiverServerPort,
+	mux.HandleFunc("/", handleInfoRequest(ctx, transport))
+	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(transport))
+	timeout := time.Duration(transport.config.dataReceiverTimeoutSeconds) * time.Second
+	server := &http.Server{
+		Addr:           transport.config.dataReceiverServerPort,
 		Handler:        mux,
 		ReadTimeout:    timeout,
 		WriteTimeout:   timeout,
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	ln, err := net.Listen("tcp", agentDataServer.Addr)
+	ln, err := net.Listen("tcp", server.Addr)
 	if err != nil {
 		return
 	}
 
 	go func() {
-		Log.Infof("Extension listening for apm data on %s", agentDataServer.Addr)
-		if err = agentDataServer.Serve(ln); err != nil {
-			if err.Error() == "http: Server closed" {
+		Log.Infof("Extension listening for apm data on %s", server.Addr)
+		if err = server.Serve(ln); err != nil {
+			if err.Error() == "http: server closed" {
 				Log.Debug(err)
 			} else {
 				Log.Errorf("Error upon APM data server start : %v", err)
 			}
 		}
 	}()
-	return nil
+	return server, nil
 }
