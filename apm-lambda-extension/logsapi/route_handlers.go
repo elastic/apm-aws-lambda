@@ -24,7 +24,7 @@ import (
 	"net/http"
 )
 
-func handleLogEventsRequest(out chan model.LogEvent) func(w http.ResponseWriter, r *http.Request) {
+func handleLogEventsRequest(transport *LogsTransport) func(w http.ResponseWriter, r *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		var logEvents []model.LogEvent
@@ -40,7 +40,7 @@ func handleLogEventsRequest(out chan model.LogEvent) func(w http.ResponseWriter,
 				w.WriteHeader(http.StatusInternalServerError)
 				continue
 			}
-			out <- logEvents[idx]
+			transport.logsChannel <- logEvents[idx]
 		}
 	}
 }

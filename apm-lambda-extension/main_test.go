@@ -48,6 +48,7 @@ const (
 	InvokeStandard                     MockEventType = "Standard"
 	InvokeStandardInfo                 MockEventType = "StandardInfo"
 	InvokeStandardFlush                MockEventType = "Flush"
+	InvokeLateFlush                    MockEventType = "LateFlush"
 	InvokeWaitgroupsRace               MockEventType = "InvokeWaitgroupsRace"
 	InvokeMultipleTransactionsOverload MockEventType = "MultipleTransactionsOverload"
 	Shutdown                           MockEventType = "Shutdown"
@@ -57,6 +58,7 @@ type MockServerInternals struct {
 	Data                string
 	WaitForUnlockSignal bool
 	UnlockSignalChannel chan struct{}
+	WaitGroup           sync.WaitGroup
 }
 
 type APMServerBehavior string
@@ -146,7 +148,6 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 	}
 
 	// Mock Lambda Server
-	logsapi.ListenerHost = "localhost"
 	var lambdaServerInternals MockServerInternals
 	lambdaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.RequestURI {
@@ -162,6 +163,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 				return
 			}
 		case "/2020-01-01/extension/event/next":
+			lambdaServerInternals.WaitGroup.Wait()
 			currId := uuid.New().String()
 			select {
 			case nextEvent := <-eventsChannel:
@@ -207,6 +209,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 func processMockEvent(currId string, event MockEvent, extensionPort string, internals *MockServerInternals) {
 	sendLogEvent(currId, "platform.start")
 	client := http.Client{}
+	sendRuntimeDone := true
 	switch event.Type {
 	case InvokeHang:
 		time.Sleep(time.Duration(event.Timeout) * time.Second)
@@ -221,6 +224,16 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 		if _, err := client.Do(reqData); err != nil {
 			extension.Log.Error(err.Error())
 		}
+	case InvokeLateFlush:
+		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
+		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
+		internals.WaitGroup.Add(1)
+		go func() {
+			if _, err := client.Do(reqData); err != nil {
+				extension.Log.Error(err.Error())
+			}
+			internals.WaitGroup.Done()
+		}()
 	case InvokeWaitgroupsRace:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData0, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
@@ -262,7 +275,9 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 		extension.Log.Debugf("Response seen by the agent : %d", res.StatusCode)
 	case Shutdown:
 	}
-	sendLogEvent(currId, "platform.runtimeDone")
+	if sendRuntimeDone {
+		sendLogEvent(currId, "platform.runtimeDone")
+	}
 }
 
 func sendNextEventInfo(w http.ResponseWriter, id string, event MockEvent) {
@@ -306,7 +321,7 @@ func sendLogEvent(requestId string, logEventType model.SubEventType) {
 		extension.Log.Errorf("Could not encode record : %v", err)
 		return
 	}
-	host, port, _ := net.SplitHostPort(logsapi.Listener.Addr().String())
+	host, port, _ := net.SplitHostPort(logsapi.TestListenerAddr.String())
 	req, _ := http.NewRequest("POST", "http://"+host+":"+port, bufLogEvent)
 	client := http.Client{}
 	if _, err := client.Do(req); err != nil {
@@ -346,7 +361,6 @@ func (suite *MainUnitTestsSuite) SetupTest() {
 	http.DefaultServeMux = new(http.ServeMux)
 	suite.eventsChannel = make(chan MockEvent, 100)
 	suite.lambdaServer, suite.apmServer, suite.apmServerInternals, suite.lambdaServerInternals = initMockServers(suite.eventsChannel)
-	extension.SetApmServerTransportState(extension.Healthy, suite.ctx)
 }
 
 // This function executes after each test case
@@ -374,6 +388,18 @@ func (suite *MainUnitTestsSuite) TestFlush() {
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
 	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+}
+
+// TestLateFlush checks if there is no race condition between RuntimeDone and AgentDone
+// The test is built so that the AgentDone signal is received after RuntimeDone, which causes the next event to be interrupted.
+func (suite *MainUnitTestsSuite) TestLateFlush() {
+	eventsChain := []MockEvent{
+		{Type: InvokeLateFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+	}
+	eventQueueGenerator(eventsChain, suite.eventsChannel)
+	assert.NotPanics(suite.T(), main)
+	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse+TimelyResponse)))
 }
 
 // TestWaitGroup checks if there is no race condition between the main waitgroups (issue #128)
@@ -436,9 +462,6 @@ func (suite *MainUnitTestsSuite) TestAPMServerRecovery() {
 // TestGracePeriodHangs verifies that the WaitforGracePeriod goroutine ends when main() ends.
 // This can be checked by asserting that apmTransportStatus is pending after the execution of main.
 func (suite *MainUnitTestsSuite) TestGracePeriodHangs() {
-	extension.ApmServerTransportState.Status = extension.Pending
-	extension.ApmServerTransportState.ReconnectionCount = 100
-
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
@@ -447,7 +470,6 @@ func (suite *MainUnitTestsSuite) TestGracePeriodHangs() {
 
 	time.Sleep(100 * time.Millisecond)
 	suite.apmServerInternals.UnlockSignalChannel <- struct{}{}
-	defer assert.Equal(suite.T(), extension.IsTransportStatusHealthyOrPending(), true)
 }
 
 // TestAPMServerCrashesDuringExecution tests that main does not panic nor runs indefinitely when the APM server crashes

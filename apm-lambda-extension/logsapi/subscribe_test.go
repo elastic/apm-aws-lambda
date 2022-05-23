@@ -32,8 +32,6 @@ import (
 )
 
 func TestSubscribeWithSamLocalEnv(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	if err := os.Setenv("AWS_SAM_LOCAL", "true"); err != nil {
 		t.Fail()
 	}
@@ -42,17 +40,26 @@ func TestSubscribeWithSamLocalEnv(t *testing.T) {
 			t.Fail()
 		}
 	})
-	out := make(chan model.LogEvent)
 
-	err := Subscribe(ctx, "testID", []model.EventType{Platform}, out)
+	_, err := Subscribe(context.Background(), "testID", []EventType{Platform})
 	assert.Error(t, err)
 }
 
+func TestSubscribeWithLambdaFunction(t *testing.T) {
+	if err := os.Setenv("AWS_LAMBDA_FUNCTION_NAME", "mock"); err != nil {
+		t.Fail()
+	}
+	t.Cleanup(func() {
+		if err := os.Unsetenv("AWS_LAMBDA_FUNCTION_NAME"); err != nil {
+			t.Fail()
+		}
+	})
+
+	_, err := Subscribe(context.Background(), "testID", []EventType{Platform})
+	assert.Error(t, err, "listen tcp: lookup sandbox: no such host")
+}
+
 func TestSubscribeAWSRequest(t *testing.T) {
-	ListenerHost = "localhost"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	out := make(chan model.LogEvent, 1)
 	// For subscription request
 	expectedTypes := []model.EventType{Platform}
 	expectedBufferingCfg := BufferingCfg{
@@ -78,12 +85,13 @@ func TestSubscribeAWSRequest(t *testing.T) {
 	}
 
 	// Subscribe to the logs api and start the http server listening for events
-	if err := Subscribe(ctx, "testID", []model.EventType{Platform}, out); err != nil {
+	transport, err := Subscribe(context.Background(), "testID", []EventType{Platform})
+	if err != nil {
 		t.Logf("Error subscribing, %v", err)
 		t.Fail()
 		return
 	}
-	defer Server.Close()
+	defer transport.server.Close()
 
 	// Create a request to send to the logs listener
 	platformDoneEvent := `{
@@ -95,7 +103,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 		}
 	}`
 	body := []byte(`[` + platformDoneEvent + `]`)
-	url := "http://" + Listener.Addr().String()
+	url := "http://" + transport.listener.Addr().String()
 	req, err := http.NewRequest("GET", url, bytes.NewReader(body))
 	if err != nil {
 		t.Log("Could not create request")
@@ -107,16 +115,11 @@ func TestSubscribeAWSRequest(t *testing.T) {
 		t.Logf("Error fetching %s, [%v]", url, err)
 		t.Fail()
 	}
-	event := <-out
+	event := <-transport.logsChannel
 	assert.Equal(t, event.Record.RequestId, "6f7f0961f83442118a7af6fe80b88")
 }
 
 func TestSubscribeWithBadLogsRequest(t *testing.T) {
-	ListenerHost = "localhost"
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	out := make(chan model.LogEvent)
-
 	// Create aws runtime API server and handler
 	awsRuntimeApiServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	defer awsRuntimeApiServer.Close()
@@ -128,17 +131,18 @@ func TestSubscribeWithBadLogsRequest(t *testing.T) {
 	}
 
 	// Subscribe to the logs api and start the http server listening for events
-	if err := Subscribe(ctx, "testID", []model.EventType{Platform}, out); err != nil {
+	transport, err := Subscribe(context.Background(), "testID", []EventType{Platform})
+	if err != nil {
 		t.Logf("Error subscribing, %v", err)
 		t.Fail()
 		return
 	}
-	defer Server.Close()
+	defer transport.server.Close()
 
 	// Create a request to send to the logs listener
 	logEvent := `{"invalid": "json"}`
 	body := []byte(`[` + logEvent + `]`)
-	url := "http://" + Listener.Addr().String()
+	url := "http://" + transport.listener.Addr().String()
 	req, err := http.NewRequest("GET", url, bytes.NewReader(body))
 	if err != nil {
 		t.Log("Could not create request")
