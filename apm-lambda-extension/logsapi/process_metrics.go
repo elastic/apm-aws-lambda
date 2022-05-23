@@ -85,8 +85,9 @@ func ProcessPlatformReport(ctx context.Context, client *http.Client, metadataCon
 		return
 	}
 
-	metadataContainer.Metadata.Service.Agent.Name = "aws-lambda-extension"
-	metadataContainer.Metadata.Service.Agent.Version = extension.Version
+	//TODO : Discuss relevance of displaying extension name
+	//metadataContainer.Metadata.Service.Agent.Name = "aws-lambda-extension"
+	//metadataContainer.Metadata.Service.Agent.Version = extension.Version
 
 	metadataJson, err := json.Marshal(metadataContainer)
 	if err != nil {
