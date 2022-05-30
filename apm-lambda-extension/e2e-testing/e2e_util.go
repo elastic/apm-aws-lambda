@@ -20,8 +20,6 @@ package e2eTesting
 import (
 	"archive/zip"
 	"bufio"
-	"elastic/apm-lambda-extension/extension"
-	"elastic/apm-lambda-extension/logsapi"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -31,6 +29,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"elastic/apm-lambda-extension/extension"
 )
 
 // GetEnvVarValueOrSetDefault retrieves the environment variable envVarName.
@@ -155,7 +155,7 @@ func GetDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 	if req.Body != nil {
 		rawBytes, _ = ioutil.ReadAll(req.Body)
 	}
-	return logsapi.GetUncompressedBytes(rawBytes, req.Header.Get("Content-Encoding"))
+	return extension.GetUncompressedBytes(rawBytes, req.Header.Get("Content-Encoding"))
 }
 
 // GetFreePort is a function that queries the kernel and obtains an unused port.

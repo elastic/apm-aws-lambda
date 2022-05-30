@@ -18,7 +18,6 @@
 package logsapi
 
 import (
-	"elastic/apm-lambda-extension/model"
 	"encoding/json"
 	"testing"
 	"time"
@@ -28,7 +27,7 @@ import (
 )
 
 func TestLogEventUnmarshalReport(t *testing.T) {
-	le := new(model.LogEvent)
+	le := new(LogEvent)
 	reportJSON := []byte(`{
 		    "time": "2020-08-20T12:31:32.123Z",
 		    "type": "platform.report",
@@ -44,12 +43,12 @@ func TestLogEventUnmarshalReport(t *testing.T) {
 
 	err := le.UnmarshalJSON(reportJSON)
 	require.NoError(t, err)
-	assert.Equal(t, model.SubEventType("platform.report"), le.Type)
+	assert.Equal(t, SubEventType("platform.report"), le.Type)
 	assert.Equal(t, "2020-08-20T12:31:32.123Z", le.Time.Format(time.RFC3339Nano))
-	rec := model.LogEventRecord{
+	rec := LogEventRecord{
 		RequestId: "6f7f0961f83442118a7af6fe80b88d56",
 		Status:    "", // no status was given in sample json
-		Metrics: model.PlatformMetrics{
+		Metrics: PlatformMetrics{
 			DurationMs:       182.43,
 			BilledDurationMs: 183,
 			MemorySizeMB:     128,
@@ -62,7 +61,7 @@ func TestLogEventUnmarshalReport(t *testing.T) {
 }
 
 func TestLogEventUnmarshalFault(t *testing.T) {
-	le := new(model.LogEvent)
+	le := new(LogEvent)
 	reportJSON := []byte(` {
 		    "time": "2020-08-20T12:31:32.123Z",
 		    "type": "platform.fault",
@@ -71,7 +70,7 @@ func TestLogEventUnmarshalFault(t *testing.T) {
 
 	err := le.UnmarshalJSON(reportJSON)
 	require.NoError(t, err)
-	assert.Equal(t, model.SubEventType("platform.fault"), le.Type)
+	assert.Equal(t, SubEventType("platform.fault"), le.Type)
 	assert.Equal(t, "2020-08-20T12:31:32.123Z", le.Time.Format(time.RFC3339Nano))
 	rec := "RequestId: d783b35e-a91d-4251-af17-035953428a2c Process exited before completing request"
 	assert.Equal(t, rec, le.StringRecord)
@@ -79,7 +78,7 @@ func TestLogEventUnmarshalFault(t *testing.T) {
 }
 
 func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
-	le := new(model.LogEvent)
+	le := new(LogEvent)
 	jsonBytes := []byte(`
 	{
 		"time": "2021-02-04T20:00:05.123Z",
@@ -93,9 +92,9 @@ func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
 
 	err := le.UnmarshalJSON(jsonBytes)
 	require.NoError(t, err)
-	assert.Equal(t, model.SubEventType("platform.runtimeDone"), le.Type)
+	assert.Equal(t, SubEventType("platform.runtimeDone"), le.Type)
 	assert.Equal(t, "2021-02-04T20:00:05.123Z", le.Time.Format(time.RFC3339Nano))
-	rec := model.LogEventRecord{
+	rec := LogEventRecord{
 		RequestId: "6f7f0961f83442118a7af6fe80b88",
 		Status:    "success",
 	}
@@ -103,7 +102,7 @@ func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
 }
 
 func Test_unmarshalRuntimeDoneRecordString(t *testing.T) {
-	le := new(model.LogEvent)
+	le := new(LogEvent)
 	jsonBytes := []byte(`
 	{
 		"time": "2021-02-04T20:00:05.123Z",
@@ -114,7 +113,7 @@ func Test_unmarshalRuntimeDoneRecordString(t *testing.T) {
 
 	err := le.UnmarshalJSON(jsonBytes)
 	require.NoError(t, err)
-	assert.Equal(t, model.SubEventType("platform.runtimeDone"), le.Type)
+	assert.Equal(t, SubEventType("platform.runtimeDone"), le.Type)
 	assert.Equal(t, "2021-02-04T20:00:05.123Z", le.Time.Format(time.RFC3339Nano))
 	assert.Equal(t, "Unknown application error occurred", le.StringRecord)
 }
@@ -128,7 +127,7 @@ func Test_unmarshalRuntimeDoneFaultRecordString(t *testing.T) {
 		}
 	`)
 
-	var le model.LogEvent
+	var le LogEvent
 	if err := json.Unmarshal(jsonBytes, &le); err != nil {
 		t.Fail()
 	}

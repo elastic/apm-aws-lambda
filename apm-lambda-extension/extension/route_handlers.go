@@ -38,7 +38,7 @@ func handleInfoRequest(ctx context.Context, apmServerTransport *ApmServerTranspo
 		Log.Debug("Handling APM server Info Request")
 
 		// Init reverse proxy
-		parsedApmServerUrl, err := url.Parse(apmServerTransport.config.apmServerUrl)
+		parsedApmServerUrl, err := url.Parse(apmServerTransport.config.ApmServerUrl)
 		if err != nil {
 			Log.Errorf("could not parse APM server URL: %v", err)
 			return
