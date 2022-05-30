@@ -29,9 +29,9 @@ func StartHttpServer(ctx context.Context, transport *ApmServerTransport) (agentD
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleInfoRequest(ctx, transport))
 	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(transport))
-	timeout := time.Duration(transport.config.dataReceiverTimeoutSeconds) * time.Second
+	timeout := time.Duration(transport.config.DataReceiverTimeoutSeconds) * time.Second
 	server := &http.Server{
-		Addr:           transport.config.dataReceiverServerPort,
+		Addr:           transport.config.DataReceiverServerPort,
 		Handler:        mux,
 		ReadTimeout:    timeout,
 		WriteTimeout:   timeout,

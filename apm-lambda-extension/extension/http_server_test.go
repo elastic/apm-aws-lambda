@@ -51,12 +51,12 @@ func TestInfoProxy(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		apmServerSecretToken:       "foo",
-		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
+	config := Config{
+		ApmServerUrl:               apmServer.URL,
+		ApmServerSecretToken:       "foo",
+		ApmServerApiKey:            "bar",
+		DataReceiverServerPort:     ":1234",
+		DataReceiverTimeoutSeconds: 15,
 	}
 	transport := InitApmServerTransport(&config)
 	agentDataServer, err := StartHttpServer(context.Background(), transport)
@@ -100,12 +100,12 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		apmServerSecretToken:       "foo",
-		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
+	config := Config{
+		ApmServerUrl:               apmServer.URL,
+		ApmServerSecretToken:       "foo",
+		ApmServerApiKey:            "bar",
+		DataReceiverServerPort:     ":1234",
+		DataReceiverTimeoutSeconds: 15,
 	}
 	transport := InitApmServerTransport(&config)
 
@@ -145,11 +145,11 @@ func Test_handleInfoRequest(t *testing.T) {
 `
 
 	// Create extension config
-	config := extensionConfig{
-		apmServerSecretToken:       "foo",
-		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
+	config := Config{
+		ApmServerSecretToken:       "foo",
+		ApmServerApiKey:            "bar",
+		DataReceiverServerPort:     ":1234",
+		DataReceiverTimeoutSeconds: 15,
 	}
 	transport := InitApmServerTransport(&config)
 
@@ -191,7 +191,7 @@ func (errReader) Read(_ []byte) (int, error) {
 }
 
 func Test_handleInfoRequestInvalidBody(t *testing.T) {
-	transport := InitApmServerTransport(&extensionConfig{})
+	transport := InitApmServerTransport(&Config{})
 	mux := http.NewServeMux()
 	urlPath := "/intake/v2/events"
 	mux.HandleFunc(urlPath, handleIntakeV2Events(transport))
@@ -211,10 +211,10 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
+	config := Config{
+		ApmServerUrl:               apmServer.URL,
+		DataReceiverServerPort:     ":1234",
+		DataReceiverTimeoutSeconds: 15,
 	}
 	transport := InitApmServerTransport(&config)
 	transport.AgentDoneSignal = make(chan struct{}, 1)
@@ -264,10 +264,10 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
+	config := Config{
+		ApmServerUrl:               apmServer.URL,
+		DataReceiverServerPort:     ":1234",
+		DataReceiverTimeoutSeconds: 15,
 	}
 	transport := InitApmServerTransport(&config)
 	transport.AgentDoneSignal = make(chan struct{}, 1)
@@ -307,10 +307,10 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
+	config := Config{
+		ApmServerUrl:               apmServer.URL,
+		DataReceiverServerPort:     ":1234",
+		DataReceiverTimeoutSeconds: 15,
 	}
 	transport := InitApmServerTransport(&config)
 	transport.AgentDoneSignal = make(chan struct{}, 1)
