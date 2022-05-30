@@ -85,7 +85,11 @@ func main() {
 		extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
 	}
 
+	// The previous event id is used to validate the received Lambda metrics
 	var prevEvent *extension.NextEventResponse
+	// This data structure contains metadata tied to the current Lambda instance. If empty, it is populated once for each
+	// active Lambda environment
+	metadataContainer := extension.MetadataContainer{}
 
 	for {
 		select {
@@ -93,7 +97,7 @@ func main() {
 			return
 		default:
 			var backgroundDataSendWg sync.WaitGroup
-			processEvent(ctx, cancel, apmServerTransport, logsTransport, &backgroundDataSendWg)
+			event := processEvent(ctx, cancel, apmServerTransport, logsTransport, &backgroundDataSendWg, prevEvent, &metadataContainer)
 			extension.Log.Debug("Waiting for background data send to end")
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
@@ -105,7 +109,16 @@ func main() {
 	}
 }
 
-func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTransport *extension.ApmServerTransport, logsTransport *logsapi.LogsTransport, backgroundDataSendWg *sync.WaitGroup) {
+func processEvent(
+	ctx context.Context,
+	cancel context.CancelFunc,
+	apmServerTransport *extension.ApmServerTransport,
+	logsTransport *logsapi.LogsTransport,
+	backgroundDataSendWg *sync.WaitGroup,
+	prevEvent *extension.NextEventResponse,
+	metadataContainer *extension.MetadataContainer,
+) *extension.NextEventResponse {
+
 	// Invocation context
 	invocationCtx, invocationCancel := context.WithCancel(ctx)
 	defer invocationCancel()
@@ -122,7 +135,7 @@ func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTrans
 		extension.Log.Errorf("Error: %s", err)
 		extension.Log.Infof("Exit signal sent to runtime : %s", status)
 		extension.Log.Infof("Exiting")
-		return
+		return nil
 	}
 
 	extension.Log.Debug("Received event.")
@@ -130,7 +143,7 @@ func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTrans
 
 	if event.EventType == extension.Shutdown {
 		cancel()
-		return
+		return event
 	}
 
 	// APM Data Processing
@@ -139,17 +152,17 @@ func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTrans
 	backgroundDataSendWg.Add(1)
 	go func() {
 		defer backgroundDataSendWg.Done()
-		if err := apmServerTransport.ForwardApmData(invocationCtx); err != nil {
+		if err := apmServerTransport.ForwardApmData(invocationCtx, metadataContainer); err != nil {
 			extension.Log.Error(err)
 		}
 	}()
 
-	// Lambda Service Logs Processing
+	// Lambda Service Logs Processing, also used to extract metrics from APM logs
 	// This goroutine should not be started if subscription failed
 	runtimeDone := make(chan struct{})
 	if logsTransport != nil {
 		go func() {
-			if err := logsapi.WaitRuntimeDone(invocationCtx, event.RequestID, logsTransport, runtimeDone); err != nil {
+			if err := logsapi.ProcessLogs(invocationCtx, event.RequestID, apmServerTransport, logsTransport, metadataContainer, runtimeDone, prevEvent); err != nil {
 				extension.Log.Errorf("Error while processing Lambda Logs ; %v", err)
 			} else {
 				close(runtimeDone)
@@ -182,4 +195,6 @@ func processEvent(ctx context.Context, cancel context.CancelFunc, apmServerTrans
 	case <-timer.C:
 		extension.Log.Info("Time expired waiting for agent signal or runtimeDone event")
 	}
+
+	return event
 }
