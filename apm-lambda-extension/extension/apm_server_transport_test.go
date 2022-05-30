@@ -20,12 +20,13 @@ package extension
 import (
 	"compress/gzip"
 	"context"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPostToApmServerDataCompressed(t *testing.T) {
@@ -120,7 +121,7 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 }
 
 func TestGracePeriod(t *testing.T) {
-	transport := InitApmServerTransport(&extensionConfig{})
+	transport := InitApmServerTransport(&Config{})
 
 	transport.reconnectionCount = 0
 	val0 := transport.computeGracePeriod().Seconds()
@@ -156,7 +157,7 @@ func TestGracePeriod(t *testing.T) {
 }
 
 func TestSetHealthyTransport(t *testing.T) {
-	transport := InitApmServerTransport(&extensionConfig{})
+	transport := InitApmServerTransport(&Config{})
 	transport.SetApmServerTransportState(context.Background(), Healthy)
 	assert.True(t, transport.status == Healthy)
 	assert.Equal(t, transport.reconnectionCount, -1)
@@ -165,7 +166,7 @@ func TestSetHealthyTransport(t *testing.T) {
 func TestSetFailingTransport(t *testing.T) {
 	// By explicitly setting the reconnection count to 0, we ensure that the grace period will not be 0
 	// and avoid a race between reaching the pending status and the test assertion.
-	transport := InitApmServerTransport(&extensionConfig{})
+	transport := InitApmServerTransport(&Config{})
 	transport.reconnectionCount = 0
 	transport.SetApmServerTransportState(context.Background(), Failing)
 	assert.True(t, transport.status == Failing)
@@ -173,7 +174,7 @@ func TestSetFailingTransport(t *testing.T) {
 }
 
 func TestSetPendingTransport(t *testing.T) {
-	transport := InitApmServerTransport(&extensionConfig{})
+	transport := InitApmServerTransport(&Config{})
 	transport.SetApmServerTransportState(context.Background(), Healthy)
 	transport.SetApmServerTransportState(context.Background(), Failing)
 	for {
@@ -186,7 +187,7 @@ func TestSetPendingTransport(t *testing.T) {
 }
 
 func TestSetPendingTransportExplicitly(t *testing.T) {
-	transport := InitApmServerTransport(&extensionConfig{})
+	transport := InitApmServerTransport(&Config{})
 	transport.SetApmServerTransportState(context.Background(), Healthy)
 	transport.SetApmServerTransportState(context.Background(), Pending)
 	assert.True(t, transport.status == Healthy)
@@ -194,7 +195,7 @@ func TestSetPendingTransportExplicitly(t *testing.T) {
 }
 
 func TestSetInvalidTransport(t *testing.T) {
-	transport := InitApmServerTransport(&extensionConfig{})
+	transport := InitApmServerTransport(&Config{})
 	transport.SetApmServerTransportState(context.Background(), Healthy)
 	transport.SetApmServerTransportState(context.Background(), "Invalid")
 	assert.True(t, transport.status == Healthy)
@@ -233,8 +234,8 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 			return
 		}
 	}))
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
+	config := Config{
+		ApmServerUrl: apmServer.URL + "/",
 	}
 	transport := InitApmServerTransport(&config)
 	transport.SetApmServerTransportState(context.Background(), Healthy)

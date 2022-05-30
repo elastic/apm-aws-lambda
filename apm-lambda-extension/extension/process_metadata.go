@@ -15,26 +15,26 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package logsapi
+package extension
 
 import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
-	"elastic/apm-lambda-extension/extension"
-	"elastic/apm-lambda-extension/model"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+
+	"elastic/apm-lambda-extension/model"
 )
 
 type MetadataContainer struct {
 	Metadata *model.Metadata `json:"metadata"`
 }
 
-func ProcessMetadata(data extension.AgentData, container *MetadataContainer) {
+func ProcessMetadata(data AgentData, container *MetadataContainer) {
 	uncompressedData, err := GetUncompressedBytes(data.Data, data.ContentEncoding)
 	log.Println(string(uncompressedData))
 	if err != nil {

@@ -47,7 +47,7 @@ const (
 type ApmServerTransport struct {
 	sync.Mutex
 	bufferPool        sync.Pool
-	config            *extensionConfig
+	config            *Config
 	AgentDoneSignal   chan struct{}
 	dataChannel       chan AgentData
 	client            *http.Client
@@ -56,7 +56,7 @@ type ApmServerTransport struct {
 	gracePeriodTimer  *time.Timer
 }
 
-func InitApmServerTransport(config *extensionConfig) *ApmServerTransport {
+func InitApmServerTransport(config *Config) *ApmServerTransport {
 	var transport ApmServerTransport
 	transport.bufferPool = sync.Pool{New: func() interface{} {
 		return &bytes.Buffer{}
@@ -75,7 +75,7 @@ func InitApmServerTransport(config *extensionConfig) *ApmServerTransport {
 // StartBackgroundApmDataForwarding Receive agent data as it comes in and post it to the APM server.
 // Stop checking for, and sending agent data when the function invocation
 // has completed, signaled via a channel.
-func (transport *ApmServerTransport) ForwardApmData(ctx context.Context) error {
+func (transport *ApmServerTransport) ForwardApmData(ctx context.Context, metadataContainer *MetadataContainer) error {
 	if transport.status == Failing {
 		return nil
 	}
@@ -85,6 +85,9 @@ func (transport *ApmServerTransport) ForwardApmData(ctx context.Context) error {
 			Log.Debug("Invocation context cancelled, not processing any more agent data")
 			return nil
 		case agentData := <-transport.dataChannel:
+			if metadataContainer.Metadata == nil {
+				ProcessMetadata(agentData, metadataContainer)
+			}
 			if err := transport.PostToApmServer(ctx, agentData); err != nil {
 				return fmt.Errorf("error sending to APM server, skipping: %v", err)
 			}
@@ -151,16 +154,16 @@ func (transport *ApmServerTransport) PostToApmServer(ctx context.Context, agentD
 		r = buf
 	}
 
-	req, err := http.NewRequest("POST", transport.config.apmServerUrl+endpointURI, r)
+	req, err := http.NewRequest("POST", transport.config.ApmServerUrl+endpointURI, r)
 	if err != nil {
 		return fmt.Errorf("failed to create a new request when posting to APM server: %v", err)
 	}
 	req.Header.Add("Content-Encoding", encoding)
 	req.Header.Add("Content-Type", "application/x-ndjson")
-	if transport.config.apmServerApiKey != "" {
-		req.Header.Add("Authorization", "ApiKey "+transport.config.apmServerApiKey)
-	} else if transport.config.apmServerSecretToken != "" {
-		req.Header.Add("Authorization", "Bearer "+transport.config.apmServerSecretToken)
+	if transport.config.ApmServerApiKey != "" {
+		req.Header.Add("Authorization", "ApiKey "+transport.config.ApmServerApiKey)
+	} else if transport.config.ApmServerSecretToken != "" {
+		req.Header.Add("Authorization", "Bearer "+transport.config.ApmServerSecretToken)
 	}
 
 	Log.Debug("Sending data chunk to APM server")
