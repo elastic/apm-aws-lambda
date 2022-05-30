@@ -19,10 +19,7 @@ package logsapi
 
 import (
 	"context"
-	"elastic/apm-lambda-extension/extension"
-	"elastic/apm-lambda-extension/model"
 	"fmt"
-	"gotest.tools/assert"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -30,13 +27,18 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"elastic/apm-lambda-extension/extension"
+	"elastic/apm-lambda-extension/model"
+
+	"gotest.tools/assert"
 )
 
 func Test_processPlatformReport(t *testing.T) {
 
 	timestamp := time.Now()
 
-	pm := model.PlatformMetrics{
+	pm := PlatformMetrics{
 		DurationMs:       182.43,
 		BilledDurationMs: 183,
 		MemorySizeMB:     128,
@@ -44,13 +46,13 @@ func Test_processPlatformReport(t *testing.T) {
 		InitDurationMs:   422.97,
 	}
 
-	logEventRecord := model.LogEventRecord{
+	logEventRecord := LogEventRecord{
 		RequestId: "6f7f0961f83442118a7af6fe80b88d56",
 		Status:    "Available",
 		Metrics:   pm,
 	}
 
-	logEvent := model.LogEvent{
+	logEvent := LogEvent{
 		Time:         timestamp,
 		Type:         "platform.report",
 		StringRecord: "",
@@ -77,7 +79,7 @@ func Test_processPlatformReport(t *testing.T) {
 		if r.Body != nil {
 			rawBytes, _ = ioutil.ReadAll(r.Body)
 		}
-		requestBytes, err := GetUncompressedBytes(rawBytes, r.Header.Get("Content-Encoding"))
+		requestBytes, err := extension.GetUncompressedBytes(rawBytes, r.Header.Get("Content-Encoding"))
 		if err != nil {
 			log.Println(err)
 			t.Fail()
@@ -97,7 +99,9 @@ func Test_processPlatformReport(t *testing.T) {
 		ApmServerUrl: apmServer.URL + "/",
 	}
 
-	mc := MetadataContainer{
+	apmServerTransport := extension.InitApmServerTransport(&config)
+
+	mc := extension.MetadataContainer{
 		Metadata: &model.Metadata{},
 	}
 	mc.Metadata.Service = model.Service{
@@ -110,5 +114,6 @@ func Test_processPlatformReport(t *testing.T) {
 	mc.Metadata.Process = model.Process{}
 	mc.Metadata.System = model.System{}
 
-	ProcessPlatformReport(context.Background(), apmServer.Client(), mc, &event, logEvent, &config)
+	ProcessPlatformReport(context.Background(), apmServerTransport, &mc, &event, logEvent)
+	apmServerTransport.FlushAPMData(context.Background())
 }

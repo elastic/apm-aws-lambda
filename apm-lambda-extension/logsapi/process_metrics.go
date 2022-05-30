@@ -19,13 +19,21 @@ package logsapi
 
 import (
 	"context"
-	"elastic/apm-lambda-extension/extension"
-	"elastic/apm-lambda-extension/model"
 	"encoding/json"
 	"log"
 	"math"
-	"net/http"
+
+	"elastic/apm-lambda-extension/extension"
+	"elastic/apm-lambda-extension/model"
 )
+
+type PlatformMetrics struct {
+	DurationMs       float32 `json:"durationMs"`
+	BilledDurationMs int32   `json:"billedDurationMs"`
+	MemorySizeMB     int32   `json:"memorySizeMB"`
+	MaxMemoryUsedMB  int32   `json:"maxMemoryUsedMB"`
+	InitDurationMs   float32 `json:"initDurationMs"`
+}
 
 type MetricsContainer struct {
 	Metrics *model.Metrics `json:"metricset"`
@@ -46,8 +54,8 @@ func (mc MetricsContainer) addMetric(name string, metric model.Metric) {
 	mc.Metrics.Samples[name] = metric
 }
 
-func ProcessPlatformReport(ctx context.Context, client *http.Client, metadataContainer MetadataContainer, functionData *extension.NextEventResponse, platformReport model.LogEvent, config *extension.Config) {
-
+func ProcessPlatformReport(ctx context.Context, apmServerTransport *extension.ApmServerTransport, metadataContainer *extension.MetadataContainer, functionData *extension.NextEventResponse, platformReport LogEvent) {
+	var metricsData []byte
 	metricsContainer := MetricsContainer{
 		Metrics: &model.Metrics{},
 	}
@@ -85,22 +93,18 @@ func ProcessPlatformReport(ctx context.Context, client *http.Client, metadataCon
 		return
 	}
 
-	//TODO : Discuss relevance of displaying extension name
-	//metadataContainer.Metadata.Service.Agent.Name = "aws-lambda-extension"
-	//metadataContainer.Metadata.Service.Agent.Version = extension.Version
-
-	metadataJson, err := json.Marshal(metadataContainer)
-	if err != nil {
-		log.Println(err)
-		return
+	if metadataContainer.Metadata != nil {
+		//TODO : Discuss relevance of displaying extension name
+		metadataContainer.Metadata.Service.Agent.Name = "aws-lambda-extension"
+		metadataContainer.Metadata.Service.Agent.Version = extension.Version
+		metadataJson, err := json.Marshal(metadataContainer)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		metricsData = append(metadataJson, []byte("\n")...)
 	}
 
-	metricsData := append(metadataJson, []byte("\n")...)
 	metricsData = append(metricsData, metricsJson...)
-
-	err = extension.PostToApmServer(ctx, client, extension.AgentData{Data: metricsData}, config)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	apmServerTransport.EnqueueAPMData(extension.AgentData{Data: metricsData})
 }
