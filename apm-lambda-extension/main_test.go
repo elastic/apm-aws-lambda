@@ -20,13 +20,8 @@ package main
 import (
 	"bytes"
 	"context"
-	e2eTesting "elastic/apm-lambda-extension/e2e-testing"
-	"elastic/apm-lambda-extension/extension"
-	"elastic/apm-lambda-extension/logsapi"
-	"elastic/apm-lambda-extension/model"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/suite"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -36,6 +31,12 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	e2eTesting "elastic/apm-lambda-extension/e2e-testing"
+	"elastic/apm-lambda-extension/extension"
+	"elastic/apm-lambda-extension/logsapi"
+
+	"github.com/stretchr/testify/suite"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -47,7 +48,8 @@ const (
 	InvokeHang                         MockEventType = "Hang"
 	InvokeStandard                     MockEventType = "Standard"
 	InvokeStandardInfo                 MockEventType = "StandardInfo"
-	InvokeStandardFlush                MockEventType = "Flush"
+	InvokeStandardFlush                MockEventType = "StandardFlush"
+	InvokeStandardMetadata             MockEventType = "StandardMetadata"
 	InvokeLateFlush                    MockEventType = "LateFlush"
 	InvokeWaitgroupsRace               MockEventType = "InvokeWaitgroupsRace"
 	InvokeMultipleTransactionsOverload MockEventType = "MultipleTransactionsOverload"
@@ -85,7 +87,6 @@ type ApmInfo struct {
 }
 
 func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.Server, *MockServerInternals, *MockServerInternals) {
-
 	// Mock APM Server
 	var apmServerInternals MockServerInternals
 	apmServerInternals.WaitForUnlockSignal = true
@@ -114,8 +115,6 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 		case Crashes:
 			panic("Server crashed")
 		default:
-			w.WriteHeader(http.StatusInternalServerError)
-			return
 		}
 		if r.RequestURI == "/intake/v2/events" {
 			w.WriteHeader(http.StatusAccepted)
@@ -207,15 +206,22 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 }
 
 func processMockEvent(currId string, event MockEvent, extensionPort string, internals *MockServerInternals) {
-	sendLogEvent(currId, "platform.start")
+	sendLogEvent(currId, logsapi.Start)
 	client := http.Client{}
 	sendRuntimeDone := true
+	sendMetrics := true
 	switch event.Type {
 	case InvokeHang:
 		time.Sleep(time.Duration(event.Timeout) * time.Second)
 	case InvokeStandard:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
+		res, _ := client.Do(req)
+		extension.Log.Debugf("Response seen by the agent : %d", res.StatusCode)
+	case InvokeStandardMetadata:
+		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
+		metadata := `{"metadata": {"service": {"name": "BAD","node": {"configured_name": "node-123"},"version": "5.1.3","environment": "staging","language": {"name": "ecmascript","version": "8"},"runtime": {"name": "node","version": "8.0.0"},"framework": {"name": "Express","version": "1.2.3"},"agent": {"name": "elastic-node","version": "3.14.0"}},"user": {"id": "123user", "username": "bar", "email": "bar@user.com"}, "labels": {"tag0": null, "tag1": "one", "tag2": 2}, "process": {"pid": 1234,"ppid": 6789,"title": "node","argv": ["node","server.js"]},"system": {"hostname": "prod1.example.com","architecture": "x64","platform": "darwin", "container": {"id": "container-id"}, "kubernetes": {"namespace": "namespace1", "pod": {"uid": "pod-uid", "name": "pod-name"}, "node": {"name": "node-name"}}},"cloud":{"account":{"id":"account_id","name":"account_name"},"availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"project":{"id":"project_id","name":"project_name"},"provider":"cloud_provider","region":"cloud_region","service":{"name":"lambda"}}}}`
+		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(metadata)))
 		res, _ := client.Do(req)
 		extension.Log.Debugf("Response seen by the agent : %d", res.StatusCode)
 	case InvokeStandardFlush:
@@ -234,6 +240,7 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 			}
 			internals.WaitGroup.Done()
 		}()
+		sendMetrics = false
 	case InvokeWaitgroupsRace:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData0, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
@@ -276,7 +283,10 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 	case Shutdown:
 	}
 	if sendRuntimeDone {
-		sendLogEvent(currId, "platform.runtimeDone")
+		sendLogEvent(currId, logsapi.RuntimeDone)
+	}
+	if sendMetrics {
+		sendLogEvent(currId, logsapi.Report)
 	}
 }
 
@@ -291,17 +301,26 @@ func sendNextEventInfo(w http.ResponseWriter, id string, event MockEvent) {
 	if event.Type == Shutdown {
 		nextEventInfo.EventType = "SHUTDOWN"
 	}
-
 	if err := json.NewEncoder(w).Encode(nextEventInfo); err != nil {
 		extension.Log.Errorf("Could not encode event : %v", err)
 	}
 }
 
-func sendLogEvent(requestId string, logEventType model.SubEventType) {
-	record := model.LogEventRecord{
+func sendLogEvent(requestId string, logEventType logsapi.SubEventType) {
+	record := logsapi.LogEventRecord{
 		RequestId: requestId,
 	}
-	logEvent := model.LogEvent{
+	if logEventType == logsapi.Report {
+		record.Metrics = logsapi.PlatformMetrics{
+			BilledDurationMs: 60,
+			DurationMs:       59.9,
+			MemorySizeMB:     128,
+			MaxMemoryUsedMB:  60,
+			InitDurationMs:   500,
+		}
+	}
+
+	logEvent := logsapi.LogEvent{
 		Time:   time.Now(),
 		Type:   logEventType,
 		Record: record,
@@ -317,7 +336,7 @@ func sendLogEvent(requestId string, logEventType model.SubEventType) {
 
 	// Convert full log event to JSON
 	bufLogEvent := new(bytes.Buffer)
-	if err := json.NewEncoder(bufLogEvent).Encode([]model.LogEvent{logEvent}); err != nil {
+	if err := json.NewEncoder(bufLogEvent).Encode([]logsapi.LogEvent{logEvent}); err != nil {
 		extension.Log.Errorf("Could not encode record : %v", err)
 		return
 	}
@@ -399,7 +418,7 @@ func (suite *MainUnitTestsSuite) TestLateFlush() {
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse+TimelyResponse)))
+	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
 }
 
 // TestWaitGroup checks if there is no race condition between the main waitgroups (issue #128)
@@ -441,7 +460,6 @@ func (suite *MainUnitTestsSuite) TestAPMServerRecovery() {
 	if err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1"); err != nil {
 		suite.T().Fail()
 	}
-
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
@@ -467,7 +485,6 @@ func (suite *MainUnitTestsSuite) TestGracePeriodHangs() {
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
-
 	time.Sleep(100 * time.Millisecond)
 	suite.apmServerInternals.UnlockSignalChannel <- struct{}{}
 }
@@ -500,7 +517,6 @@ func (suite *MainUnitTestsSuite) TestFullChannelSlowAPMServer() {
 	if err := os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background"); err != nil {
 		suite.T().Fail()
 	}
-
 	eventsChain := []MockEvent{
 		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: SlowResponse, ExecutionDuration: 0.01, Timeout: 5},
 	}
@@ -531,4 +547,37 @@ func (suite *MainUnitTestsSuite) TestInfoRequestHangs() {
 	assert.NotPanics(suite.T(), main)
 	assert.False(suite.T(), strings.Contains(suite.lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20"))
 	suite.apmServerInternals.UnlockSignalChannel <- struct{}{}
+}
+
+// TestMetricsWithoutMetadata checks if the extension sends metrics corresponding to invocation n during invocation
+// n+1, even if the metadata container was not populated
+func (suite *MainUnitTestsSuite) TestMetricsWithoutMetadata() {
+	eventsChain := []MockEvent{
+		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+	}
+	eventQueueGenerator(eventsChain, suite.eventsChannel)
+	assert.NotPanics(suite.T(), main)
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, `aws.lambda.metrics.BilledDuration":{"value":60`)
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, `aws.lambda.metrics.Duration":{"value":59.9`)
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, `aws.lambda.metrics.TotalMemory":{"value":134217728`)
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, `aws.lambda.metrics.UsedMemory":{"value":62914560`)
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, `aws.lambda.metrics.ColdStartDuration":{"value":500`)
+}
+
+// TestMetricsWithMetadata checks if the extension sends metrics corresponding to invocation n during invocation
+// n+1, even if the metadata container was not populated
+func (suite *MainUnitTestsSuite) TestMetricsWithMetadata() {
+	eventsChain := []MockEvent{
+		{Type: InvokeStandardMetadata, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+		{Type: InvokeStandardMetadata, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+	}
+	eventQueueGenerator(eventsChain, suite.eventsChannel)
+	assert.NotPanics(suite.T(), main)
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, fmt.Sprintf(`{"metadata":{"service":{"name":"BAD","version":"5.1.3","environment":"staging","agent":{"name":"aws-lambda-extension","version":"%s"},"framework":{"name":"Express","version":"1.2.3"},"language":{"name":"ecmascript","version":"8"},"runtime":{"name":"node","version":"8.0.0"},"node":{"configured_name":"node-123"}},"user":{"username":"bar","id":"123user","email":"bar@user.com"},"labels":{"tag0":null,"tag1":"one","tag2":2},"process":{"pid":1234,"ppid":6789,"title":"node","argv":["node","server.js"]},"system":{"architecture":"x64","hostname":"prod1.example.com","platform":"darwin","container":{"id":"container-id"},"kubernetes":{"namespace":"namespace1","node":{"name":"node-name"},"pod":{"name":"pod-name","uid":"pod-uid"}}},"cloud":{"provider":"cloud_provider","region":"cloud_region","availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"account":{"id":"account_id","name":"account_name"},"project":{"id":"project_id","name":"project_name"},"service":{"name":"lambda"}}}}`, extension.Version))
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, `aws.lambda.metrics.BilledDuration":{"value":60`)
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, `aws.lambda.metrics.Duration":{"value":59.9`)
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, `aws.lambda.metrics.TotalMemory":{"value":134217728`)
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, `aws.lambda.metrics.UsedMemory":{"value":62914560`)
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, `aws.lambda.metrics.ColdStartDuration":{"value":500`)
 }
