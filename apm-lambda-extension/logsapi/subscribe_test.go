@@ -20,7 +20,6 @@ package logsapi
 import (
 	"bytes"
 	"context"
-	"elastic/apm-lambda-extension/model"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -61,7 +60,7 @@ func TestSubscribeWithLambdaFunction(t *testing.T) {
 
 func TestSubscribeAWSRequest(t *testing.T) {
 	// For subscription request
-	expectedTypes := []model.EventType{Platform}
+	expectedTypes := []EventType{Platform}
 	expectedBufferingCfg := BufferingCfg{
 		MaxItems:  10000,
 		MaxBytes:  262144,

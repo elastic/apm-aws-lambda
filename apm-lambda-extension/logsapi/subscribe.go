@@ -19,13 +19,15 @@ package logsapi
 
 import (
 	"context"
-	"elastic/apm-lambda-extension/extension"
-	"elastic/apm-lambda-extension/model"
 	"fmt"
-	"github.com/pkg/errors"
 	"net"
 	"net/http"
 	"os"
+	"time"
+
+	"elastic/apm-lambda-extension/extension"
+
+	"github.com/pkg/errors"
 )
 
 // TODO: Remove global variable and find another way to retrieve Logs Listener network info when testing main
@@ -44,6 +46,21 @@ func InitLogsTransport(listenerHost string) *LogsTransport {
 	transport.listenerHost = listenerHost
 	transport.logsChannel = make(chan LogEvent, 100)
 	return &transport
+}
+
+// LogEvent represents an event received from the Logs API
+type LogEvent struct {
+	Time         time.Time    `json:"time"`
+	Type         SubEventType `json:"type"`
+	StringRecord string
+	Record       LogEventRecord
+}
+
+// LogEventRecord is a sub-object in a Logs API event
+type LogEventRecord struct {
+	RequestId string          `json:"requestId"`
+	Status    string          `json:"status"`
+	Metrics   PlatformMetrics `json:"metrics"`
 }
 
 // Subscribes to the Logs API
@@ -141,16 +158,25 @@ func checkLambdaFunction() bool {
 	return false
 }
 
-// WaitRuntimeDone consumes events until a RuntimeDone event corresponding
+// ProcessLogs consumes events until a RuntimeDone event corresponding
 // to requestID is received, or ctx is cancelled, and then returns.
-func WaitRuntimeDone(ctx context.Context, requestID string, transport *LogsTransport, runtimeDoneSignal chan struct{}) error {
+func ProcessLogs(
+	ctx context.Context,
+	requestID string,
+	apmServerTransport *extension.ApmServerTransport,
+	logsTransport *LogsTransport,
+	metadataContainer *extension.MetadataContainer,
+	runtimeDoneSignal chan struct{},
+	prevEvent *extension.NextEventResponse,
+) error {
 	for {
 		select {
-		case logEvent := <-transport.logsChannel:
+		case logEvent := <-logsTransport.logsChannel:
 			extension.Log.Debugf("Received log event %v", logEvent.Type)
+			switch logEvent.Type {
 			// Check the logEvent for runtimeDone and compare the RequestID
 			// to the id that came in via the Next API
-			if logEvent.Type == RuntimeDone {
+			case RuntimeDone:
 				if logEvent.Record.RequestId == requestID {
 					extension.Log.Info("Received runtimeDone event for this function invocation")
 					runtimeDoneSignal <- struct{}{}
@@ -158,7 +184,17 @@ func WaitRuntimeDone(ctx context.Context, requestID string, transport *LogsTrans
 				} else {
 					extension.Log.Debug("Log API runtimeDone event request id didn't match")
 				}
+			// Check if the logEvent contains metrics and verify that they can be linked to the previous invocation
+			case Report:
+				if logEvent.Record.RequestId == prevEvent.RequestID {
+					ProcessPlatformReport(ctx, apmServerTransport, metadataContainer, prevEvent, logEvent)
+					extension.Log.Debug("Received platform report for the previous function invocation")
+				} else {
+					extension.Log.Warn("report event request id didn't match the previous event id")
+					extension.Log.Debug("Log API runtimeDone event request id didn't match")
+				}
 			}
+
 		case <-ctx.Done():
 			extension.Log.Debug("Current invocation over. Interrupting logs processing goroutine")
 			return nil
