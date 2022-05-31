@@ -396,7 +396,7 @@ func (suite *MainUnitTestsSuite) TestStandardEventsChain() {
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, TimelyResponse)
 }
 
 // TestFlush checks if the flushed param does not cause a panic or an unexpected behavior
@@ -406,7 +406,7 @@ func (suite *MainUnitTestsSuite) TestFlush() {
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, TimelyResponse)
 }
 
 // TestLateFlush checks if there is no race condition between RuntimeDone and AgentDone
@@ -418,7 +418,7 @@ func (suite *MainUnitTestsSuite) TestLateFlush() {
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, TimelyResponse)
 }
 
 // TestWaitGroup checks if there is no race condition between the main waitgroups (issue #128)
@@ -428,7 +428,7 @@ func (suite *MainUnitTestsSuite) TestWaitGroup() {
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, TimelyResponse)
 }
 
 // TestAPMServerDown tests that main does not panic nor runs indefinitely when the APM server is inactive.
@@ -439,7 +439,7 @@ func (suite *MainUnitTestsSuite) TestAPMServerDown() {
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
-	assert.False(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	assert.NotContains(suite.T(), suite.apmServerInternals.Data, TimelyResponse)
 }
 
 // TestAPMServerHangs tests that main does not panic nor runs indefinitely when the APM server does not respond.
@@ -449,7 +449,7 @@ func (suite *MainUnitTestsSuite) TestAPMServerHangs() {
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
-	assert.False(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(Hangs)))
+	assert.NotContains(suite.T(), suite.apmServerInternals.Data, string(Hangs))
 	suite.apmServerInternals.UnlockSignalChannel <- struct{}{}
 }
 
@@ -470,8 +470,8 @@ func (suite *MainUnitTestsSuite) TestAPMServerRecovery() {
 		suite.apmServerInternals.UnlockSignalChannel <- struct{}{}
 	}()
 	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(Hangs)))
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, Hangs)
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, TimelyResponse)
 	if err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", ""); err != nil {
 		suite.T().Fail()
 	}
@@ -497,7 +497,7 @@ func (suite *MainUnitTestsSuite) TestAPMServerCrashesDuringExecution() {
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
-	assert.False(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(Crashes)))
+	assert.NotContains(suite.T(), suite.apmServerInternals.Data, Crashes)
 }
 
 // TestFullChannel checks that an overload of APM data chunks is handled correctly, events dropped beyond the 100th one
@@ -508,7 +508,7 @@ func (suite *MainUnitTestsSuite) TestFullChannel() {
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	assert.Contains(suite.T(), suite.apmServerInternals.Data, TimelyResponse)
 }
 
 // TestFullChannelSlowAPMServer tests what happens when the APM Data channel is full and the APM server is slow
@@ -535,7 +535,7 @@ func (suite *MainUnitTestsSuite) TestInfoRequest() {
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20"))
+	assert.Contains(suite.T(), suite.lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20")
 }
 
 // TestInfoRequest checks if the extension times out when unable to retrieve APM server info (/ endpoint)
@@ -545,7 +545,7 @@ func (suite *MainUnitTestsSuite) TestInfoRequestHangs() {
 	}
 	eventQueueGenerator(eventsChain, suite.eventsChannel)
 	assert.NotPanics(suite.T(), main)
-	assert.False(suite.T(), strings.Contains(suite.lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20"))
+	assert.NotContains(suite.T(), suite.lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20")
 	suite.apmServerInternals.UnlockSignalChannel <- struct{}{}
 }
 
