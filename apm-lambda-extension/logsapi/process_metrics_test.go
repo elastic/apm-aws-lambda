@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -81,15 +80,14 @@ func Test_processPlatformReport(t *testing.T) {
 		}
 		requestBytes, err := extension.GetUncompressedBytes(rawBytes, r.Header.Get("Content-Encoding"))
 		if err != nil {
-			log.Println(err)
+			extension.Log.Error(err)
 			t.Fail()
 		}
-		log.Printf("Test output : %s", string(requestBytes))
 		assert.Equal(t, string(requestBytes), desiredOutput)
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		_, err = w.Write([]byte(`{"foo": "bar"}`))
 		if err != nil {
-			log.Println(err)
+			extension.Log.Error(err)
 			t.Fail()
 		}
 	}))
