@@ -138,6 +138,8 @@ func processEvent(
 		return nil
 	}
 
+	// Used to compute Lambda Timeout
+	event.Timestamp = time.Now()
 	extension.Log.Debug("Received event.")
 	extension.Log.Debugf("%v", extension.PrettyPrint(event))
 
