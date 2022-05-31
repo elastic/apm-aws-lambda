@@ -20,12 +20,13 @@ package extension
 import (
 	"compress/gzip"
 	"context"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPostToApmServerDataCompressed(t *testing.T) {
