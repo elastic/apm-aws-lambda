@@ -18,15 +18,16 @@
 package extension
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"time"
 )
 
 // StartHttpServer starts the server listening for APM agent data.
-func StartHttpServer(transport *ApmServerTransport) (agentDataServer *http.Server, err error) {
+func StartHttpServer(ctx context.Context, transport *ApmServerTransport) (agentDataServer *http.Server, err error) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleInfoRequest(transport))
+	mux.HandleFunc("/", handleInfoRequest(ctx, transport))
 	mux.HandleFunc("/intake/v2/events", handleIntakeV2Events(transport))
 	timeout := time.Duration(transport.config.dataReceiverTimeoutSeconds) * time.Second
 	server := &http.Server{
@@ -45,7 +46,7 @@ func StartHttpServer(transport *ApmServerTransport) (agentDataServer *http.Serve
 	go func() {
 		Log.Infof("Extension listening for apm data on %s", server.Addr)
 		if err = server.Serve(ln); err != nil {
-			if err.Error() == "http: Server closed" {
+			if err.Error() == "http: server closed" {
 				Log.Debug(err)
 			} else {
 				Log.Errorf("Error upon APM data server start : %v", err)

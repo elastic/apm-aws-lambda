@@ -19,37 +19,7 @@ package extension
 
 import (
 	"encoding/json"
-	"net/http"
 )
-
-// ProcessShutdown processes the Shutdown event received from the
-// Lambda runtime API.
-func ProcessShutdown(agentDataServer *http.Server, logsServer *http.Server) {
-	Log.Info("Received SHUTDOWN event, exiting")
-	agentDataServer.Close()
-	logsServer.Close()
-}
-
-// FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
-func FlushAPMData(transport *ApmServerTransport) {
-	if transport.Status == Failing {
-		Log.Debug("Flush skipped - Transport failing")
-		return
-	}
-	Log.Debug("Flush started - Checking for agent data")
-	for {
-		select {
-		case agentData := <-transport.DataChannel:
-			Log.Debug("Flush in progress - Processing agent data")
-			if err := PostToApmServer(transport, agentData); err != nil {
-				Log.Errorf("Error sending to APM server, skipping: %v", err)
-			}
-		default:
-			Log.Debug("Flush ended - No agent data on buffer")
-			return
-		}
-	}
-}
 
 // PrettyPrint prints formatted, legible json data.
 func PrettyPrint(v interface{}) string {

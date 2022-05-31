@@ -18,6 +18,7 @@
 package extension
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -30,13 +31,11 @@ type AgentData struct {
 	ContentEncoding string
 }
 
-var currApmServerTransport *ApmServerTransport
-
 // URL: http://server/
-func handleInfoRequest(apmServerTransport *ApmServerTransport) func(w http.ResponseWriter, r *http.Request) {
+func handleInfoRequest(ctx context.Context, apmServerTransport *ApmServerTransport) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		Log.Debug("Handling APM Server Info Request")
+		Log.Debug("Handling APM server Info Request")
 
 		// Init reverse proxy
 		parsedApmServerUrl, err := url.Parse(apmServerTransport.config.apmServerUrl)
@@ -52,11 +51,13 @@ func handleInfoRequest(apmServerTransport *ApmServerTransport) func(w http.Respo
 		customTransport.ResponseHeaderTimeout = reverseProxyTimeout
 		reverseProxy.Transport = customTransport
 
-		currApmServerTransport = apmServerTransport
-		reverseProxy.ErrorHandler = reverseProxyErrorHandler
+		reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+			apmServerTransport.SetApmServerTransportState(ctx, Failing)
+			Log.Errorf("Error querying version from the APM server: %v", err)
+		}
 
 		// Process request (the Golang doc suggests removing any pre-existing X-Forwarded-For header coming
-		// from the Client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
+		// from the client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
 		r.Header.Del("X-Forwarded-For")
 
 		// Update headers to allow for SSL redirection
@@ -68,11 +69,6 @@ func handleInfoRequest(apmServerTransport *ApmServerTransport) func(w http.Respo
 		// Forward request to the APM server
 		reverseProxy.ServeHTTP(w, r)
 	}
-}
-
-func reverseProxyErrorHandler(res http.ResponseWriter, req *http.Request, err error) {
-	SetApmServerTransportState(currApmServerTransport, Failing)
-	Log.Errorf("Error querying version from the APM Server: %v", err)
 }
 
 // URL: http://server/intake/v2/events
@@ -94,7 +90,7 @@ func handleIntakeV2Events(transport *ApmServerTransport) func(w http.ResponseWri
 				ContentEncoding: r.Header.Get("Content-Encoding"),
 			}
 
-			EnqueueAPMData(transport.DataChannel, agentData)
+			transport.EnqueueAPMData(agentData)
 		}
 
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {

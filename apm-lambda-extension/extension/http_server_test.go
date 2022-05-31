@@ -58,8 +58,8 @@ func TestInfoProxy(t *testing.T) {
 		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
-	transport := InitApmServerTransport(context.Background(), &config)
-	agentDataServer, err := StartHttpServer(transport)
+	transport := InitApmServerTransport(&config)
+	agentDataServer, err := StartHttpServer(context.Background(), transport)
 	if err != nil {
 		t.Fail()
 		return
@@ -107,9 +107,9 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
-	transport := InitApmServerTransport(context.Background(), &config)
+	transport := InitApmServerTransport(&config)
 
-	agentDataServer, err := StartHttpServer(transport)
+	agentDataServer, err := StartHttpServer(context.Background(), transport)
 	if err != nil {
 		t.Fail()
 		return
@@ -151,10 +151,10 @@ func Test_handleInfoRequest(t *testing.T) {
 		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
-	transport := InitApmServerTransport(context.Background(), &config)
+	transport := InitApmServerTransport(&config)
 
 	// Start extension server
-	agentDataServer, err := StartHttpServer(transport)
+	agentDataServer, err := StartHttpServer(context.Background(), transport)
 	if err != nil {
 		t.Fail()
 		return
@@ -191,7 +191,7 @@ func (errReader) Read(_ []byte) (int, error) {
 }
 
 func Test_handleInfoRequestInvalidBody(t *testing.T) {
-	transport := InitApmServerTransport(context.Background(), &extensionConfig{})
+	transport := InitApmServerTransport(&extensionConfig{})
 	mux := http.NewServeMux()
 	urlPath := "/intake/v2/events"
 	mux.HandleFunc(urlPath, handleIntakeV2Events(transport))
@@ -216,9 +216,9 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
-	transport := InitApmServerTransport(context.Background(), &config)
-
-	agentDataServer, err := StartHttpServer(transport)
+	transport := InitApmServerTransport(&config)
+	transport.AgentDoneSignal = make(chan struct{}, 1)
+	agentDataServer, err := StartHttpServer(context.Background(), transport)
 	if err != nil {
 		t.Fail()
 		return
@@ -248,7 +248,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 
 	select {
 	case <-transport.AgentDoneSignal:
-		<-transport.DataChannel
+		<-transport.dataChannel
 	case <-timer.C:
 		t.Log("Timed out waiting for server to send FuncDone signal")
 		t.Fail()
@@ -269,9 +269,9 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
-	transport := InitApmServerTransport(context.Background(), &config)
-
-	agentDataServer, err := StartHttpServer(transport)
+	transport := InitApmServerTransport(&config)
+	transport.AgentDoneSignal = make(chan struct{}, 1)
+	agentDataServer, err := StartHttpServer(context.Background(), transport)
 	if err != nil {
 		t.Fail()
 		return
@@ -294,7 +294,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
 		t.Fail()
 	}
-	<-transport.DataChannel
+	<-transport.dataChannel
 	assert.Equal(t, 202, resp.StatusCode)
 }
 
@@ -312,9 +312,9 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 		dataReceiverServerPort:     ":1234",
 		dataReceiverTimeoutSeconds: 15,
 	}
-	transport := InitApmServerTransport(context.Background(), &config)
-
-	agentDataServer, err := StartHttpServer(transport)
+	transport := InitApmServerTransport(&config)
+	transport.AgentDoneSignal = make(chan struct{}, 1)
+	agentDataServer, err := StartHttpServer(context.Background(), transport)
 	if err != nil {
 		t.Fail()
 		return

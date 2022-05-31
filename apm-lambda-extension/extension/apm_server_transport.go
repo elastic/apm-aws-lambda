@@ -47,56 +47,70 @@ const (
 type ApmServerTransport struct {
 	sync.Mutex
 	bufferPool        sync.Pool
-	ctx               context.Context
 	config            *extensionConfig
 	AgentDoneSignal   chan struct{}
-	DataChannel       chan AgentData
-	Client            *http.Client
-	Status            ApmServerTransportStatusType
-	ReconnectionCount int
-	GracePeriodTimer  *time.Timer
+	dataChannel       chan AgentData
+	client            *http.Client
+	status            ApmServerTransportStatusType
+	reconnectionCount int
+	gracePeriodTimer  *time.Timer
 }
 
-func InitApmServerTransport(ctx context.Context, config *extensionConfig) *ApmServerTransport {
+func InitApmServerTransport(config *extensionConfig) *ApmServerTransport {
 	var transport ApmServerTransport
 	transport.bufferPool = sync.Pool{New: func() interface{} {
 		return &bytes.Buffer{}
 	}}
-	transport.AgentDoneSignal = make(chan struct{}, 1)
-	transport.DataChannel = make(chan AgentData, 100)
-	transport.Client = &http.Client{
+	transport.dataChannel = make(chan AgentData, 100)
+	transport.client = &http.Client{
 		Timeout:   time.Duration(config.DataForwarderTimeoutSeconds) * time.Second,
 		Transport: http.DefaultTransport.(*http.Transport).Clone(),
 	}
 	transport.config = config
-	transport.ctx = ctx
-	transport.Status = Healthy
-	transport.ReconnectionCount = -1
+	transport.status = Healthy
+	transport.reconnectionCount = -1
 	return &transport
 }
 
 // StartBackgroundApmDataForwarding Receive agent data as it comes in and post it to the APM server.
 // Stop checking for, and sending agent data when the function invocation
 // has completed, signaled via a channel.
-func StartBackgroundApmDataForwarding(transport *ApmServerTransport, funcDone chan struct{}, backgroundDataSendWg *sync.WaitGroup) {
-	go func() {
-		defer backgroundDataSendWg.Done()
-		if transport.Status == Failing {
-			return
-		}
-		for {
-			select {
-			case <-funcDone:
-				Log.Debug("Received signal that function has completed, not processing any more agent data")
-				return
-			case agentData := <-transport.DataChannel:
-				if err := PostToApmServer(transport, agentData); err != nil {
-					Log.Errorf("Error sending to APM server, skipping: %v", err)
-					return
-				}
+func (transport *ApmServerTransport) ForwardApmData(ctx context.Context) error {
+	if transport.status == Failing {
+		return nil
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			Log.Debug("Invocation context cancelled, not processing any more agent data")
+			return nil
+		case agentData := <-transport.dataChannel:
+			if err := transport.PostToApmServer(ctx, agentData); err != nil {
+				return fmt.Errorf("error sending to APM server, skipping: %v", err)
 			}
 		}
-	}()
+	}
+}
+
+// FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
+func (transport *ApmServerTransport) FlushAPMData(ctx context.Context) {
+	if transport.status == Failing {
+		Log.Debug("Flush skipped - Transport failing")
+		return
+	}
+	Log.Debug("Flush started - Checking for agent data")
+	for {
+		select {
+		case agentData := <-transport.dataChannel:
+			Log.Debug("Flush in progress - Processing agent data")
+			if err := transport.PostToApmServer(ctx, agentData); err != nil {
+				Log.Errorf("Error sending to APM server, skipping: %v", err)
+			}
+		default:
+			Log.Debug("Flush ended - No agent data on buffer")
+			return
+		}
+	}
 }
 
 // PostToApmServer takes a chunk of APM agent data and posts it to the APM server.
@@ -104,10 +118,10 @@ func StartBackgroundApmDataForwarding(transport *ApmServerTransport, funcDone ch
 // The function compresses the APM agent data, if it's not already compressed.
 // It sets the APM transport status to failing upon errors, as part of the backoff
 // strategy.
-func PostToApmServer(transport *ApmServerTransport, agentData AgentData) error {
+func (transport *ApmServerTransport) PostToApmServer(ctx context.Context, agentData AgentData) error {
 	// todo: can this be a streaming or streaming style call that keeps the
 	//       connection open across invocations?
-	if transport.Status == Failing {
+	if transport.status == Failing {
 		return errors.New("transport status is unhealthy")
 	}
 
@@ -149,10 +163,10 @@ func PostToApmServer(transport *ApmServerTransport, agentData AgentData) error {
 		req.Header.Add("Authorization", "Bearer "+transport.config.apmServerSecretToken)
 	}
 
-	Log.Debug("Sending data chunk to APM Server")
-	resp, err := transport.Client.Do(req)
+	Log.Debug("Sending data chunk to APM server")
+	resp, err := transport.client.Do(req)
 	if err != nil {
-		SetApmServerTransportState(transport, Failing)
+		transport.SetApmServerTransportState(ctx, Failing)
 		return fmt.Errorf("failed to post to APM server: %v", err)
 	}
 
@@ -160,11 +174,11 @@ func PostToApmServer(transport *ApmServerTransport, agentData AgentData) error {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		SetApmServerTransportState(transport, Failing)
+		transport.SetApmServerTransportState(ctx, Failing)
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
-	SetApmServerTransportState(transport, Healthy)
+	transport.SetApmServerTransportState(ctx, Healthy)
 	Log.Debug("Transport status set to healthy")
 	Log.Debugf("APM server response body: %v", string(body))
 	Log.Debugf("APM server response status code: %v", resp.StatusCode)
@@ -178,49 +192,49 @@ func PostToApmServer(transport *ApmServerTransport, agentData AgentData) error {
 // to the APM server.
 //
 // This function is public for use in tests.
-func SetApmServerTransportState(transport *ApmServerTransport, status ApmServerTransportStatusType) {
+func (transport *ApmServerTransport) SetApmServerTransportState(ctx context.Context, status ApmServerTransportStatusType) {
 	switch status {
 	case Healthy:
 		transport.Lock()
-		transport.Status = status
-		Log.Debugf("APM Server Transport status set to %s", transport.Status)
-		transport.ReconnectionCount = -1
+		transport.status = status
+		Log.Debugf("APM server Transport status set to %s", transport.status)
+		transport.reconnectionCount = -1
 		transport.Unlock()
 	case Failing:
 		transport.Lock()
-		transport.Status = status
-		Log.Debugf("APM Server Transport status set to %s", transport.Status)
-		transport.ReconnectionCount++
-		transport.GracePeriodTimer = time.NewTimer(computeGracePeriod(transport))
-		Log.Debugf("Grace period entered, reconnection count : %d", transport.ReconnectionCount)
+		transport.status = status
+		Log.Debugf("APM server Transport status set to %s", transport.status)
+		transport.reconnectionCount++
+		transport.gracePeriodTimer = time.NewTimer(transport.computeGracePeriod())
+		Log.Debugf("Grace period entered, reconnection count : %d", transport.reconnectionCount)
 		go func() {
 			select {
-			case <-transport.GracePeriodTimer.C:
+			case <-transport.gracePeriodTimer.C:
 				Log.Debug("Grace period over - timer timed out")
-			case <-transport.ctx.Done():
+			case <-ctx.Done():
 				Log.Debug("Grace period over - context done")
 			}
-			transport.Status = Pending
-			Log.Debugf("APM Server Transport status set to %s", transport.Status)
+			transport.status = Pending
+			Log.Debugf("APM server Transport status set to %s", transport.status)
 			transport.Unlock()
 		}()
 	default:
-		Log.Errorf("Cannot set APM Server Transport status to %s", status)
+		Log.Errorf("Cannot set APM server Transport status to %s", status)
 	}
 }
 
 // ComputeGracePeriod https://github.com/elastic/apm/blob/main/specs/agents/transport.md#transport-errors
-func computeGracePeriod(transport *ApmServerTransport) time.Duration {
-	gracePeriodWithoutJitter := math.Pow(math.Min(float64(transport.ReconnectionCount), 6), 2)
+func (transport *ApmServerTransport) computeGracePeriod() time.Duration {
+	gracePeriodWithoutJitter := math.Pow(math.Min(float64(transport.reconnectionCount), 6), 2)
 	jitter := rand.Float64()/5 - 0.1
 	return time.Duration((gracePeriodWithoutJitter + jitter*gracePeriodWithoutJitter) * float64(time.Second))
 }
 
 // EnqueueAPMData adds a AgentData struct to the agent data channel, effectively queueing for a send
 // to the APM server.
-func EnqueueAPMData(agentDataChannel chan AgentData, agentData AgentData) {
+func (transport *ApmServerTransport) EnqueueAPMData(agentData AgentData) {
 	select {
-	case agentDataChannel <- agentData:
+	case transport.dataChannel <- agentData:
 		Log.Debug("Adding agent data to buffer to be sent to apm server")
 	default:
 		Log.Warn("Channel full: dropping a subset of agent data")
