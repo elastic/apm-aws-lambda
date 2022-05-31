@@ -19,12 +19,13 @@ package logsapi
 
 import (
 	"context"
-	"elastic/apm-lambda-extension/extension"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"time"
+
+	"elastic/apm-lambda-extension/extension"
 
 	"github.com/pkg/errors"
 )
@@ -57,8 +58,9 @@ type LogEvent struct {
 
 // LogEventRecord is a sub-object in a Logs API event
 type LogEventRecord struct {
-	RequestId string `json:"requestId"`
-	Status    string `json:"status"`
+	RequestId string          `json:"requestId"`
+	Status    string          `json:"status"`
+	Metrics   PlatformMetrics `json:"metrics"`
 }
 
 // Subscribes to the Logs API
@@ -156,21 +158,44 @@ func checkLambdaFunction() bool {
 	return false
 }
 
-// WaitRuntimeDone consumes events until a RuntimeDone event corresponding
+// ProcessLogs consumes events until a RuntimeDone event corresponding
 // to requestID is received, or ctx is cancelled, and then returns.
-func WaitRuntimeDone(ctx context.Context, requestID string, transport *LogsTransport, runtimeDoneSignal chan struct{}) error {
+func ProcessLogs(
+	ctx context.Context,
+	requestID string,
+	apmServerTransport *extension.ApmServerTransport,
+	logsTransport *LogsTransport,
+	metadataContainer *extension.MetadataContainer,
+	runtimeDoneSignal chan struct{},
+	prevEvent *extension.NextEventResponse,
+) error {
 	for {
 		select {
-		case logEvent := <-transport.logsChannel:
+		case logEvent := <-logsTransport.logsChannel:
 			extension.Log.Debugf("Received log event %v", logEvent.Type)
+			switch logEvent.Type {
 			// Check the logEvent for runtimeDone and compare the RequestID
 			// to the id that came in via the Next API
-			if logEvent.Type == RuntimeDone {
+			case RuntimeDone:
 				if logEvent.Record.RequestId == requestID {
 					extension.Log.Info("Received runtimeDone event for this function invocation")
 					runtimeDoneSignal <- struct{}{}
 					return nil
 				} else {
+					extension.Log.Debug("Log API runtimeDone event request id didn't match")
+				}
+			// Check if the logEvent contains metrics and verify that they can be linked to the previous invocation
+			case Report:
+				if prevEvent != nil && logEvent.Record.RequestId == prevEvent.RequestID {
+					extension.Log.Debug("Received platform report for the previous function invocation")
+					processedMetrics, err := ProcessPlatformReport(ctx, metadataContainer, prevEvent, logEvent)
+					if err != nil {
+						extension.Log.Errorf("Error processing Lambda platform metrics : %v", err)
+					} else {
+						apmServerTransport.EnqueueAPMData(processedMetrics)
+					}
+				} else {
+					extension.Log.Warn("report event request id didn't match the previous event id")
 					extension.Log.Debug("Log API runtimeDone event request id didn't match")
 				}
 			}

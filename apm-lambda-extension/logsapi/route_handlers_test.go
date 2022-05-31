@@ -48,6 +48,13 @@ func TestLogEventUnmarshalReport(t *testing.T) {
 	rec := LogEventRecord{
 		RequestId: "6f7f0961f83442118a7af6fe80b88d56",
 		Status:    "", // no status was given in sample json
+		Metrics: PlatformMetrics{
+			DurationMs:       101.51,
+			BilledDurationMs: 300,
+			MemorySizeMB:     512,
+			MaxMemoryUsedMB:  33,
+			InitDurationMs:   116.67,
+		},
 	}
 	assert.Equal(t, rec, le.Record)
 
