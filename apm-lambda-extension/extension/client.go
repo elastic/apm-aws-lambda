@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // RegisterResponse is the body of the response for /register
@@ -34,6 +35,7 @@ type RegisterResponse struct {
 
 // NextEventResponse is the response for /event/next
 type NextEventResponse struct {
+	Timestamp          time.Time `json:"timestamp,omitempty"`
 	EventType          EventType `json:"eventType"`
 	DeadlineMs         int64     `json:"deadlineMs"`
 	RequestID          string    `json:"requestId"`
