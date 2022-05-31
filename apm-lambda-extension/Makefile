@@ -1,10 +1,9 @@
 SHELL = /bin/bash -eo pipefail
 
 AWS_FOLDER = .aws
-
 DOCKER_IMAGE_NAME = observability/apm-lambda-extension
-
 DOCKER_REGISTRY = docker.elastic.co
+AGENT_VERSION = $(shell echo $${BRANCH_NAME} | cut -f 2 -d 'v')
 
 ifndef GOARCH
 	GOARCH=amd64
@@ -57,12 +56,12 @@ env:
 dist: validate-branch-name build test zip
 	@cp ./bin/$(GOARCH).zip bin/$(BRANCH_NAME)-linux-$(GOARCH).zip
 
-build-docker:
-	docker build -t $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)-$(ARCHITECTURE):$(BRANCH_NAME) \
+build-docker: validate-version
+	docker build -t $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)-$(ARCHITECTURE):$(AGENT_VERSION) \
   --build-arg EXTENSION_FILE=bin/extensions/apm-lambda-extension .
 
 push-docker: build-docker
-	@../.ci/push_docker.sh $(DOCKER_REGISTRY) "$(DOCKER_IMAGE_NAME)-$(ARCHITECTURE)" $(BRANCH_NAME)
+	@../.ci/push_docker.sh $(DOCKER_REGISTRY) "$(DOCKER_IMAGE_NAME)-$(ARCHITECTURE)" $(AGENT_VERSION)
 
 # List all the AWS regions
 get-all-aws-regions:
@@ -125,6 +124,11 @@ release-notes: validate-branch-name validate-suffix-arn-file
 		--generate-notes \
 		--notes-file $(SUFFIX_ARN_FILE) \
 		./bin/$(BRANCH_NAME)*.zip
+
+validate-version:
+ifndef AGENT_VERSION
+	$(error AGENT_VERSION is undefined)
+endif
 
 validate-branch-name:
 ifndef BRANCH_NAME
