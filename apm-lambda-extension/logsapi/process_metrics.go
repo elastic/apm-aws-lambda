@@ -20,7 +20,6 @@ package logsapi
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"math"
 
 	"elastic/apm-lambda-extension/extension"
@@ -54,7 +53,7 @@ func (mc MetricsContainer) addMetric(name string, metric model.Metric) {
 	mc.Metrics.Samples[name] = metric
 }
 
-func ProcessPlatformReport(ctx context.Context, apmServerTransport *extension.ApmServerTransport, metadataContainer *extension.MetadataContainer, functionData *extension.NextEventResponse, platformReport LogEvent) {
+func ProcessPlatformReport(ctx context.Context, apmServerTransport *extension.ApmServerTransport, metadataContainer *extension.MetadataContainer, functionData *extension.NextEventResponse, platformReport LogEvent) error {
 	var metricsData []byte
 	metricsContainer := MetricsContainer{
 		Metrics: &model.Metrics{},
@@ -89,8 +88,7 @@ func ProcessPlatformReport(ctx context.Context, apmServerTransport *extension.Ap
 
 	metricsJson, err := json.Marshal(metricsContainer)
 	if err != nil {
-		log.Println(err)
-		return
+		return err
 	}
 
 	if metadataContainer.Metadata != nil {
@@ -99,12 +97,12 @@ func ProcessPlatformReport(ctx context.Context, apmServerTransport *extension.Ap
 		metadataContainer.Metadata.Service.Agent.Version = extension.Version
 		metadataJson, err := json.Marshal(metadataContainer)
 		if err != nil {
-			log.Println(err)
-			return
+			return err
 		}
 		metricsData = append(metadataJson, []byte("\n")...)
 	}
 
 	metricsData = append(metricsData, metricsJson...)
 	apmServerTransport.EnqueueAPMData(extension.AgentData{Data: metricsData})
+	return nil
 }

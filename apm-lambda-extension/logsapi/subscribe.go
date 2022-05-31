@@ -187,14 +187,16 @@ func ProcessLogs(
 			// Check if the logEvent contains metrics and verify that they can be linked to the previous invocation
 			case Report:
 				if logEvent.Record.RequestId == prevEvent.RequestID {
-					ProcessPlatformReport(ctx, apmServerTransport, metadataContainer, prevEvent, logEvent)
 					extension.Log.Debug("Received platform report for the previous function invocation")
+					err := ProcessPlatformReport(ctx, apmServerTransport, metadataContainer, prevEvent, logEvent)
+					if err != nil {
+						extension.Log.Errorf("Error processing Lambda platform metrics : %v", err)
+					}
 				} else {
 					extension.Log.Warn("report event request id didn't match the previous event id")
 					extension.Log.Debug("Log API runtimeDone event request id didn't match")
 				}
 			}
-
 		case <-ctx.Done():
 			extension.Log.Debug("Current invocation over. Interrupting logs processing goroutine")
 			return nil

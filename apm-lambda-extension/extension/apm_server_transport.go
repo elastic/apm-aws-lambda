@@ -86,7 +86,10 @@ func (transport *ApmServerTransport) ForwardApmData(ctx context.Context, metadat
 			return nil
 		case agentData := <-transport.dataChannel:
 			if metadataContainer.Metadata == nil {
-				ProcessMetadata(agentData, metadataContainer)
+				err := ProcessMetadata(agentData, metadataContainer)
+				if err != nil {
+					Log.Errorf("Error extracting metadata from agent payload %v", err)
+				}
 			}
 			if err := transport.PostToApmServer(ctx, agentData); err != nil {
 				return fmt.Errorf("error sending to APM server, skipping: %v", err)

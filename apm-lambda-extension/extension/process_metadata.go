@@ -25,38 +25,37 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 
 	"elastic/apm-lambda-extension/model"
+
+	"github.com/pkg/errors"
 )
 
 type MetadataContainer struct {
 	Metadata *model.Metadata `json:"metadata"`
 }
 
-func ProcessMetadata(data AgentData, container *MetadataContainer) {
+func ProcessMetadata(data AgentData, container *MetadataContainer) error {
 	uncompressedData, err := GetUncompressedBytes(data.Data, data.ContentEncoding)
-	log.Println(string(uncompressedData))
 	if err != nil {
-		log.Printf("Error uncompressing agent data for metadata extraction : %v", err)
-		return
+		return errors.New(fmt.Sprintf("Error uncompressing agent data for metadata extraction : %v", err))
 	}
 	decoder := json.NewDecoder(bytes.NewReader(uncompressedData))
 	for {
 		err = decoder.Decode(container)
 		if container.Metadata != nil {
-			log.Printf("Metadata decoded")
+			Log.Debug("Metadata decoded")
 			break
 		}
 		if err != nil {
 			if err == io.EOF {
-				log.Printf("No metadata in current agent transaction")
+				return errors.New("No metadata in current agent transaction")
 			} else {
-				log.Printf("Error uncompressing agent data for metadata extraction : %v", err)
+				return errors.New(fmt.Sprintf("Error uncompressing agent data for metadata extraction : %v", err))
 			}
-			return
 		}
 	}
+	return nil
 }
 
 func GetUncompressedBytes(rawBytes []byte, encodingType string) ([]byte, error) {
