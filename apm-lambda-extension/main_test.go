@@ -20,12 +20,8 @@ package main
 import (
 	"bytes"
 	"context"
-	e2eTesting "elastic/apm-lambda-extension/e2e-testing"
-	"elastic/apm-lambda-extension/extension"
-	"elastic/apm-lambda-extension/logsapi"
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/suite"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -35,6 +31,10 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	e2eTesting "elastic/apm-lambda-extension/e2e-testing"
+	"elastic/apm-lambda-extension/extension"
+	"elastic/apm-lambda-extension/logsapi"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -83,9 +83,7 @@ type ApmInfo struct {
 	Version      string    `json:"version"`
 }
 
-func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.Server, *MockServerInternals, *MockServerInternals) {
-
-	// Mock APM Server
+func newMockApmServer(t *testing.T) (*MockServerInternals, *httptest.Server) {
 	var apmServerInternals MockServerInternals
 	apmServerInternals.WaitForUnlockSignal = true
 	apmServerInternals.UnlockSignalChannel = make(chan struct{})
@@ -137,16 +135,21 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 			}
 		}
 	}))
+
 	if err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", apmServer.URL); err != nil {
 		extension.Log.Fatalf("Could not set environment variable : %v", err)
-		return nil, nil, nil, nil
+		return nil, nil
 	}
 	if err := os.Setenv("ELASTIC_APM_SECRET_TOKEN", "none"); err != nil {
 		extension.Log.Fatalf("Could not set environment variable : %v", err)
-		return nil, nil, nil, nil
+		return nil, nil
 	}
 
-	// Mock Lambda Server
+	t.Cleanup(func() { apmServer.Close() })
+	return &apmServerInternals, apmServer
+}
+
+func newMockLambdaServer(t *testing.T, eventsChannel chan MockEvent) *MockServerInternals {
 	var lambdaServerInternals MockServerInternals
 	lambdaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.RequestURI {
@@ -187,7 +190,7 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 	strippedLambdaURL := slicedLambdaURL[1]
 	if err := os.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL); err != nil {
 		extension.Log.Fatalf("Could not set environment variable : %v", err)
-		return nil, nil, nil, nil
+		return nil
 	}
 	extensionClient = extension.NewClient(os.Getenv("AWS_LAMBDA_RUNTIME_API"))
 
@@ -199,10 +202,26 @@ func initMockServers(eventsChannel chan MockEvent) (*httptest.Server, *httptest.
 	}
 	if err = os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort)); err != nil {
 		extension.Log.Fatalf("Could not set environment variable : %v", err)
-		return nil, nil, nil, nil
+		return nil
 	}
 
-	return lambdaServer, apmServer, &apmServerInternals, &lambdaServerInternals
+	t.Cleanup(func() { lambdaServer.Close() })
+	return &lambdaServerInternals
+}
+
+// TODO : Move logger out of extension package and stop using it as a package-level variable
+func newLogger(t *testing.T, logLevel string) {
+	if err := os.Setenv("ELASTIC_APM_LOG_LEVEL", logLevel); err != nil {
+		t.Fail()
+	}
+}
+
+func newTestStructs(t *testing.T) (context.Context, chan MockEvent) {
+	http.DefaultServeMux = new(http.ServeMux)
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(func() { cancel() })
+	eventsChannel := make(chan MockEvent, 100)
+	return ctx, eventsChannel
 }
 
 func processMockEvent(currId string, event MockEvent, extensionPort string, internals *MockServerInternals) {
@@ -335,199 +354,230 @@ func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
 	}
 }
 
-// TESTS
-type MainUnitTestsSuite struct {
-	suite.Suite
-	eventsChannel         chan MockEvent
-	lambdaServer          *httptest.Server
-	apmServer             *httptest.Server
-	apmServerInternals    *MockServerInternals
-	lambdaServerInternals *MockServerInternals
-	ctx                   context.Context
-	cancel                context.CancelFunc
-}
-
-func TestMainUnitTestsSuite(t *testing.T) {
-	suite.Run(t, new(MainUnitTestsSuite))
-}
-
-// This function executes before each test case
-func (suite *MainUnitTestsSuite) SetupTest() {
-	if err := os.Setenv("ELASTIC_APM_LOG_LEVEL", "trace"); err != nil {
-		suite.T().Fail()
-	}
-	suite.ctx, suite.cancel = context.WithCancel(context.Background())
-	http.DefaultServeMux = new(http.ServeMux)
-	suite.eventsChannel = make(chan MockEvent, 100)
-	suite.lambdaServer, suite.apmServer, suite.apmServerInternals, suite.lambdaServerInternals = initMockServers(suite.eventsChannel)
-}
-
-// This function executes after each test case
-func (suite *MainUnitTestsSuite) TearDownTest() {
-	suite.lambdaServer.Close()
-	suite.apmServer.Close()
-	suite.cancel()
-}
-
 // TestStandardEventsChain checks a nominal sequence of events (fast APM server, only one standard event)
-func (suite *MainUnitTestsSuite) TestStandardEventsChain() {
+func TestStandardEventsChain(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	apmServerInternals, _ := newMockApmServer(t)
+	newMockLambdaServer(t, eventsChannel)
+
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
-	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
+	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
 }
 
 // TestFlush checks if the flushed param does not cause a panic or an unexpected behavior
-func (suite *MainUnitTestsSuite) TestFlush() {
+func TestFlush(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	apmServerInternals, _ := newMockApmServer(t)
+	newMockLambdaServer(t, eventsChannel)
+
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
-	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
+	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
 }
 
 // TestLateFlush checks if there is no race condition between RuntimeDone and AgentDone
 // The test is built so that the AgentDone signal is received after RuntimeDone, which causes the next event to be interrupted.
-func (suite *MainUnitTestsSuite) TestLateFlush() {
+func TestLateFlush(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	apmServerInternals, _ := newMockApmServer(t)
+	newMockLambdaServer(t, eventsChannel)
+
 	eventsChain := []MockEvent{
 		{Type: InvokeLateFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
-	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse+TimelyResponse)))
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
+	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse+TimelyResponse)))
 }
 
 // TestWaitGroup checks if there is no race condition between the main waitgroups (issue #128)
-func (suite *MainUnitTestsSuite) TestWaitGroup() {
+func TestWaitGroup(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	apmServerInternals, _ := newMockApmServer(t)
+	newMockLambdaServer(t, eventsChannel)
+
 	eventsChain := []MockEvent{
 		{Type: InvokeWaitgroupsRace, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 500},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
-	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
+	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
 }
 
 // TestAPMServerDown tests that main does not panic nor runs indefinitely when the APM server is inactive.
-func (suite *MainUnitTestsSuite) TestAPMServerDown() {
-	suite.apmServer.Close()
+func TestAPMServerDown(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	apmServerInternals, apmServer := newMockApmServer(t)
+	newMockLambdaServer(t, eventsChannel)
+
+	apmServer.Close()
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
-	assert.NotPanics(suite.T(), main)
-	assert.False(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
+	assert.False(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
 }
 
 // TestAPMServerHangs tests that main does not panic nor runs indefinitely when the APM server does not respond.
-func (suite *MainUnitTestsSuite) TestAPMServerHangs() {
+func TestAPMServerHangs(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	apmServerInternals, _ := newMockApmServer(t)
+	newMockLambdaServer(t, eventsChannel)
+
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
-	assert.NotPanics(suite.T(), main)
-	assert.False(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(Hangs)))
-	suite.apmServerInternals.UnlockSignalChannel <- struct{}{}
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
+	assert.False(t, strings.Contains(apmServerInternals.Data, string(Hangs)))
+	apmServerInternals.UnlockSignalChannel <- struct{}{}
 }
 
 // TestAPMServerRecovery tests a scenario where the APM server recovers after hanging.
 // The default forwarder timeout is 3 seconds, so we wait 5 seconds until we unlock that hanging state.
 // Hence, the APM server is waked up just in time to process the TimelyResponse data frame.
-func (suite *MainUnitTestsSuite) TestAPMServerRecovery() {
+func TestAPMServerRecovery(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	apmServerInternals, _ := newMockApmServer(t)
+	newMockLambdaServer(t, eventsChannel)
+
 	if err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1"); err != nil {
-		suite.T().Fail()
+		t.Fail()
 	}
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
+	eventQueueGenerator(eventsChain, eventsChannel)
 	go func() {
 		time.Sleep(2500 * time.Millisecond) // Cannot multiply time.Second by a float
-		suite.apmServerInternals.UnlockSignalChannel <- struct{}{}
+		apmServerInternals.UnlockSignalChannel <- struct{}{}
 	}()
-	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(Hangs)))
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	assert.NotPanics(t, main)
+	assert.True(t, strings.Contains(apmServerInternals.Data, string(Hangs)))
+	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
 	if err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", ""); err != nil {
-		suite.T().Fail()
+		t.Fail()
 	}
 }
 
 // TestGracePeriodHangs verifies that the WaitforGracePeriod goroutine ends when main() ends.
 // This can be checked by asserting that apmTransportStatus is pending after the execution of main.
-func (suite *MainUnitTestsSuite) TestGracePeriodHangs() {
+func TestGracePeriodHangs(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	apmServerInternals, _ := newMockApmServer(t)
+	newMockLambdaServer(t, eventsChannel)
+
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
-	assert.NotPanics(suite.T(), main)
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
 
 	time.Sleep(100 * time.Millisecond)
-	suite.apmServerInternals.UnlockSignalChannel <- struct{}{}
+	apmServerInternals.UnlockSignalChannel <- struct{}{}
 }
 
 // TestAPMServerCrashesDuringExecution tests that main does not panic nor runs indefinitely when the APM server crashes
 // during execution.
-func (suite *MainUnitTestsSuite) TestAPMServerCrashesDuringExecution() {
+func TestAPMServerCrashesDuringExecution(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	apmServerInternals, _ := newMockApmServer(t)
+	newMockLambdaServer(t, eventsChannel)
+
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Crashes, ExecutionDuration: 1, Timeout: 5},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
-	assert.NotPanics(suite.T(), main)
-	assert.False(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(Crashes)))
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
+	assert.False(t, strings.Contains(apmServerInternals.Data, string(Crashes)))
 }
 
 // TestFullChannel checks that an overload of APM data chunks is handled correctly, events dropped beyond the 100th one
 // if no space left in channel, no panic, no infinite hanging.
-func (suite *MainUnitTestsSuite) TestFullChannel() {
+func TestFullChannel(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	apmServerInternals, _ := newMockApmServer(t)
+	newMockLambdaServer(t, eventsChannel)
+
 	eventsChain := []MockEvent{
 		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.1, Timeout: 5},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
-	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.apmServerInternals.Data, string(TimelyResponse)))
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
+	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
 }
 
 // TestFullChannelSlowAPMServer tests what happens when the APM Data channel is full and the APM server is slow
 // (send strategy : background)
-func (suite *MainUnitTestsSuite) TestFullChannelSlowAPMServer() {
+func TestFullChannelSlowAPMServer(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	newMockApmServer(t)
+	newMockLambdaServer(t, eventsChannel)
+
 	if err := os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background"); err != nil {
-		suite.T().Fail()
+		t.Fail()
 	}
 
 	eventsChain := []MockEvent{
 		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: SlowResponse, ExecutionDuration: 0.01, Timeout: 5},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
-	assert.NotPanics(suite.T(), main)
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
 	// The test should not hang
 	if err := os.Setenv("ELASTIC_APM_SEND_STRATEGY", "syncflush"); err != nil {
-		suite.T().Fail()
+		t.Fail()
 	}
 }
 
 // TestInfoRequest checks if the extension is able to retrieve APM server info (/ endpoint) (fast APM server, only one standard event)
-func (suite *MainUnitTestsSuite) TestInfoRequest() {
+func TestInfoRequest(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	newMockApmServer(t)
+	lambdaServerInternals := newMockLambdaServer(t, eventsChannel)
+
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardInfo, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
-	assert.NotPanics(suite.T(), main)
-	assert.True(suite.T(), strings.Contains(suite.lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20"))
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
+	assert.True(t, strings.Contains(lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20"))
 }
 
 // TestInfoRequest checks if the extension times out when unable to retrieve APM server info (/ endpoint)
-func (suite *MainUnitTestsSuite) TestInfoRequestHangs() {
+func TestInfoRequestHangs(t *testing.T) {
+	newLogger(t, "trace")
+	_, eventsChannel := newTestStructs(t)
+	apmServerInternals, _ := newMockApmServer(t)
+	lambdaServerInternals := newMockLambdaServer(t, eventsChannel)
+
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardInfo, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
-	eventQueueGenerator(eventsChain, suite.eventsChannel)
-	assert.NotPanics(suite.T(), main)
-	assert.False(suite.T(), strings.Contains(suite.lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20"))
-	suite.apmServerInternals.UnlockSignalChannel <- struct{}{}
+	eventQueueGenerator(eventsChain, eventsChannel)
+	assert.NotPanics(t, main)
+	assert.False(t, strings.Contains(lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20"))
+	apmServerInternals.UnlockSignalChannel <- struct{}{}
 }
