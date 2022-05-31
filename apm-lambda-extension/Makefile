@@ -2,6 +2,10 @@ SHELL = /bin/bash -eo pipefail
 
 AWS_FOLDER = .aws
 
+DOCKER_IMAGE_NAME = observability/apm-lambda-extension
+
+DOCKER_REGISTRY = docker.elastic.co
+
 ifndef GOARCH
 	GOARCH=amd64
 endif
@@ -13,7 +17,7 @@ else
 	ARCHITECTURE=arm64
 endif
 
-export AWS_FOLDER GOARCH ARCHITECTURE
+export AWS_FOLDER GOARCH ARCHITECTURE DOCKER_IMAGE_NAME DOCKER_REGISTRY
 
 .PHONY: all
 all: build
@@ -52,6 +56,13 @@ env:
 	env
 dist: validate-branch-name build test zip
 	@cp ./bin/$(GOARCH).zip bin/$(BRANCH_NAME)-linux-$(GOARCH).zip
+
+build-docker:
+	docker build -t $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)-$(ARCHITECTURE):$(BRANCH_NAME) \
+  --build-arg EXTENSION_FILE=bin/extensions/apm-lambda-extension .
+
+push-docker: build-docker
+	@../.ci/push_docker.sh $(DOCKER_REGISTRY) "$(DOCKER_IMAGE_NAME)-$(ARCHITECTURE)" $(BRANCH_NAME)
 
 # List all the AWS regions
 get-all-aws-regions:

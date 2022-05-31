@@ -12,6 +12,8 @@ pipeline {
     RELEASE_URL_MESSAGE = "(<https://github.com/elastic/${env.REPO}/releases/tag/${env.TAG_NAME}|${env.TAG_NAME}>)"
     SLACK_CHANNEL = '#apm-serverless'
     NOTIFY_TO = 'build-apm+apm-serverless@elastic.co'
+    DOCKER_REGISTRY = 'docker.elastic.co'
+    DOCKER_SECRET = 'secret/apm-team/ci/docker-registry/prod'
   }
   options {
     timeout(time: 1, unit: 'HOURS')
@@ -130,9 +132,21 @@ pipeline {
                   }
                 }
               }
-              stage('Publish') {
+              stage('PushDockerImage') {
                 steps {
-                  withGithubNotify(context: "Publish-${PLATFORM}") {
+                  withGithubNotify(context: "Push-Docker-${PLATFORM}") {
+                    withGoEnv(){
+                      dir("${BASE_DIR}/apm-lambda-extension"){
+                        dockerLogin(secret: "${DOCKER_SECRET}", registry: "${DOCKER_REGISTRY}", role_id: 'apm-vault-role-id', secret_id: 'apm-vault-secret-id')
+                        cmd(label: 'make push-docker', script: 'make push-docker')
+                      }
+                    }
+                  }
+                }
+              }
+              stage('PublishLayer') {
+                steps {
+                  withGithubNotify(context: "Publish-Layer-${PLATFORM}") {
                     withGoEnv(){
                       withAWSEnv(secret: 'secret/observability-team/ci/service-account/apm-aws-lambda', forceInstallation: true, version: '2.4.10') {
                         dir("${BASE_DIR}/apm-lambda-extension"){
