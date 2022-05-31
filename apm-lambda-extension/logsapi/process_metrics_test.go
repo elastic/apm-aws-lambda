@@ -88,5 +88,8 @@ func Test_processPlatformReport(t *testing.T) {
 		t.Fail()
 	}
 	requestBytes, err := extension.GetUncompressedBytes(rawBytes.Data, "")
+	if err != nil {
+		t.Fail()
+	}
 	assert.Equal(t, string(requestBytes), desiredOutput)
 }
