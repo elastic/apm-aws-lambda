@@ -366,7 +366,7 @@ func TestStandardEventsChain(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
-	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
+	assert.Contains(t, apmServerInternals.Data, TimelyResponse)
 }
 
 // TestFlush checks if the flushed param does not cause a panic or an unexpected behavior
@@ -381,7 +381,7 @@ func TestFlush(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
-	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
+	assert.Contains(t, apmServerInternals.Data, TimelyResponse)
 }
 
 // TestLateFlush checks if there is no race condition between RuntimeDone and AgentDone
@@ -398,7 +398,7 @@ func TestLateFlush(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
-	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse+TimelyResponse)))
+	assert.Contains(t, apmServerInternals.Data, TimelyResponse+TimelyResponse)
 }
 
 // TestWaitGroup checks if there is no race condition between the main waitgroups (issue #128)
@@ -413,7 +413,7 @@ func TestWaitGroup(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
-	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
+	assert.Contains(t, apmServerInternals.Data, TimelyResponse)
 }
 
 // TestAPMServerDown tests that main does not panic nor runs indefinitely when the APM server is inactive.
@@ -429,7 +429,7 @@ func TestAPMServerDown(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
-	assert.False(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
+	assert.NotContains(t, apmServerInternals.Data, TimelyResponse)
 }
 
 // TestAPMServerHangs tests that main does not panic nor runs indefinitely when the APM server does not respond.
@@ -444,7 +444,7 @@ func TestAPMServerHangs(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
-	assert.False(t, strings.Contains(apmServerInternals.Data, string(Hangs)))
+	assert.NotContains(t, apmServerInternals.Data, Hangs)
 	apmServerInternals.UnlockSignalChannel <- struct{}{}
 }
 
@@ -471,8 +471,8 @@ func TestAPMServerRecovery(t *testing.T) {
 		apmServerInternals.UnlockSignalChannel <- struct{}{}
 	}()
 	assert.NotPanics(t, main)
-	assert.True(t, strings.Contains(apmServerInternals.Data, string(Hangs)))
-	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
+	assert.Contains(t, apmServerInternals.Data, Hangs)
+	assert.Contains(t, apmServerInternals.Data, TimelyResponse)
 	if err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", ""); err != nil {
 		t.Fail()
 	}
@@ -509,7 +509,7 @@ func TestAPMServerCrashesDuringExecution(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
-	assert.False(t, strings.Contains(apmServerInternals.Data, string(Crashes)))
+	assert.NotContains(t, apmServerInternals.Data, Crashes)
 }
 
 // TestFullChannel checks that an overload of APM data chunks is handled correctly, events dropped beyond the 100th one
@@ -525,7 +525,7 @@ func TestFullChannel(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
-	assert.True(t, strings.Contains(apmServerInternals.Data, string(TimelyResponse)))
+	assert.Contains(t, apmServerInternals.Data, TimelyResponse)
 }
 
 // TestFullChannelSlowAPMServer tests what happens when the APM Data channel is full and the APM server is slow
@@ -563,7 +563,7 @@ func TestInfoRequest(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
-	assert.True(t, strings.Contains(lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20"))
+	assert.Contains(t, lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20")
 }
 
 // TestInfoRequest checks if the extension times out when unable to retrieve APM server info (/ endpoint)
@@ -578,6 +578,6 @@ func TestInfoRequestHangs(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
-	assert.False(t, strings.Contains(lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20"))
+	assert.NotContains(t, lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20")
 	apmServerInternals.UnlockSignalChannel <- struct{}{}
 }
