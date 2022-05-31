@@ -112,6 +112,8 @@ func Test_processPlatformReport(t *testing.T) {
 	mc.Metadata.Process = model.Process{}
 	mc.Metadata.System = model.System{}
 
-	ProcessPlatformReport(context.Background(), apmServerTransport, &mc, &event, logEvent)
+	if err := ProcessPlatformReport(context.Background(), apmServerTransport, &mc, &event, logEvent); err != nil {
+		t.Fail()
+	}
 	apmServerTransport.FlushAPMData(context.Background())
 }
