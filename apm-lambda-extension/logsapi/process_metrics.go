@@ -93,7 +93,7 @@ func ProcessPlatformReport(ctx context.Context, apmServerTransport *extension.Ap
 
 	if metadataContainer.Metadata != nil {
 		//TODO : Discuss relevance of displaying extension name
-		metadataContainer.Metadata.Service.Agent.Name = "aws-lambda-extension"
+		metadataContainer.Metadata.Service.Agent.Name = "apm-lambda-extension"
 		metadataContainer.Metadata.Service.Agent.Version = extension.Version
 		metadataJson, err := json.Marshal(metadataContainer)
 		if err != nil {
