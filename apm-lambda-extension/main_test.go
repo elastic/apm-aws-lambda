@@ -136,14 +136,8 @@ func newMockApmServer(t *testing.T) (*MockServerInternals, *httptest.Server) {
 		}
 	}))
 
-	if err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", apmServer.URL); err != nil {
-		extension.Log.Fatalf("Could not set environment variable : %v", err)
-		return nil, nil
-	}
-	if err := os.Setenv("ELASTIC_APM_SECRET_TOKEN", "none"); err != nil {
-		extension.Log.Fatalf("Could not set environment variable : %v", err)
-		return nil, nil
-	}
+	t.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", apmServer.URL)
+	t.Setenv("ELASTIC_APM_SECRET_TOKEN", "none")
 
 	t.Cleanup(func() { apmServer.Close() })
 	return &apmServerInternals, apmServer
@@ -188,10 +182,7 @@ func newMockLambdaServer(t *testing.T, eventsChannel chan MockEvent) *MockServer
 
 	slicedLambdaURL := strings.Split(lambdaServer.URL, "//")
 	strippedLambdaURL := slicedLambdaURL[1]
-	if err := os.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL); err != nil {
-		extension.Log.Fatalf("Could not set environment variable : %v", err)
-		return nil
-	}
+	t.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL)
 	extensionClient = extension.NewClient(os.Getenv("AWS_LAMBDA_RUNTIME_API"))
 
 	// Find unused port for the extension to listen to
@@ -200,28 +191,23 @@ func newMockLambdaServer(t *testing.T, eventsChannel chan MockEvent) *MockServer
 		extension.Log.Errorf("Could not find free port for the extension to listen on : %v", err)
 		extensionPort = 8200
 	}
-	if err = os.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort)); err != nil {
-		extension.Log.Fatalf("Could not set environment variable : %v", err)
-		return nil
-	}
+	t.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort))
 
 	t.Cleanup(func() { lambdaServer.Close() })
 	return &lambdaServerInternals
 }
 
 // TODO : Move logger out of extension package and stop using it as a package-level variable
-func newLogger(t *testing.T, logLevel string) {
-	if err := os.Setenv("ELASTIC_APM_LOG_LEVEL", logLevel); err != nil {
-		t.Fail()
-	}
+func initLogLevel(t *testing.T, logLevel string) {
+	t.Setenv("ELASTIC_APM_LOG_LEVEL", logLevel)
 }
 
-func newTestStructs(t *testing.T) (context.Context, chan MockEvent) {
+func newTestStructs(t *testing.T) chan MockEvent {
 	http.DefaultServeMux = new(http.ServeMux)
-	ctx, cancel := context.WithCancel(context.Background())
+	_, cancel := context.WithCancel(context.Background())
 	t.Cleanup(func() { cancel() })
 	eventsChannel := make(chan MockEvent, 100)
-	return ctx, eventsChannel
+	return eventsChannel
 }
 
 func processMockEvent(currId string, event MockEvent, extensionPort string, internals *MockServerInternals) {
@@ -356,8 +342,8 @@ func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
 
 // TestStandardEventsChain checks a nominal sequence of events (fast APM server, only one standard event)
 func TestStandardEventsChain(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t)
 	newMockLambdaServer(t, eventsChannel)
 
@@ -371,8 +357,8 @@ func TestStandardEventsChain(t *testing.T) {
 
 // TestFlush checks if the flushed param does not cause a panic or an unexpected behavior
 func TestFlush(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t)
 	newMockLambdaServer(t, eventsChannel)
 
@@ -387,8 +373,8 @@ func TestFlush(t *testing.T) {
 // TestLateFlush checks if there is no race condition between RuntimeDone and AgentDone
 // The test is built so that the AgentDone signal is received after RuntimeDone, which causes the next event to be interrupted.
 func TestLateFlush(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t)
 	newMockLambdaServer(t, eventsChannel)
 
@@ -403,8 +389,8 @@ func TestLateFlush(t *testing.T) {
 
 // TestWaitGroup checks if there is no race condition between the main waitgroups (issue #128)
 func TestWaitGroup(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t)
 	newMockLambdaServer(t, eventsChannel)
 
@@ -418,8 +404,8 @@ func TestWaitGroup(t *testing.T) {
 
 // TestAPMServerDown tests that main does not panic nor runs indefinitely when the APM server is inactive.
 func TestAPMServerDown(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	apmServerInternals, apmServer := newMockApmServer(t)
 	newMockLambdaServer(t, eventsChannel)
 
@@ -434,8 +420,8 @@ func TestAPMServerDown(t *testing.T) {
 
 // TestAPMServerHangs tests that main does not panic nor runs indefinitely when the APM server does not respond.
 func TestAPMServerHangs(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t)
 	newMockLambdaServer(t, eventsChannel)
 
@@ -452,14 +438,12 @@ func TestAPMServerHangs(t *testing.T) {
 // The default forwarder timeout is 3 seconds, so we wait 5 seconds until we unlock that hanging state.
 // Hence, the APM server is waked up just in time to process the TimelyResponse data frame.
 func TestAPMServerRecovery(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t)
 	newMockLambdaServer(t, eventsChannel)
 
-	if err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1"); err != nil {
-		t.Fail()
-	}
+	t.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1")
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
@@ -473,16 +457,14 @@ func TestAPMServerRecovery(t *testing.T) {
 	assert.NotPanics(t, main)
 	assert.Contains(t, apmServerInternals.Data, Hangs)
 	assert.Contains(t, apmServerInternals.Data, TimelyResponse)
-	if err := os.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", ""); err != nil {
-		t.Fail()
-	}
+	t.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "")
 }
 
 // TestGracePeriodHangs verifies that the WaitforGracePeriod goroutine ends when main() ends.
 // This can be checked by asserting that apmTransportStatus is pending after the execution of main.
 func TestGracePeriodHangs(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t)
 	newMockLambdaServer(t, eventsChannel)
 
@@ -499,8 +481,8 @@ func TestGracePeriodHangs(t *testing.T) {
 // TestAPMServerCrashesDuringExecution tests that main does not panic nor runs indefinitely when the APM server crashes
 // during execution.
 func TestAPMServerCrashesDuringExecution(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t)
 	newMockLambdaServer(t, eventsChannel)
 
@@ -515,8 +497,8 @@ func TestAPMServerCrashesDuringExecution(t *testing.T) {
 // TestFullChannel checks that an overload of APM data chunks is handled correctly, events dropped beyond the 100th one
 // if no space left in channel, no panic, no infinite hanging.
 func TestFullChannel(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t)
 	newMockLambdaServer(t, eventsChannel)
 
@@ -531,14 +513,12 @@ func TestFullChannel(t *testing.T) {
 // TestFullChannelSlowAPMServer tests what happens when the APM Data channel is full and the APM server is slow
 // (send strategy : background)
 func TestFullChannelSlowAPMServer(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	newMockApmServer(t)
 	newMockLambdaServer(t, eventsChannel)
 
-	if err := os.Setenv("ELASTIC_APM_SEND_STRATEGY", "background"); err != nil {
-		t.Fail()
-	}
+	t.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
 
 	eventsChain := []MockEvent{
 		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: SlowResponse, ExecutionDuration: 0.01, Timeout: 5},
@@ -546,15 +526,13 @@ func TestFullChannelSlowAPMServer(t *testing.T) {
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
 	// The test should not hang
-	if err := os.Setenv("ELASTIC_APM_SEND_STRATEGY", "syncflush"); err != nil {
-		t.Fail()
-	}
+	t.Setenv("ELASTIC_APM_SEND_STRATEGY", "syncflush")
 }
 
 // TestInfoRequest checks if the extension is able to retrieve APM server info (/ endpoint) (fast APM server, only one standard event)
 func TestInfoRequest(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	newMockApmServer(t)
 	lambdaServerInternals := newMockLambdaServer(t, eventsChannel)
 
@@ -568,8 +546,8 @@ func TestInfoRequest(t *testing.T) {
 
 // TestInfoRequest checks if the extension times out when unable to retrieve APM server info (/ endpoint)
 func TestInfoRequestHangs(t *testing.T) {
-	newLogger(t, "trace")
-	_, eventsChannel := newTestStructs(t)
+	initLogLevel(t, "trace")
+	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t)
 	lambdaServerInternals := newMockLambdaServer(t, eventsChannel)
 
