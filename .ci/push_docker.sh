@@ -31,12 +31,17 @@ else  # We are in a local (non-CI) environment
   docker push $DOCKER_PUSH_IMAGE || echo "You may need to run 'docker login' first and then re-run this script"
 fi
 
-docker tag $DOCKER_PUSH_IMAGE $DOCKER_PUSH_IMAGE_LATEST
-echo "INFO: Pushing image $DOCKER_PUSH_IMAGE_LATEST to $DOCKER_REGISTRY_URL"
+readonly LATEST_TAG=$(git tag --list --sort=version:refname "v*" | grep -v - | cut -c2- | tail -n1)
 
-if [ ${WORKERS+x} ]  # We are on a CI worker
+if [ "$DOCKER_TAG" = "$LATEST_TAG" ]
 then
-  retry $RETRIES docker push $DOCKER_PUSH_IMAGE_LATEST || echo "Push failed after $RETRIES retries"
-else  # We are in a local (non-CI) environment
-  docker push $DOCKER_PUSH_IMAGE_LATEST || echo "You may need to run 'docker login' first and then re-run this script"
+  echo "INFO: Current version ($DOCKER_TAG) is the latest version. Tagging and pushing $DOCKER_PUSH_IMAGE_LATEST ..."
+  docker tag $DOCKER_PUSH_IMAGE $DOCKER_PUSH_IMAGE_LATEST
+
+  if [ ${WORKERS+x} ]  # We are on a CI worker
+  then
+    retry $RETRIES docker push $DOCKER_PUSH_IMAGE_LATEST || echo "Push failed after $RETRIES retries"
+  else  # We are in a local (non-CI) environment
+    docker push $DOCKER_PUSH_IMAGE_LATEST || echo "You may need to run 'docker login' first and then re-run this script"
+  fi
 fi
