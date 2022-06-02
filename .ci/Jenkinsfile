@@ -137,7 +137,7 @@ pipeline {
                   withGithubNotify(context: "Push-Docker-${PLATFORM}") {
                     withGoEnv(){
                       dir("${BASE_DIR}/apm-lambda-extension"){
-                        dockerLogin(secret: "${DOCKER_SECRET}", registry: "${DOCKER_REGISTRY}", role_id: 'apm-vault-role-id', secret_id: 'apm-vault-secret-id')
+                        dockerLogin(secret: "${DOCKER_SECRET}", registry: "${DOCKER_REGISTRY}")
                         cmd(label: 'make push-docker', script: 'make push-docker')
                       }
                     }
