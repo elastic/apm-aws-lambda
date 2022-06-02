@@ -27,7 +27,8 @@ import (
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/model"
 
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_processPlatformReport(t *testing.T) {
@@ -80,16 +81,12 @@ func Test_processPlatformReport(t *testing.T) {
 		Runtime:   model.Runtime{Name: os.Getenv("AWS_EXECUTION_ENV")},
 		Framework: model.Framework{Name: "AWS Lambda"},
 	}
-	mc.Metadata.Process = model.Process{}
-	mc.Metadata.System = model.System{}
 
 	rawBytes, err := ProcessPlatformReport(context.Background(), &mc, &event, logEvent)
-	if err != nil {
-		t.Fail()
-	}
+	require.NoError(t, err)
+
 	requestBytes, err := extension.GetUncompressedBytes(rawBytes.Data, "")
-	if err != nil {
-		t.Fail()
-	}
-	assert.Equal(t, string(requestBytes), desiredOutput)
+	require.NoError(t, err)
+
+	assert.Equal(t, desiredOutput, string(requestBytes))
 }
