@@ -87,9 +87,9 @@ func ProcessPlatformReport(ctx context.Context, metadataContainer *extension.Met
 	metricsContainer.Add("system.memory.actual.free", float64(platformReportMetrics.MemorySizeMB-platformReportMetrics.MaxMemoryUsedMB)*convMB2Bytes) // Unit : Bytes
 
 	// Raw Metrics
-	metricsContainer.Add("aws.lambda.metrics.duration", float64(platformReportMetrics.DurationMs))                // Unit : Milliseconds
-	metricsContainer.Add("aws.lambda.metrics.billed_duration", float64(platformReportMetrics.BilledDurationMs))   // Unit : Milliseconds
-	metricsContainer.Add("aws.lambda.metrics.cold_start_duration", float64(platformReportMetrics.InitDurationMs)) // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.duration", float64(platformReportMetrics.DurationMs))               // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.billed_duration", float64(platformReportMetrics.BilledDurationMs))  // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.coldstart_duration", float64(platformReportMetrics.InitDurationMs)) // Unit : Milliseconds
 	// In AWS Lambda, the Timeout is configured as an integer number of seconds. We use this assumption to derive the Timeout from
 	// - The epoch corresponding to the end of the current invocation (its "deadline")
 	// - The epoch corresponding to the start of the current invocation
