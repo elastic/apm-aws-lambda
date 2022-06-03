@@ -55,7 +55,7 @@ pipeline {
           dir("${BASE_DIR}"){
             withGoEnv(){
               sh(label: 'notice', script: '''
-                bash ./scripts/notice.sh
+                bash ./apm-lambda-extension/scripts/notice.sh
                 git diff --exit-code --quiet && exit 0 || echo "regenerate NOTICE.txt" && exit 1
               ''')
             }
