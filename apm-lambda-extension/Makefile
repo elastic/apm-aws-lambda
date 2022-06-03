@@ -25,12 +25,20 @@ all: build
 gen-notice:
 	@bash ./scripts/notice.sh
 
+check-licenses:
+	go install github.com/elastic/go-licenser@v0.4.0
+	go run github.com/elastic/go-licenser@v0.4.0 -d .
+
+update-licenses:
+	go install github.com/elastic/go-licenser@v0.4.0
+	go run github.com/elastic/go-licenser@v0.4.0
+
 lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.0
 	golangci-lint --version
 	golangci-lint run
 
-build: gen-notice
+build: check-licenses gen-notice
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
 	chmod +x bin/extensions/apm-lambda-extension
 build-and-publish: check-licenses validate-layer-name validate-aws-default-region
