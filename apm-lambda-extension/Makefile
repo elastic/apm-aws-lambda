@@ -21,20 +21,16 @@ export AWS_FOLDER GOARCH ARCHITECTURE DOCKER_IMAGE_NAME DOCKER_REGISTRY
 .PHONY: all
 all: build
 
-check-licenses:
-	go install github.com/elastic/go-licenser@v0.4.0
-	go run github.com/elastic/go-licenser@v0.4.0 -d .
-
-update-licenses:
-	go install github.com/elastic/go-licenser@v0.4.0
-	go run github.com/elastic/go-licenser@v0.4.0 .
+.PHONY: gen-license
+gen-license:
+	@bash ./scripts/notice.sh
 
 lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.0
 	golangci-lint --version
 	golangci-lint run
 
-build: check-licenses
+build: gen-license
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
 	chmod +x bin/extensions/apm-lambda-extension
 build-and-publish: check-licenses validate-layer-name validate-aws-default-region

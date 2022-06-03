@@ -21,7 +21,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR=${SCRIPT_DIR}/../apm-lambda-extension
+PROJECT_DIR=${SCRIPT_DIR}/..
 TEMP_DIR=$(mktemp -d)
 LICENCE_DETECTOR="go.elastic.co/go-licence-detector@v0.3.0"
 
