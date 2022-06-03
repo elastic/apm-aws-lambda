@@ -87,14 +87,14 @@ func ProcessPlatformReport(ctx context.Context, metadataContainer *extension.Met
 	metricsContainer.Add("system.memory.actual.free", float64(platformReportMetrics.MemorySizeMB-platformReportMetrics.MaxMemoryUsedMB)*convMB2Bytes) // Unit : Bytes
 
 	// Raw Metrics
-	metricsContainer.Add("aws.lambda.metrics.Duration", float64(platformReportMetrics.DurationMs))              // Unit : Milliseconds
-	metricsContainer.Add("aws.lambda.metrics.BilledDuration", float64(platformReportMetrics.BilledDurationMs))  // Unit : Milliseconds
-	metricsContainer.Add("aws.lambda.metrics.ColdStartDuration", float64(platformReportMetrics.InitDurationMs)) // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.duration", float64(platformReportMetrics.DurationMs))                // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.billed_duration", float64(platformReportMetrics.BilledDurationMs))   // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.cold_start_duration", float64(platformReportMetrics.InitDurationMs)) // Unit : Milliseconds
 	// In AWS Lambda, the Timeout is configured as an integer number of seconds. We use this assumption to derive the Timeout from
 	// - The epoch corresponding to the end of the current invocation (its "deadline")
 	// - The epoch corresponding to the start of the current invocation
 	// - The multiplication / division then rounds the value to obtain a number of ms that can be expressed a multiple of 1000 (see initial assumption)
-	metricsContainer.Add("aws.lambda.metrics.Timeout", math.Ceil(float64(functionData.DeadlineMs-functionData.Timestamp.UnixMilli())/1e3)*1e3) // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.timeout", math.Ceil(float64(functionData.DeadlineMs-functionData.Timestamp.UnixMilli())/1e3)*1e3) // Unit : Milliseconds
 
 	var jsonWriter fastjson.Writer
 	if err := metricsContainer.MarshalFastJSON(&jsonWriter); err != nil {

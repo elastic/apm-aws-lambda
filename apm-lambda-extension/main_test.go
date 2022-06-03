@@ -596,9 +596,9 @@ func TestMetricsWithoutMetadata(t *testing.T) {
 	eventQueueGenerator(eventsChain, eventsChannel)
 	assert.NotPanics(t, main)
 
-	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.BilledDuration":{"value":60`)
-	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.Duration":{"value":59.9`)
-	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.ColdStartDuration":{"value":500`)
+	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.billed_duration":{"value":60`)
+	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.duration":{"value":59.9`)
+	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.cold_start_duration":{"value":500`)
 }
 
 // TestMetricsWithMetadata checks if the extension sends metrics corresponding to invocation n during invocation
@@ -617,7 +617,7 @@ func TestMetricsWithMetadata(t *testing.T) {
 	assert.NotPanics(t, main)
 
 	assert.Contains(t, apmServerInternals.Data, `{"metadata":{"service":{"name":"1234_service-12a3","version":"5.1.3","environment":"staging","agent":{"name":"elastic-node","version":"3.14.0"},"framework":{"name":"Express","version":"1.2.3"},"language":{"name":"ecmascript","version":"8"},"runtime":{"name":"node","version":"8.0.0"},"node":{"configured_name":"node-123"}},"user":{"username":"bar","id":"123user","email":"bar@user.com"},"labels":{"tag0":null,"tag1":"one","tag2":2},"process":{"pid":1234,"ppid":6789,"title":"node","argv":["node","server.js"]},"system":{"architecture":"x64","hostname":"prod1.example.com","platform":"darwin","container":{"id":"container-id"},"kubernetes":{"namespace":"namespace1","node":{"name":"node-name"},"pod":{"name":"pod-name","uid":"pod-uid"}}},"cloud":{"provider":"cloud_provider","region":"cloud_region","availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"account":{"id":"account_id","name":"account_name"},"project":{"id":"project_id","name":"project_name"},"service":{"name":"lambda"}}}}`)
-	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.BilledDuration":{"value":60`)
-	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.Duration":{"value":59.9`)
-	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.ColdStartDuration":{"value":500`)
+	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.billed_duration":{"value":60`)
+	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.duration":{"value":59.9`)
+	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.cold_start_duration":{"value":500`)
 }
