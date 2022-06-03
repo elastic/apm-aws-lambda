@@ -31,7 +31,6 @@ update-licenses:
 	go install github.com/elastic/go-licenser@v0.4.0
 	go run github.com/elastic/go-licenser@v0.4.0 .
 	go run github.com/elastic/go-licenser@v0.4.0 -ext .java .
-	go run github.com/elastic/go-licenser@v0.4.0 -ext .js .
 
 lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.0
