@@ -41,10 +41,9 @@ func ProcessMetadata(data AgentData) ([]byte, error) {
 		return nil, errors.New(fmt.Sprintf("Error uncompressing agent data for metadata extraction : %v", err))
 	}
 	scanner := bufio.NewScanner(strings.NewReader(string(uncompressedData)))
-	for scanner.Scan() {
-		if strings.Contains(strings.ToLower(scanner.Text()), "metadata") {
-			return scanner.Bytes(), nil
-		}
+	scanner.Scan()
+	if strings.Contains(strings.ToLower(scanner.Text()), "metadata") {
+		return scanner.Bytes(), nil
 	}
 	return nil, errors.New("No metadata found in APM agent payload")
 }
