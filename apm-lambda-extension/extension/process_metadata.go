@@ -18,44 +18,35 @@
 package extension
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
-	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
-
-	"elastic/apm-lambda-extension/model"
+	"strings"
 
 	"github.com/pkg/errors"
 )
 
 type MetadataContainer struct {
-	Metadata *model.Metadata `json:"metadata"`
+	Metadata []byte
 }
 
-func ProcessMetadata(data AgentData, container *MetadataContainer) error {
+// ProcessMetadata return a byte array containing the Metadata marshaled in JSON
+// In case we want to update the Metadata values, usage of https://github.com/tidwall/sjson is advised
+func ProcessMetadata(data AgentData) ([]byte, error) {
 	uncompressedData, err := GetUncompressedBytes(data.Data, data.ContentEncoding)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error uncompressing agent data for metadata extraction : %v", err))
+		return nil, errors.New(fmt.Sprintf("Error uncompressing agent data for metadata extraction : %v", err))
 	}
-	decoder := json.NewDecoder(bytes.NewReader(uncompressedData))
-	for {
-		err = decoder.Decode(container)
-		if container.Metadata != nil {
-			Log.Debug("Metadata decoded")
-			break
-		}
-		if err != nil {
-			if err == io.EOF {
-				return errors.New("No metadata in current agent transaction")
-			} else {
-				return errors.New(fmt.Sprintf("Error uncompressing agent data for metadata extraction : %v", err))
-			}
+	scanner := bufio.NewScanner(strings.NewReader(string(uncompressedData)))
+	for scanner.Scan() {
+		if strings.Contains(strings.ToLower(scanner.Text()), "metadata") {
+			return scanner.Bytes(), nil
 		}
 	}
-	return nil
+	return nil, errors.New("No metadata found in APM agent payload")
 }
 
 func GetUncompressedBytes(rawBytes []byte, encodingType string) ([]byte, error) {
