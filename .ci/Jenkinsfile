@@ -51,6 +51,16 @@ pipeline {
             }
           }
         }
+        withGithubNotify(context: "NOTICE.txt") {
+          dir("${BASE_DIR}"){
+            withGoEnv(){
+              sh(label: 'notice', script: '''
+                bash ./apm-lambda-extension/scripts/notice.sh
+                git diff --exit-code --quiet && exit 0 || echo "regenerate NOTICE.txt" && exit 1
+              ''')
+            }
+          }
+        }
       }
     }
     stage('Test') {
@@ -112,6 +122,9 @@ pipeline {
           matrix {
             agent {label "${PLATFORM}"}
             options { skipDefaultCheckout() }
+            environment {
+              HOME = "${env.WORKSPACE}" // required by "bash_standard_lib.sh" for "Push Docker Image" step
+            }
             axes {
               axis {
                 name 'PLATFORM'

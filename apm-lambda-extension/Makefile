@@ -21,22 +21,31 @@ export AWS_FOLDER GOARCH ARCHITECTURE DOCKER_IMAGE_NAME DOCKER_REGISTRY
 .PHONY: all
 all: build
 
+.PHONY: gen-notice
+gen-notice:
+	@bash ./scripts/notice.sh
+
 check-licenses:
 	go install github.com/elastic/go-licenser@v0.4.0
 	go run github.com/elastic/go-licenser@v0.4.0 -d .
+	go run github.com/elastic/go-licenser@v0.4.0 -d -ext .java .
+	go run github.com/elastic/go-licenser@v0.4.0 -d -ext .js .
 
 update-licenses:
 	go install github.com/elastic/go-licenser@v0.4.0
 	go run github.com/elastic/go-licenser@v0.4.0 .
+	go run github.com/elastic/go-licenser@v0.4.0 -ext .java .
 
 lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.0
 	golangci-lint --version
 	golangci-lint run
 
-build: check-licenses
+build: check-licenses gen-notice
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
 	chmod +x bin/extensions/apm-lambda-extension
+	cp NOTICE.txt bin/extensions/NOTICE.txt
+	cp dependencies.asciidoc bin/extensions/dependencies.asciidoc
 build-and-publish: check-licenses validate-layer-name validate-aws-default-region
 ifndef AWS_ACCESS_KEY_ID
 	$(error AWS_ACCESS_KEY_ID is undefined)
