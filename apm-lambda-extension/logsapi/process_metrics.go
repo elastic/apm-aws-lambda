@@ -19,11 +19,13 @@ package logsapi
 
 import (
 	"context"
-	"encoding/json"
 	"math"
+	"strconv"
 
 	"elastic/apm-lambda-extension/extension"
-	"elastic/apm-lambda-extension/model"
+
+	"go.elastic.co/apm/model"
+	"go.elastic.co/fastjson"
 )
 
 type PlatformMetrics struct {
@@ -40,7 +42,7 @@ type MetricsContainer struct {
 
 // Add adds a metric with the given name, labels, and value,
 // The labels are expected to be sorted lexicographically.
-func (mc MetricsContainer) Add(name string, labels []model.MetricLabel, value float64) {
+func (mc MetricsContainer) Add(name string, value float64) {
 	mc.addMetric(name, model.Metric{Value: value})
 }
 
@@ -53,6 +55,15 @@ func (mc MetricsContainer) addMetric(name string, metric model.Metric) {
 	mc.Metrics.Samples[name] = metric
 }
 
+func (mc MetricsContainer) MarshalFastJSON(json *fastjson.Writer) error {
+	json.RawString(`{"metricset":`)
+	if err := mc.Metrics.MarshalFastJSON(json); err != nil {
+		return err
+	}
+	json.RawString(`}`)
+	return nil
+}
+
 func ProcessPlatformReport(ctx context.Context, metadataContainer *extension.MetadataContainer, functionData *extension.NextEventResponse, platformReport LogEvent) (extension.AgentData, error) {
 	var metricsData []byte
 	metricsContainer := MetricsContainer{
@@ -63,49 +74,37 @@ func ProcessPlatformReport(ctx context.Context, metadataContainer *extension.Met
 
 	// APM Spec Fields
 	// Timestamp
-	metricsContainer.Metrics.Timestamp = platformReport.Time.UnixMicro()
+	metricsContainer.Metrics.Timestamp = model.Time(platformReport.Time)
 	// FaaS Fields
-	metricsContainer.Metrics.Labels = make(map[string]interface{})
-	metricsContainer.Metrics.Labels["faas.execution"] = platformReport.Record.RequestId
-	metricsContainer.Metrics.Labels["faas.id"] = functionData.InvokedFunctionArn
-	if platformReportMetrics.InitDurationMs > 0 {
-		metricsContainer.Metrics.Labels["faas.coldstart"] = true
-	} else {
-		metricsContainer.Metrics.Labels["faas.coldstart"] = false
+	metricsContainer.Metrics.Labels = model.StringMap{
+		{Key: "faas.execution", Value: platformReport.Record.RequestId},
+		{Key: "faas.id", Value: functionData.InvokedFunctionArn},
+		{Key: "faas.coldstart", Value: strconv.FormatBool(platformReportMetrics.InitDurationMs > 0)},
 	}
 	// System
-	metricsContainer.Add("system.memory.total", nil, float64(platformReportMetrics.MemorySizeMB)*convMB2Bytes)                                             // Unit : Bytes
-	metricsContainer.Add("system.memory.actual.free", nil, float64(platformReportMetrics.MemorySizeMB-platformReportMetrics.MaxMemoryUsedMB)*convMB2Bytes) // Unit : Bytes
+	// AWS uses binary multiples to compute memory : https://aws.amazon.com/about-aws/whats-new/2020/12/aws-lambda-supports-10gb-memory-6-vcpu-cores-lambda-functions/
+	metricsContainer.Add("system.memory.total", float64(platformReportMetrics.MemorySizeMB)*convMB2Bytes)                                             // Unit : Bytes
+	metricsContainer.Add("system.memory.actual.free", float64(platformReportMetrics.MemorySizeMB-platformReportMetrics.MaxMemoryUsedMB)*convMB2Bytes) // Unit : Bytes
 
 	// Raw Metrics
-	// AWS uses binary multiples to compute memory : https://aws.amazon.com/about-aws/whats-new/2020/12/aws-lambda-supports-10gb-memory-6-vcpu-cores-lambda-functions/
-	metricsContainer.Add("aws.lambda.metrics.TotalMemory", nil, float64(platformReportMetrics.MemorySizeMB)*convMB2Bytes)   // Unit : Bytes
-	metricsContainer.Add("aws.lambda.metrics.UsedMemory", nil, float64(platformReportMetrics.MaxMemoryUsedMB)*convMB2Bytes) // Unit : Bytes
-	metricsContainer.Add("aws.lambda.metrics.Duration", nil, float64(platformReportMetrics.DurationMs))                     // Unit : Milliseconds
-	metricsContainer.Add("aws.lambda.metrics.BilledDuration", nil, float64(platformReportMetrics.BilledDurationMs))         // Unit : Milliseconds
-	metricsContainer.Add("aws.lambda.metrics.ColdStartDuration", nil, float64(platformReportMetrics.InitDurationMs))        // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.Duration", float64(platformReportMetrics.DurationMs))              // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.BilledDuration", float64(platformReportMetrics.BilledDurationMs))  // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.ColdStartDuration", float64(platformReportMetrics.InitDurationMs)) // Unit : Milliseconds
 	// In AWS Lambda, the Timeout is configured as an integer number of seconds. We use this assumption to derive the Timeout from
 	// - The epoch corresponding to the end of the current invocation (its "deadline")
 	// - The epoch corresponding to the start of the current invocation
 	// - The multiplication / division then rounds the value to obtain a number of ms that can be expressed a multiple of 1000 (see initial assumption)
-	metricsContainer.Add("aws.lambda.metrics.Timeout", nil, math.Ceil(float64(functionData.DeadlineMs-functionData.Timestamp.UnixMilli())/1e3)*1e3) // Unit : Milliseconds
+	metricsContainer.Add("aws.lambda.metrics.Timeout", math.Ceil(float64(functionData.DeadlineMs-functionData.Timestamp.UnixMilli())/1e3)*1e3) // Unit : Milliseconds
 
-	metricsJson, err := json.Marshal(metricsContainer)
-	if err != nil {
-		return extension.AgentData{}, err
+	var jsonWriter fastjson.Writer
+	if err := metricsContainer.MarshalFastJSON(&jsonWriter); err != nil {
+		return extension.AgentData{Data: metricsData}, nil
 	}
 
 	if metadataContainer.Metadata != nil {
-		//TODO : Discuss relevance of displaying extension name
-		metadataContainer.Metadata.Service.Agent.Name = "apm-lambda-extension"
-		metadataContainer.Metadata.Service.Agent.Version = extension.Version
-		metadataJson, err := json.Marshal(metadataContainer)
-		if err != nil {
-			return extension.AgentData{}, err
-		}
-		metricsData = append(metadataJson, []byte("\n")...)
+		metricsData = append(metadataContainer.Metadata, []byte("\n")...)
 	}
 
-	metricsData = append(metricsData, metricsJson...)
+	metricsData = append(metricsData, jsonWriter.Bytes()...)
 	return extension.AgentData{Data: metricsData}, nil
 }

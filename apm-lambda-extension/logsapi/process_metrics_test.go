@@ -20,18 +20,22 @@ package logsapi
 import (
 	"context"
 	"fmt"
-	"os"
+	"log"
+	"strings"
 	"testing"
 	"time"
 
 	"elastic/apm-lambda-extension/extension"
-	"elastic/apm-lambda-extension/model"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_processPlatformReport(t *testing.T) {
+
+	mc := extension.MetadataContainer{
+		Metadata: []byte(fmt.Sprintf(`{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"%s"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`, extension.Version)),
+	}
 
 	timestamp := time.Now()
 
@@ -68,19 +72,9 @@ func Test_processPlatformReport(t *testing.T) {
 		},
 	}
 
-	desiredOutput := fmt.Sprintf(`{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"%s"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}
-{"metricset":{"timestamp":%d,"transaction":{},"span":{},"tags":{"faas.coldstart":true,"faas.execution":"6f7f0961f83442118a7af6fe80b88d56","faas.id":"arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"},"samples":{"aws.lambda.metrics.BilledDuration":{"value":183},"aws.lambda.metrics.ColdStartDuration":{"value":422.9700012207031},"aws.lambda.metrics.Duration":{"value":182.42999267578125},"aws.lambda.metrics.Timeout":{"value":5000},"aws.lambda.metrics.TotalMemory":{"value":134217728},"aws.lambda.metrics.UsedMemory":{"value":79691776},"system.memory.actual.free":{"value":54525952},"system.memory.total":{"value":134217728}}}}`, extension.Version, timestamp.UnixNano()/1e3)
+	desiredOutputMetadata := fmt.Sprintf(`{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"%s"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`, extension.Version)
 
-	mc := extension.MetadataContainer{
-		Metadata: &model.Metadata{},
-	}
-	mc.Metadata.Service = model.Service{
-		Name:      os.Getenv("AWS_LAMBDA_FUNCTION_NAME"),
-		Agent:     model.Agent{Name: "python", Version: "6.7.2"},
-		Language:  model.Language{Name: "python", Version: "3.9.8"},
-		Runtime:   model.Runtime{Name: os.Getenv("AWS_EXECUTION_ENV")},
-		Framework: model.Framework{Name: "AWS Lambda"},
-	}
+	desiredOutputMetrics := fmt.Sprintf(`{"metricset":{"samples":{"aws.lambda.metrics.BilledDuration":{"value":183},"aws.lambda.metrics.ColdStartDuration":{"value":422.9700012207031},"aws.lambda.metrics.Timeout":{"value":5000},"system.memory.total":{"value":1.34217728e+08},"system.memory.actual.free":{"value":5.4525952e+07},"aws.lambda.metrics.Duration":{"value":182.42999267578125}},"timestamp":%d,"tags":{"faas.execution":"6f7f0961f83442118a7af6fe80b88d56","faas.id":"arn:aws:lambda:us-east-2:123456789012:function:custom-runtime","faas.coldstart":"true"}}}`, timestamp.UnixNano()/1e3)
 
 	rawBytes, err := ProcessPlatformReport(context.Background(), &mc, &event, logEvent)
 	require.NoError(t, err)
@@ -88,5 +82,11 @@ func Test_processPlatformReport(t *testing.T) {
 	requestBytes, err := extension.GetUncompressedBytes(rawBytes.Data, "")
 	require.NoError(t, err)
 
-	assert.Equal(t, desiredOutput, string(requestBytes))
+	out := string(requestBytes)
+	log.Println(out)
+
+	processingResult := strings.Split(string(requestBytes), "\n")
+
+	assert.JSONEq(t, desiredOutputMetadata, processingResult[0])
+	assert.JSONEq(t, desiredOutputMetrics, processingResult[1])
 }
