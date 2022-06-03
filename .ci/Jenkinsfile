@@ -112,6 +112,9 @@ pipeline {
           matrix {
             agent {label "${PLATFORM}"}
             options { skipDefaultCheckout() }
+            environment {
+              HOME = "${env.WORKSPACE}" // required by "bash_standard_lib.sh" for "Push Docker Image" step
+            }
             axes {
               axis {
                 name 'PLATFORM'
