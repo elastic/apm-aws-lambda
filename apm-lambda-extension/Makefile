@@ -21,8 +21,8 @@ export AWS_FOLDER GOARCH ARCHITECTURE DOCKER_IMAGE_NAME DOCKER_REGISTRY
 .PHONY: all
 all: build
 
-.PHONY: gen-license
-gen-license:
+.PHONY: gen-notice
+gen-notice:
 	@bash ./scripts/notice.sh
 
 lint:
@@ -30,7 +30,7 @@ lint:
 	golangci-lint --version
 	golangci-lint run
 
-build: gen-license
+build: gen-notice
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
 	chmod +x bin/extensions/apm-lambda-extension
 build-and-publish: check-licenses validate-layer-name validate-aws-default-region
