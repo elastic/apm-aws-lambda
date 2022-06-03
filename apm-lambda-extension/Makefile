@@ -38,6 +38,7 @@ build: check-licenses
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
 	chmod +x bin/extensions/apm-lambda-extension
 	cp NOTICE.txt bin/extensions/NOTICE.txt
+	cp dependencies.asciidoc bin/extensions/dependencies.asciidoc
 build-and-publish: check-licenses validate-layer-name validate-aws-default-region
 ifndef AWS_ACCESS_KEY_ID
 	$(error AWS_ACCESS_KEY_ID is undefined)
