@@ -106,15 +106,15 @@ pipeline {
       when {
         tag pattern: 'v\\d+\\.\\d+\\.\\d+', comparator: 'REGEXP'
       }
-      environment {
-        HOME = "${env.WORKSPACE}" // required by "bash_standard_lib.sh" for "Push Docker Image" step
-      }
       stages {
         stage('BuildPublish') {
           failFast false
           matrix {
             agent {label "${PLATFORM}"}
             options { skipDefaultCheckout() }
+            environment {
+              HOME = "${env.WORKSPACE}" // required by "bash_standard_lib.sh" for "Push Docker Image" step
+            }
             axes {
               axis {
                 name 'PLATFORM'
