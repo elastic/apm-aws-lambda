@@ -51,6 +51,16 @@ pipeline {
             }
           }
         }
+        withGithubNotify(context: "NOTICE.txt") {
+          dir("${BASE_DIR}"){
+            withGoEnv(){
+              sh(label: 'notice', script: '''
+                bash ./scripts/notice.sh
+                git diff --exit-code --quiet && exit 0 || echo "regenerate NOTICE.txt" && exit 1
+              ''')
+            }
+          }
+        }
       }
     }
     stage('Test') {
