@@ -133,25 +133,25 @@ func ProcessEnv() *extensionConfig {
 	}
 
 	apmServerApiKey := os.Getenv("ELASTIC_APM_API_KEY")
-	apmServerApiKeySMSecretId := os.Getenv("ELASTIC_APM_SECRET_MANAGER_API_KEY_ID")
+	apmServerApiKeySMSecretId := os.Getenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID")
 	if apmServerApiKeySMSecretId != "" {
 		result, err := getSecret(apmServerApiKeySMSecretId)
 		if err != nil {
-			Log.Fatalf("Failed loading APM Server ApiKey from Secret Manager: %v", err)
+			Log.Fatalf("Failed loading APM Server ApiKey from Secrets Manager: %v", err)
 		} else {
-			Log.Infof("Using the APM API key retrieved from Secret Manager.")
+			Log.Infof("Using the APM API key retrieved from Secrets Manager.")
 			apmServerApiKey = result
 		}
 	}
 
 	apmServerSecretToken := os.Getenv("ELASTIC_APM_SECRET_TOKEN")
-	apmServerSecretTokenSMSecretId := os.Getenv("ELASTIC_APM_SECRET_MANAGER_SECRET_TOKEN_ID")
+	apmServerSecretTokenSMSecretId := os.Getenv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID")
 	if apmServerSecretTokenSMSecretId != "" {
 		result, err := getSecret(apmServerSecretTokenSMSecretId)
 		if err != nil {
-			Log.Fatalf("Failed loading APM Server Secret Token from Secret Manager: %v", err)
+			Log.Fatalf("Failed loading APM Server Secret Token from Secrets Manager: %v", err)
 		} else {
-			Log.Infof("Using the APM secret token retrieved from Secret Manager.")
+			Log.Infof("Using the APM secret token retrieved from Secrets Manager.")
 			apmServerSecretToken = result
 		}
 	}
