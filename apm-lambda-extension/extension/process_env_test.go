@@ -189,13 +189,18 @@ func TestProcessEnv(t *testing.T) {
 func TestGetSecretCalled(t *testing.T) {
 	originalSecretToken := os.Getenv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID")
 	originalApiKey := os.Getenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID")
+	originalUnmanagedSecretToken := os.Getenv("ELASTIC_APM_SECRET_TOKEN")
+	originalUnmanagedApiKey := os.Getenv("ELASTIC_APM_API_KEY")
 	defer func() {
 		os.Setenv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID", originalSecretToken)
 		os.Setenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID", originalApiKey)
+		os.Setenv("ELASTIC_APM_SECRET_TOKEN", originalUnmanagedSecretToken)
+		os.Setenv("ELASTIC_APM_API_KEY", originalUnmanagedApiKey)
 	}()
 
 	require.NoError(t, os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "bar.example.com/"))
-
+	require.NoError(t, os.Setenv("ELASTIC_APM_SECRET_TOKEN", "unmanagedsecret"))
+	require.NoError(t, os.Setenv("ELASTIC_APM_API_KEY", "unmanagedapikey"))
 	require.NoError(t, os.Setenv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID", "secrettoken"))
 	require.NoError(t, os.Setenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID", "apikey"))
 
@@ -209,8 +214,8 @@ func TestGetSecretCalled(t *testing.T) {
 	require.NoError(t, os.Setenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID", ""))
 
 	config = ProcessEnv(sm)
-	assert.Equal(t, "", config.apmServerSecretToken)
-	assert.Equal(t, "", config.apmServerApiKey)
+	assert.Equal(t, "unmanagedsecret", config.apmServerSecretToken)
+	assert.Equal(t, "unmanagedapikey", config.apmServerApiKey)
 }
 
 type mockSecretManager struct{}
