@@ -18,15 +18,17 @@
 package extension
 
 import (
+	"encoding/base64"
+	"errors"
 	"fmt"
-	"go.uber.org/zap/zapcore"
 	"os"
 	"strconv"
 	"strings"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"encoding/base64"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"go.uber.org/zap/zapcore"
 )
 
 type extensionConfig struct {
@@ -67,7 +69,10 @@ func getIntFromEnv(name string) (int, error) {
 }
 
 func getSecret(secretName string) (string, error) {
-	region := os.Getenv("AWS_REGION")
+	region := strings.TrimSpace(os.Getenv("AWS_REGION"))
+	if region == "" {
+		return "", errors.New("must set AWS_REGION")
+	}
 
 	sess, err := session.NewSession()
 	if err != nil {
@@ -89,11 +94,11 @@ func getSecret(secretName string) (string, error) {
 		secretString = *result.SecretString
 	} else {
 		decodedBinarySecretBytes := make([]byte, base64.StdEncoding.DecodedLen(len(result.SecretBinary)))
-		len, err := base64.StdEncoding.Decode(decodedBinarySecretBytes, result.SecretBinary)
+		_, err := base64.StdEncoding.Decode(decodedBinarySecretBytes, result.SecretBinary)
 		if err != nil {
 			return "", err
 		}
-		secretString = string(decodedBinarySecretBytes[:len])
+		secretString = string(decodedBinarySecretBytes)
 	}
 
 	return secretString, nil
@@ -138,10 +143,9 @@ func ProcessEnv() *extensionConfig {
 		result, err := getSecret(apmServerApiKeySMSecretId)
 		if err != nil {
 			Log.Fatalf("Failed loading APM Server ApiKey from Secrets Manager: %v", err)
-		} else {
-			Log.Infof("Using the APM API key retrieved from Secrets Manager.")
-			apmServerApiKey = result
 		}
+		Log.Infof("Using the APM API key retrieved from Secrets Manager.")
+		apmServerApiKey = result
 	}
 
 	apmServerSecretToken := os.Getenv("ELASTIC_APM_SECRET_TOKEN")
@@ -150,10 +154,9 @@ func ProcessEnv() *extensionConfig {
 		result, err := getSecret(apmServerSecretTokenSMSecretId)
 		if err != nil {
 			Log.Fatalf("Failed loading APM Server Secret Token from Secrets Manager: %v", err)
-		} else {
-			Log.Infof("Using the APM secret token retrieved from Secrets Manager.")
-			apmServerSecretToken = result
 		}
+		Log.Infof("Using the APM secret token retrieved from Secrets Manager.")
+		apmServerSecretToken = result
 	}
 
 	config := &extensionConfig{
