@@ -16,7 +16,7 @@ require (
 )
 
 require (
-	go.elastic.co/apm v1.15.0
+	go.elastic.co/apm/v2 v2.1.0
 	go.elastic.co/fastjson v1.1.0
 )
 

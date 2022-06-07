@@ -24,7 +24,7 @@ import (
 
 	"elastic/apm-lambda-extension/extension"
 
-	"go.elastic.co/apm/model"
+	"go.elastic.co/apm/v2/model"
 	"go.elastic.co/fastjson"
 )
 
