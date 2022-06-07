@@ -19,14 +19,12 @@ package extension
 
 import (
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/secretsmanager"
 	"go.uber.org/zap/zapcore"
 )
@@ -68,23 +66,17 @@ func getIntFromEnv(name string) (int, error) {
 	return value, nil
 }
 
-func getSecret(secretName string) (string, error) {
-	region := strings.TrimSpace(os.Getenv("AWS_REGION"))
-	if region == "" {
-		return "", errors.New("must set AWS_REGION")
-	}
+type secretManager interface {
+	GetSecretValue(*secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error)
+}
 
-	sess, err := session.NewSession()
-	if err != nil {
-		return "", err
-	}
-	svc := secretsmanager.New(sess, aws.NewConfig().WithRegion(region))
+func getSecret(manager secretManager, secretName string) (string, error) {
 	input := &secretsmanager.GetSecretValueInput{
 		SecretId:     aws.String(secretName),
 		VersionStage: aws.String("AWSCURRENT"),
 	}
 
-	result, err := svc.GetSecretValue(input)
+	result, err := manager.GetSecretValue(input)
 	if err != nil {
 		return "", err
 	}
@@ -105,7 +97,7 @@ func getSecret(secretName string) (string, error) {
 }
 
 // ProcessEnv extracts ENV variables into globals
-func ProcessEnv() *extensionConfig {
+func ProcessEnv(manager secretManager) *extensionConfig {
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
 		dataReceiverTimeoutSeconds = defaultDataReceiverTimeoutSeconds
@@ -140,7 +132,7 @@ func ProcessEnv() *extensionConfig {
 	apmServerApiKey := os.Getenv("ELASTIC_APM_API_KEY")
 	apmServerApiKeySMSecretId := os.Getenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID")
 	if apmServerApiKeySMSecretId != "" {
-		result, err := getSecret(apmServerApiKeySMSecretId)
+		result, err := getSecret(manager, apmServerApiKeySMSecretId)
 		if err != nil {
 			Log.Fatalf("Failed loading APM Server ApiKey from Secrets Manager: %v", err)
 		}
@@ -151,7 +143,7 @@ func ProcessEnv() *extensionConfig {
 	apmServerSecretToken := os.Getenv("ELASTIC_APM_SECRET_TOKEN")
 	apmServerSecretTokenSMSecretId := os.Getenv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID")
 	if apmServerSecretTokenSMSecretId != "" {
-		result, err := getSecret(apmServerSecretTokenSMSecretId)
+		result, err := getSecret(manager, apmServerSecretTokenSMSecretId)
 		if err != nil {
 			Log.Fatalf("Failed loading APM Server Secret Token from Secrets Manager: %v", err)
 		}

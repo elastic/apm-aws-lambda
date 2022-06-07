@@ -18,12 +18,19 @@
 package extension
 
 import (
-	"go.uber.org/zap/zapcore"
+	"encoding/base64"
+	"fmt"
 	"os"
 	"testing"
+
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestProcessEnv(t *testing.T) {
+	sm := new(mockSecretManager)
 	if err := os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "bar.example.com/"); err != nil {
 		t.Fail()
 		return
@@ -32,7 +39,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 		return
 	}
-	config := ProcessEnv()
+	config := ProcessEnv(sm)
 	t.Logf("%v", config)
 
 	if config.apmServerUrl != "bar.example.com/" {
@@ -49,7 +56,7 @@ func TestProcessEnv(t *testing.T) {
 		return
 	}
 
-	config = ProcessEnv()
+	config = ProcessEnv(sm)
 	t.Logf("%v", config)
 
 	// config normalizes string to ensure it ends in a `/`
@@ -82,7 +89,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 		return
 	}
-	config = ProcessEnv()
+	config = ProcessEnv(sm)
 	if config.dataReceiverServerPort != ":8201" {
 		t.Log("Env port not set correctly")
 		t.Fail()
@@ -92,7 +99,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 		return
 	}
-	config = ProcessEnv()
+	config = ProcessEnv(sm)
 	if config.dataReceiverTimeoutSeconds != 10 {
 		t.Log("APM data receiver timeout not set correctly")
 		t.Fail()
@@ -102,7 +109,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 		return
 	}
-	config = ProcessEnv()
+	config = ProcessEnv(sm)
 	if config.dataReceiverTimeoutSeconds != 15 {
 		t.Log("APM data receiver timeout not set correctly")
 		t.Fail()
@@ -112,7 +119,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 		return
 	}
-	config = ProcessEnv()
+	config = ProcessEnv(sm)
 	if config.DataForwarderTimeoutSeconds != 10 {
 		t.Log("APM data forwarder timeout not set correctly")
 		t.Fail()
@@ -122,7 +129,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 		return
 	}
-	config = ProcessEnv()
+	config = ProcessEnv(sm)
 	if config.DataForwarderTimeoutSeconds != 3 {
 		t.Log("APM data forwarder not set correctly")
 		t.Fail()
@@ -132,7 +139,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 		return
 	}
-	config = ProcessEnv()
+	config = ProcessEnv(sm)
 	if config.apmServerApiKey != "foo" {
 		t.Log("API Key not set correctly")
 		t.Fail()
@@ -142,7 +149,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 		return
 	}
-	config = ProcessEnv()
+	config = ProcessEnv(sm)
 	if config.SendStrategy != "background" {
 		t.Log("Background send strategy not set correctly")
 		t.Fail()
@@ -152,7 +159,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 		return
 	}
-	config = ProcessEnv()
+	config = ProcessEnv(sm)
 	if config.SendStrategy != "syncflush" {
 		t.Log("Syncflush send strategy not set correctly")
 		t.Fail()
@@ -162,7 +169,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 		return
 	}
-	config = ProcessEnv()
+	config = ProcessEnv(sm)
 	if config.LogLevel != zapcore.DebugLevel {
 		t.Log("Log level not set correctly")
 		t.Fail()
@@ -172,9 +179,52 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 		return
 	}
-	config = ProcessEnv()
+	config = ProcessEnv(sm)
 	if config.LogLevel != zapcore.InfoLevel {
 		t.Log("Log level not set correctly")
 		t.Fail()
+	}
+}
+
+func TestGetSecretCalled(t *testing.T) {
+	originalSecretToken := os.Getenv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID")
+	originalApiKey := os.Getenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID")
+	defer func() {
+		os.Setenv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID", originalSecretToken)
+		os.Setenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID", originalApiKey)
+	}()
+
+	require.NoError(t, os.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "bar.example.com/"))
+
+	require.NoError(t, os.Setenv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID", "secrettoken"))
+	require.NoError(t, os.Setenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID", "apikey"))
+
+	sm := new(mockSecretManager)
+
+	config := ProcessEnv(sm)
+	assert.Equal(t, "secrettoken", config.apmServerSecretToken)
+	assert.Equal(t, "apikey", config.apmServerApiKey)
+
+	require.NoError(t, os.Setenv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID", ""))
+	require.NoError(t, os.Setenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID", ""))
+
+	config = ProcessEnv(sm)
+	assert.Equal(t, "", config.apmServerSecretToken)
+	assert.Equal(t, "", config.apmServerApiKey)
+}
+
+type mockSecretManager struct{}
+
+func (s *mockSecretManager) GetSecretValue(input *secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error) {
+	switch s := *input.SecretId; s {
+	case "secrettoken":
+		return &secretsmanager.GetSecretValueOutput{SecretString: input.SecretId}, nil
+	case "apikey":
+		data := []byte(s)
+		secretBinary := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
+		base64.StdEncoding.Encode(secretBinary, data)
+		return &secretsmanager.GetSecretValueOutput{SecretBinary: secretBinary}, nil
+	default:
+		return nil, fmt.Errorf("unrecognized secret input value %s", s)
 	}
 }
