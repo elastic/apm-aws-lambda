@@ -35,6 +35,7 @@ generate_notice() {
     (
         cd "$PROJECT_DIR"
         go mod download
+        export LC_ALL=C
         pkgs=$(go list -deps -f '{{define "M"}}{{.Path}}@{{.Version}}{{end}}{{with .Module}}{{if not .Main}}{{if .Replace}}{{template "M" .Replace}}{{else}}{{template "M" .}}{{end}}{{end}}{{end}}' | sort -u)
         deps=""
         for pkg in $pkgs; do
