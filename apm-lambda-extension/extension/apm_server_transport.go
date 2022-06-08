@@ -75,7 +75,7 @@ func InitApmServerTransport(config *extensionConfig) *ApmServerTransport {
 // StartBackgroundApmDataForwarding Receive agent data as it comes in and post it to the APM server.
 // Stop checking for, and sending agent data when the function invocation
 // has completed, signaled via a channel.
-func (transport *ApmServerTransport) ForwardApmData(ctx context.Context) error {
+func (transport *ApmServerTransport) ForwardApmData(ctx context.Context, metadataContainer *MetadataContainer) error {
 	if transport.status == Failing {
 		return nil
 	}
@@ -85,6 +85,13 @@ func (transport *ApmServerTransport) ForwardApmData(ctx context.Context) error {
 			Log.Debug("Invocation context cancelled, not processing any more agent data")
 			return nil
 		case agentData := <-transport.dataChannel:
+			if metadataContainer.Metadata == nil {
+				metadata, err := ProcessMetadata(agentData)
+				if err != nil {
+					Log.Errorf("Error extracting metadata from agent payload %v", err)
+				}
+				metadataContainer.Metadata = metadata
+			}
 			if err := transport.PostToApmServer(ctx, agentData); err != nil {
 				return fmt.Errorf("error sending to APM server, skipping: %v", err)
 			}

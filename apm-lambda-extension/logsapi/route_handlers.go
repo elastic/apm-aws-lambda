@@ -18,10 +18,11 @@
 package logsapi
 
 import (
-	"elastic/apm-lambda-extension/extension"
 	"encoding/json"
 	"net/http"
 	"time"
+
+	"elastic/apm-lambda-extension/extension"
 )
 
 func handleLogEventsRequest(transport *LogsTransport) func(w http.ResponseWriter, r *http.Request) {

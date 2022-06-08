@@ -62,6 +62,8 @@ const (
 	// RuntimeDone event is sent when lambda function is finished it's execution
 	RuntimeDone SubEventType = "platform.runtimeDone"
 	Fault       SubEventType = "platform.fault"
+	Report      SubEventType = "platform.report"
+	Start       SubEventType = "platform.start"
 )
 
 // BufferingCfg is the configuration set for receiving logs from Logs API. Whichever of the conditions below is met first, the logs will be sent
