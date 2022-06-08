@@ -35,7 +35,13 @@ generate_notice() {
     (
         cd "$PROJECT_DIR"
         go mod download
-        go list -m -json all | "${TEMP_DIR}"/go-licence-detector \
+        export LC_ALL=C
+        pkgs=$(go list -deps -f '{{define "M"}}{{.Path}}@{{.Version}}{{end}}{{with .Module}}{{if not .Main}}{{if .Replace}}{{template "M" .Replace}}{{else}}{{template "M" .}}{{end}}{{end}}{{end}}' | sort -u)
+        deps=""
+        for pkg in $pkgs; do
+          deps+="$(go list -m -json $pkg)\n"
+        done
+        echo -e $deps | "${TEMP_DIR}"/go-licence-detector \
             -depsTemplate="${SCRIPT_DIR}"/templates/dependencies.asciidoc.tmpl \
             -depsOut="${PROJECT_DIR}"/dependencies.asciidoc \
             -noticeTemplate="${SCRIPT_DIR}"/templates/NOTICE.txt.tmpl \
