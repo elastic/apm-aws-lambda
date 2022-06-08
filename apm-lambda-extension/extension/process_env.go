@@ -18,11 +18,15 @@
 package extension
 
 import (
+	"encoding/base64"
 	"fmt"
-	"go.uber.org/zap/zapcore"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"go.uber.org/zap/zapcore"
 )
 
 type extensionConfig struct {
@@ -62,8 +66,38 @@ func getIntFromEnv(name string) (int, error) {
 	return value, nil
 }
 
+type secretManager interface {
+	GetSecretValue(*secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error)
+}
+
+func getSecret(manager secretManager, secretName string) (string, error) {
+	input := &secretsmanager.GetSecretValueInput{
+		SecretId:     aws.String(secretName),
+		VersionStage: aws.String("AWSCURRENT"),
+	}
+
+	result, err := manager.GetSecretValue(input)
+	if err != nil {
+		return "", err
+	}
+
+	var secretString string
+	if result.SecretString != nil {
+		secretString = *result.SecretString
+	} else {
+		decodedBinarySecretBytes := make([]byte, base64.StdEncoding.DecodedLen(len(result.SecretBinary)))
+		_, err := base64.StdEncoding.Decode(decodedBinarySecretBytes, result.SecretBinary)
+		if err != nil {
+			return "", err
+		}
+		secretString = string(decodedBinarySecretBytes)
+	}
+
+	return secretString, nil
+}
+
 // ProcessEnv extracts ENV variables into globals
-func ProcessEnv() *extensionConfig {
+func ProcessEnv(manager secretManager) *extensionConfig {
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
 		dataReceiverTimeoutSeconds = defaultDataReceiverTimeoutSeconds
@@ -82,7 +116,7 @@ func ProcessEnv() *extensionConfig {
 		normalizedApmLambdaServer = normalizedApmLambdaServer + "/"
 	}
 
-	logLevel, err := ParseLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
+	logLevel, err := ParseLogLevel(strings.ToLower(os.Getenv("ELASTIC_APM_LOG_LEVEL")))
 	if err != nil {
 		logLevel = zapcore.InfoLevel
 		Log.Warnf("Could not read ELASTIC_APM_LOG_LEVEL, defaulting to %s", logLevel)
@@ -95,10 +129,32 @@ func ProcessEnv() *extensionConfig {
 		normalizedSendStrategy = Background
 	}
 
+	apmServerApiKey := os.Getenv("ELASTIC_APM_API_KEY")
+	apmServerApiKeySMSecretId := os.Getenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID")
+	if apmServerApiKeySMSecretId != "" {
+		result, err := getSecret(manager, apmServerApiKeySMSecretId)
+		if err != nil {
+			Log.Fatalf("Failed loading APM Server ApiKey from Secrets Manager: %v", err)
+		}
+		Log.Infof("Using the APM API key retrieved from Secrets Manager.")
+		apmServerApiKey = result
+	}
+
+	apmServerSecretToken := os.Getenv("ELASTIC_APM_SECRET_TOKEN")
+	apmServerSecretTokenSMSecretId := os.Getenv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID")
+	if apmServerSecretTokenSMSecretId != "" {
+		result, err := getSecret(manager, apmServerSecretTokenSMSecretId)
+		if err != nil {
+			Log.Fatalf("Failed loading APM Server Secret Token from Secrets Manager: %v", err)
+		}
+		Log.Infof("Using the APM secret token retrieved from Secrets Manager.")
+		apmServerSecretToken = result
+	}
+
 	config := &extensionConfig{
 		apmServerUrl:                normalizedApmLambdaServer,
-		apmServerSecretToken:        os.Getenv("ELASTIC_APM_SECRET_TOKEN"),
-		apmServerApiKey:             os.Getenv("ELASTIC_APM_API_KEY"),
+		apmServerSecretToken:        apmServerSecretToken,
+		apmServerApiKey:             apmServerApiKey,
 		dataReceiverServerPort:      fmt.Sprintf(":%s", os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT")),
 		SendStrategy:                normalizedSendStrategy,
 		dataReceiverTimeoutSeconds:  dataReceiverTimeoutSeconds,
