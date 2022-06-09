@@ -43,8 +43,8 @@ lint:
 
 build: check-licenses gen-notice
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
-	cp NOTICE.txt bin/extensions/NOTICE.txt
-	cp dependencies.asciidoc bin/extensions/dependencies.asciidoc
+	cp NOTICE.txt bin/NOTICE.txt
+	cp dependencies.asciidoc bin/dependencies.asciidoc
 
 build-and-publish: check-licenses validate-layer-name validate-aws-default-region
 ifndef AWS_ACCESS_KEY_ID
@@ -57,7 +57,7 @@ endif
 	GOARCH=${GOARCH} make zip
 	$(MAKE) publish
 zip:
-	cd bin && rm -f extension.zip || true && zip -r extension.zip extensions && cp extension.zip ${GOARCH}.zip
+	cd bin && rm -f extension.zip || true && zip -r extension.zip extensions NOTICE.txt dependencies.asciidoc && cp extension.zip ${GOARCH}.zip
 test:
 	go test extension/*.go -v
 env:
