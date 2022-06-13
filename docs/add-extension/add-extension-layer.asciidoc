@@ -167,7 +167,7 @@ FROM docker.elastic.co/observability/apm-lambda-extension-IMAGE_ARCH:latest AS l
 
 # FROM ...  <-- this is the base image of your Lambda function
 
-COPY --from=lambda-extension /opt/ /opt/
+COPY --from=lambda-extension /opt/elastic-apm-extension /opt/extensions/elastic-apm-extension
 
 # ...
 ----
@@ -183,7 +183,7 @@ AGENT_IMPORT
 
 # FROM ...  <-- this is the base image of your Lambda function
 
-COPY --from=lambda-extension /opt/ /opt/
+COPY --from=lambda-extension /opt/elastic-apm-extension /opt/extensions/elastic-apm-extension
 AGENT_COPY
 
 # ...
