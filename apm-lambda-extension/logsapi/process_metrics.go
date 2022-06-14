@@ -20,7 +20,6 @@ package logsapi
 import (
 	"context"
 	"math"
-	"strconv"
 
 	"elastic/apm-lambda-extension/extension"
 
@@ -75,12 +74,14 @@ func ProcessPlatformReport(ctx context.Context, metadataContainer *extension.Met
 	// APM Spec Fields
 	// Timestamp
 	metricsContainer.Metrics.Timestamp = model.Time(platformReport.Time)
+
 	// FaaS Fields
-	metricsContainer.Metrics.Labels = model.StringMap{
-		{Key: "faas.execution", Value: platformReport.Record.RequestId},
-		{Key: "faas.id", Value: functionData.InvokedFunctionArn},
-		{Key: "faas.coldstart", Value: strconv.FormatBool(platformReportMetrics.InitDurationMs > 0)},
+	metricsContainer.Metrics.FAAS = &model.Faas{
+		Execution: platformReport.Record.RequestId,
+		ID:        functionData.InvokedFunctionArn,
+		Coldstart: platformReportMetrics.InitDurationMs > 0,
 	}
+
 	// System
 	// AWS uses binary multiples to compute memory : https://aws.amazon.com/about-aws/whats-new/2020/12/aws-lambda-supports-10gb-memory-6-vcpu-cores-lambda-functions/
 	metricsContainer.Add("system.memory.total", float64(platformReportMetrics.MemorySizeMB)*convMB2Bytes)                                             // Unit : Bytes

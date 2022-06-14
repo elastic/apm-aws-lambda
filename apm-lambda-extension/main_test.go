@@ -599,6 +599,12 @@ func TestMetricsWithoutMetadata(t *testing.T) {
 	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.billed_duration":{"value":60`)
 	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.duration":{"value":59.9`)
 	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.coldstart_duration":{"value":500`)
+	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.timeout":{"value":5000}`)
+	assert.Contains(t, apmServerInternals.Data, `system.memory.actual.free":{"value":7.1303168e+07`)
+	assert.Contains(t, apmServerInternals.Data, `system.memory.total":{"value":1.34217728e+08`)
+	assert.Contains(t, apmServerInternals.Data, `coldstart":true`)
+	assert.Contains(t, apmServerInternals.Data, `execution":`)
+	assert.Contains(t, apmServerInternals.Data, `id":"arn:aws:lambda:eu-central-1:627286350134:function:main_unit_test"`)
 }
 
 // TestMetricsWithMetadata checks if the extension sends metrics corresponding to invocation n during invocation
@@ -620,4 +626,8 @@ func TestMetricsWithMetadata(t *testing.T) {
 	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.billed_duration":{"value":60`)
 	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.duration":{"value":59.9`)
 	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.coldstart_duration":{"value":500`)
+	assert.Contains(t, apmServerInternals.Data, `aws.lambda.metrics.timeout":{"value":5000}`)
+	assert.Contains(t, apmServerInternals.Data, `coldstart":true`)
+	assert.Contains(t, apmServerInternals.Data, `execution"`)
+	assert.Contains(t, apmServerInternals.Data, `id":"arn:aws:lambda:eu-central-1:627286350134:function:main_unit_test"`)
 }
