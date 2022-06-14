@@ -157,3 +157,35 @@ resource "aws_lambda_function" "your_lambda_function" {
 ----
 
 // end::terraform-with-agent[]
+
+// tag::container-extension-only[]
+To add the APM Extension to your container-based function extend the Dockerfile of your function image as follows:
+
+[source,Dockerfile]
+----
+FROM docker.elastic.co/observability/apm-lambda-extension-IMAGE_ARCH:latest AS lambda-extension
+
+# FROM ...  <-- this is the base image of your Lambda function
+
+COPY --from=lambda-extension /opt/elastic-apm-extension /opt/extensions/elastic-apm-extension
+
+# ...
+----
+// end::container-extension-only[]
+
+// tag::container-with-agent[]
+To add the APM Extension and the APM Agent to your container-based function extend the Dockerfile of your function image as follows:
+
+[source,Dockerfile]
+----
+FROM docker.elastic.co/observability/apm-lambda-extension-IMAGE_ARCH:latest AS lambda-extension
+AGENT_IMPORT
+
+# FROM ...  <-- this is the base image of your Lambda function
+
+COPY --from=lambda-extension /opt/elastic-apm-extension /opt/extensions/elastic-apm-extension
+AGENT_COPY
+
+# ...
+----
+// end::container-with-agent[]
