@@ -62,11 +62,24 @@ const updateLambdaAttributes = () => {
       lambdaAttributesUpdateListeners.forEach(listener => listener(region, arch));
     };
 
+const replaceAgentDockerImageParams = async (importStatement, copyStatement) => {
+  const containerTab = document.getElementById("container-tab-layer");
+  containerTab.innerHTML = containerTab.innerHTML.replace(/AGENT_IMPORT/, importStatement);
+  containerTab.innerHTML = containerTab.innerHTML.replace(/AGENT_COPY/, copyStatement);
+}
+
+const updateExtensionDockerImageArch = (region, arch) => {
+  document.querySelectorAll(`[role="replaceLambdaArch"]`).forEach(span => {
+    span.innerHTML = arch;
+  });
+};
+
 const addArnGenerator = async (type, ghRepo, arnPattern) => {
   const tabs = document.getElementsByName("lambda-tabpanel");
   const rgx = type === 'agent' ? /AGENT_ARN/ : /EXTENSION_ARN/;
   tabs.forEach(tab => {
-    tab.innerHTML = tab.innerHTML.replace(rgx, `<span role="replace${type}Arn"></span>`);
+    tab.innerHTML = tab.innerHTML.replace(rgx, `<span role="replace${type}Arn"></span>`)
+                                  .replace(/IMAGE_ARCH/, `<span role="replaceLambdaArch"></span>`);
   });
 
   var version = undefined;
@@ -76,7 +89,7 @@ const addArnGenerator = async (type, ghRepo, arnPattern) => {
     const releases = await fetch(`https://api.github.com/repos/elastic/${ghRepo}/releases`).then(data => {
         return data.status >= 400 ? undefined : data.json();
       });
-    
+
     if(releases){
       var latestRelease = releases[0];
 
@@ -124,6 +137,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   arnInputs.forEach(input => {
     input.addEventListener("change", e => updateLambdaAttributes());
   });
+
+  lambdaAttributesUpdateListeners.push(updateExtensionDockerImageArch);
+  updateLambdaAttributes();
 });
 </script>
 
