@@ -76,7 +76,7 @@ func ProcessPlatformReport(ctx context.Context, metadataContainer *extension.Met
 	metricsContainer.Metrics.Timestamp = model.Time(platformReport.Time)
 
 	// FaaS Fields
-	metricsContainer.Metrics.FAAS = &model.Faas{
+	metricsContainer.Metrics.FAAS = &model.FAAS{
 		Execution: platformReport.Record.RequestId,
 		ID:        functionData.InvokedFunctionArn,
 		Coldstart: platformReportMetrics.InitDurationMs > 0,
