@@ -87,7 +87,7 @@ The logging level to be used by both the APM Agent and the Lambda Extension. Sup
 
 [[aws-lambda-secrets-manager]]
 == Using AWS Secrets Manager to manage APM authentication keys
-When using the config options <<aws-lambda-config-authentication-keys>> for authentication of the APM Lambda Extension with Elastic APM the corresponding keys are specified in plain text in the environment variables of your Lambda function. If you prefer to securely store the authentication keys, you can use the AWS Secrets Manager and let the APM Lambda Extension retrieve the actual keys from the AWS Secrets Manager. Follow the instructions below to setup the AWS Secrets Manager with the APM Lambda Extension.
+When using the config options <<aws-lambda-config-authentication-keys>> for authentication of the APM Lambda Extension with Elastic APM, the corresponding keys are specified in plain text in the environment variables of your Lambda function. If you prefer to securely store the authentication keys, you can use the AWS Secrets Manager and let the APM Lambda Extension retrieve the actual keys from the AWS Secrets Manager. Follow the instructions below to set up the AWS Secrets Manager with the APM Lambda Extension.
 
 [[aws-lambda-secrets-manager-create-secret]]
 === Step 1: Create a secret in the AWS Secrets Manager.
