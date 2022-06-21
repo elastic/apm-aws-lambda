@@ -110,7 +110,7 @@ Finally, you will need to configure the APM Lambda extension to use the secret f
 
 Provide the name of the secret you created in <<aws-lambda-secrets-manager-create-secret, Step 1>> as the value for the <<aws-lambda-config-secrets-manager-options>> config option, respectively, depending on whether you want to use the {apm-guide-ref}/secret-token.html[APM Secret Token] or the {apm-guide-ref}/api-key.html[APM API key]. 
 
-The language specific instructions describe how to set environment variables for the purpose of configuring AWS Lambda for Elastic APM:
+The language-specific instructions describe how to set environment variables for configuring AWS Lambda for Elastic APM:
 
 * {apm-node-ref}/lambda.html#_step_3_configure_apm_on_aws_lambda[Configure APM on AWS Lambda - Node.js]
 * {apm-py-ref}/lambda-support.html#_step_3_configure_apm_on_aws_lambda[Configure APM on AWS Lambda - Python]
