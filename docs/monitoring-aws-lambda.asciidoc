@@ -93,7 +93,7 @@ When using the config options <<aws-lambda-config-authentication-keys>> for auth
 === Step 1: Create a secret in the AWS Secrets Manager.
 https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.html[Create a secret in the AWS Secrets Manager] for the {apm-guide-ref}/secret-token.html[APM Secret Token] or the {apm-guide-ref}/api-key.html[APM API key], depending on which one you prefer to use. Make sure to create the secret as a *Plaintext* typed secret and ensure it is created *in the same AWS region* as your target Lambda function that will use the secret. 
 
-We recommend to use the AWS managed encryption key `aws/secretsmanager`. However, you can optionally create and select a custom KMS key for encryption. Note that with a custom encryption key you will need additional key permissions on your Lambda function (see <<aws-lambda-secrets-manager-permissions, Step 2>>).
+We recommend using the AWS-managed encryption key `aws/secretsmanager`. However, you can optionally create and select a custom KMS key for encryption. Note that with a custom encryption key, you will need additional key permissions on your Lambda function (see <<aws-lambda-secrets-manager-permissions, Step 2>>).
 
 include::./secrets-manager/create-secret-widget.asciidoc[]
 
