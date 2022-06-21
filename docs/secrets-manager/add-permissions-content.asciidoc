@@ -1,0 +1,191 @@
+// tag::console[]
+- In the Web Console of your AWS Lambda function navigate to `Configuration` -> `Permissions` and click on the link in the `Execution Role` section. 
+This will lead you to the Web Console for the corresponding IAM role.
+- Select `Create inline policy` in the `Add permission` dropdown button and select the `JSON` tab to define the following JSON-based policy:
++
+--
+[source,json]
+----
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "secretsmanager:GetSecretValue"
+            ],
+            "Resource": [
+                "THE_ARN_OF_YOUR_SECRET"
+            ]
+        },
+        { <1>
+            "Effect": "Allow",
+            "Action": [
+                "kms:Decrypt"
+            ],
+            "Resource": [
+                "THE_ARN_OF_YOUR_CUSTOM_KMS_KEY"
+            ]
+        }
+    ]
+}
+----
+<1> This permission is ONLY needed if you use a custom KMS encryption key for your secret
+--
+- Review and save the policy.
+
+// end::console[]
+
+// tag::cli[]
+- Create a policy file (`smElasticApmPolicy.json`) with the following content:
++
+--
+[source,json]
+----
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "secretsmanager:GetSecretValue"
+            ],
+            "Resource": [
+                "THE_ARN_OF_YOUR_SECRET"
+            ]
+        },
+        { <1>
+            "Effect": "Allow",
+            "Action": [
+                "kms:Decrypt"
+            ],
+            "Resource": [
+                "THE_ARN_OF_YOUR_CUSTOM_KMS_KEY"
+            ]
+        }
+    ]
+}
+----
+<1> This permission is ONLY needed if you use a custom KMS encryption key for your secret
+--
+- Retrieve the execution role name of your Lambda function with the following command:
++
+--
+[source,bash]
+----
+aws lambda get-function-configuration --function-name THE_NAME_OF_YOUR_FUNCTION | grep "Role"
+----
+--
+- Attach the new policy to the execution role:
++
+--
+[source,bash]
+----
+aws iam put-role-policy \
+  --role-name NAME_OR_ARN_OF_THE_EXECUTION_ROLE \
+  --policy-name SecretsManagerAPMKeyPolicy \
+  --policy-document file://smElasticApmPolicy.json
+----
+--
+// end::cli[]
+
+// tag::sam[]
+
+In your SAM `template.yml` file add the following policy to give the Lambda function access to the stored secret:
+
+[source,yml]
+----
+...
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Resources:
+  yourLambdaFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      ...
+      Policies:
+      - Statement:
+        - Sid: SecretsManagerGetSecretValue
+          Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource: 'THE_ARN_OF_YOUR_SECRET'
+        - Sid: KMSDecrypt <1>
+          Effect: Allow
+          Action:
+            - kms:Decrypt
+          Resource: 'THE_ARN_OF_YOUR_CUSTOM_KMS_KEY'
+...
+----
+<1> This permission is ONLY needed if you use a custom KMS encryption key for your secret
+
+// end::sam[]
+
+// tag::serverless[]
+In your serverless file add the following policy to give the Lambda function access to the stored secret:
+[source,yml]
+----
+...
+provider:
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action: 'secretsmanager:GetSecretValue'
+          Resource: 'THE_ARN_OF_YOUR_SECRET'
+        - Effect: Allow <1>
+          Action: 'kms:Decrypt'
+          Resource: 'THE_ARN_OF_YOUR_CUSTOM_KMS_KEY'
+...
+----
+<1> This permission is ONLY needed if you use a custom KMS encryption key for your secret
+
+// end::serverless[]
+
+// tag::terraform[]
+Add the following policy and policy attachement resources to your terraform file to 
+give the Lambda function access to the stored secret:
+[source,terraform]
+----
+...
+resource "aws_iam_role" "lambda_role" {
+  // Here is your Lambda execution role
+  ...
+}
+
+resource "aws_iam_policy" "secrets_manager_elastic_apm_policy" {
+  name        = "secrets_manager_elastic_apm_policy"
+  description = "Allows the lambda function to access the APM authentication key stored in AWS Secrets Manager."
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Effect": "Allow",
+      "Resource": "THE_ARN_OF_YOUR_SECRET"
+    },
+    { <1>
+      "Action": [
+        "kms:Decrypt"
+      ],
+      "Effect": "Allow",
+      "Resource": "THE_ARN_OF_YOUR_CUSTOM_KMS_KEY"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_policy_attachment" "secrets_manager_elastic_apm_policy_attach" {
+  role      = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.secrets_manager_elastic_apm_policy.arn
+}
+...
+----
+<1> This permission is ONLY needed if you use a custom KMS encryption key for your secret
+
+// end::terraform[]

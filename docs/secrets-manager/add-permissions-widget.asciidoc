@@ -1,0 +1,99 @@
+++++
+<div class="tabs" data-tab-group="os">
+  <div role="tablist" aria-label="dependency">
+    <button role="tab"
+            aria-selected="true"
+            aria-controls="console-tab-add-permissions"
+            id="console-add-permissions">
+      AWS Web Console
+    </button>
+    <button role="tab"
+            aria-selected="false"
+            aria-controls="cli-tab-add-permissions"
+            id="cli-add-permissions"
+            tabindex="-1">
+      AWS CLI
+    </button>
+    <button role="tab"
+            aria-selected="false"
+            aria-controls="sam-tab-add-permissions"
+            id="sam-add-permissions"
+            tabindex="-1">
+      SAM
+    </button>
+    <button role="tab"
+            aria-selected="false"
+            aria-controls="serverless-tab-add-permissions"
+            id="serverless-add-permissions"
+            tabindex="-1">
+      Serverless
+    </button>
+    <button role="tab"
+            aria-selected="false"
+            aria-controls="terraform-tab-add-permissions"
+            id="terraform-add-permissions"
+            tabindex="-1">
+      Terraform
+    </button>
+  </div>
+  <div tabindex="0"
+      role="tabpanel"
+      id="console-tab-add-permissions"
+      name="lambda-tabpanel"
+      aria-labelledby="console-add-permissions">
+++++
+
+include::add-permissions-content.asciidoc[tag=console]
+
+++++
+  </div>
+  <div tabindex="0"
+      role="tabpanel"
+      id="cli-tab-add-permissions"
+      name="lambda-tabpanel"
+      aria-labelledby="cli-add-permissions"
+      hidden="">
+++++
+
+include::add-permissions-content.asciidoc[tag=cli]
+
+++++
+  </div>
+  <div tabindex="0"
+      role="tabpanel"
+      id="sam-tab-add-permissions"
+      name="lambda-tabpanel"
+      aria-labelledby="sam-add-permissions"
+      hidden="">
+++++
+
+include::add-permissions-content.asciidoc[tag=sam]
+
+++++
+  </div>
+  <div tabindex="0"
+      role="tabpanel"
+      id="serverless-tab-add-permissions"
+      name="lambda-tabpanel"
+      aria-labelledby="serverless-add-permissions"
+      hidden="">
+++++
+
+include::add-permissions-content.asciidoc[tag=serverless]
+
+++++
+  </div>
+  <div tabindex="0"
+      role="tabpanel"
+      id="terraform-tab-add-permissions"
+      name="lambda-tabpanel"
+      aria-labelledby="terraform-add-permissions"
+      hidden="">
+++++
+
+include::add-permissions-content.asciidoc[tag=terraform]
+
+++++
+  </div>
+</div>
+++++
