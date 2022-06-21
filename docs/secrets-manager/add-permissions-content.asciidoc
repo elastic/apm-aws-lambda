@@ -133,12 +133,12 @@ provider:
         - Effect: Allow
           Action: 'secretsmanager:GetSecretValue'
           Resource: 'THE_ARN_OF_YOUR_SECRET'
-        # The following permission is ONLY needed if you use a custom KMS encryption key for your secret
-        - Effect: Allow
+        - Effect: Allow <1>
           Action: 'kms:Decrypt'
           Resource: 'THE_ARN_OF_YOUR_CUSTOM_KMS_KEY'
 ...
 ----
+<1> This permission is ONLY needed if you use a custom KMS encryption key for your secret
 
 // end::serverless[]
 
