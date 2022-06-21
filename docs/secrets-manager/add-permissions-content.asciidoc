@@ -168,8 +168,7 @@ resource "aws_iam_policy" "secrets_manager_elastic_apm_policy" {
       "Effect": "Allow",
       "Resource": "THE_ARN_OF_YOUR_SECRET"
     },
-    // The following permission is ONLY needed if you use a custom KMS encryption key for your secret
-    {
+    { <1>
       "Action": [
         "kms:Decrypt"
       ],
@@ -187,5 +186,6 @@ resource "aws_iam_policy_attachment" "secrets_manager_elastic_apm_policy_attach"
 }
 ...
 ----
+<1> This permission is ONLY needed if you use a custom KMS encryption key for your secret
 
 // end::terraform[]
