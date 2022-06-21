@@ -106,7 +106,7 @@ For your Lambda function to be able to retrieve the authentication key from the 
 include::./secrets-manager/add-permissions-widget.asciidoc[]
 
 === Step 3: Configure the APM Lambda extension
-Finally, you will need to configure the APM Lambda extension to make it use the secret from the Secrets Manager _instead of_ the value provided through <<aws-lambda-config-authentication-keys>>.
+Finally, you will need to configure the APM Lambda extension to use the secret from the Secrets Manager _instead of_ the value provided through <<aws-lambda-config-authentication-keys>>.
 
 Provide the name of the secret you created in <<aws-lambda-secrets-manager-create-secret, Step 1>> as the value for the <<aws-lambda-config-secrets-manager-options>> config option, respectively, depending on whether you want to use the {apm-guide-ref}/secret-token.html[APM Secret Token] or the {apm-guide-ref}/api-key.html[APM API key]. 
 
