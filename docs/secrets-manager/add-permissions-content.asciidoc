@@ -54,8 +54,7 @@ This will lead you to the Web Console for the corresponding IAM role.
                 "THE_ARN_OF_YOUR_SECRET"
             ]
         },
-        // The following permission is ONLY needed if you use a custom KMS encryption key for your secret
-        {
+        { <1>
             "Effect": "Allow",
             "Action": [
                 "kms:Decrypt"
@@ -67,6 +66,7 @@ This will lead you to the Web Console for the corresponding IAM role.
     ]
 }
 ----
+<1> This permission is ONLY needed if you use a custom KMS encryption key for your secret
 --
 - Retrieve the execution role name of your Lambda function with the following command:
 +
