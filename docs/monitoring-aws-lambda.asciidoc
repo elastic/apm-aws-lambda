@@ -101,7 +101,7 @@ Remember your chosen secret name. You will use the secret name as the value for 
 
 [[aws-lambda-secrets-manager-permissions]]
 === Step 2: Add permissions to your AWS Lambda function
-For your Lambda function to be able to retrieve the authentication key from the AWS Secrets Manager you need to provide the following permissions to your Lambda function.
+For your Lambda function to be able to retrieve the authentication key from the AWS Secrets Manager, you need to provide the following permissions to your Lambda function.
 
 include::./secrets-manager/add-permissions-widget.asciidoc[]
 
