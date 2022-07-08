@@ -5,7 +5,7 @@ To add a layer to a Lambda function through the AWS Management Console:
 1. Navigate to your function in the AWS Management Console
 2. Scroll to the Layers section and click the _Add a layer_ button image:images/config-layer.png[image of layer configuration section in AWS Console]
 3. Choose the _Specify an ARN_ radio button
-4. Copy and paste the following ARN of the APM Lambda Extension layer in the _Specify an ARN_ text input: + 
+4. Copy and paste the following ARN of the {apm-lambda-ext} layer in the _Specify an ARN_ text input: +
 +++<span style="font-size:10pt"><b>EXTENSION_ARN</b></span>+++
 image:images/choose-a-layer.png[image of choosing a layer in AWS Console]
 5. Click the _Add_ button
@@ -19,10 +19,10 @@ To add the layers to your Lambda function through the AWS Management Console:
 1. Navigate to your function in the AWS Management Console
 2. Scroll to the Layers section and click the _Add a layer_ button image:images/config-layer.png[image of layer configuration section in AWS Console]
 3. Choose the _Specify an ARN_ radio button
-4. Copy and paste the following ARNs of the APM Lambda Extension layer and the APM agent layer in the _Specify an ARN_ text input: + 
+4. Copy and paste the following ARNs of the {apm-lambda-ext} layer and the APM agent layer in the _Specify an ARN_ text input: +
 APM Extension layer: +
 +++<span style="font-size:10pt"><b>EXTENSION_ARN</b></span>+++ +
-APM Agent layer: +
+APM agent layer: +
 +++<span style="font-size:10pt"><b>AGENT_ARN</b></span>+++
 image:images/choose-a-layer.png[image of choosing a layer in AWS Console]
 5. Click the _Add_ button
@@ -31,7 +31,7 @@ image:images/choose-a-layer.png[image of choosing a layer in AWS Console]
 
 // tag::cli-extension-only[]
 
-To add the APM Extension Layer ARN through the AWS command line interface execute the following command:
+To add the {apm-lambda-ext} Layer ARN through the AWS command line interface execute the following command:
 
 [source,bash]
 ----
@@ -43,7 +43,7 @@ aws lambda update-function-configuration --function-name yourLambdaFunctionName 
 
 // tag::cli-with-agent[]
 
-To add the Layer ARNs of the APM Extension and the APM Agent through the AWS command line interface execute the following command:
+To add the Layer ARNs of the {apm-lambda-ext} and the APM agent through the AWS command line interface execute the following command:
 
 [source,bash]
 ----
@@ -56,7 +56,7 @@ AGENT_ARN
 
 // tag::sam-extension-only[]
 
-In your SAM `template.yml` file add the APM Extension Layer ARN as follows:
+In your SAM `template.yml` file add the {apm-lambda-ext} Layer ARN as follows:
 
 [source,yml]
 ----
@@ -75,7 +75,7 @@ Resources:
 
 // tag::sam-with-agent[]
 
-In your SAM `template.yml` file add the Layer ARNs of the APM Extension and the APM Agent as follows:
+In your SAM `template.yml` file add the Layer ARNs of the {apm-lambda-ext} and the APM agent as follows:
 
 [source,yml]
 ----
@@ -95,7 +95,7 @@ Resources:
 
 // tag::serverless-extension-only[]
 
-In your `serverless.yml` file add the APM Extension Layer ARN to your function as follows:
+In your `serverless.yml` file add the {apm-lambda-ext} Layer ARN to your function as follows:
 
 [source,yml]
 ----
@@ -112,7 +112,7 @@ functions:
 
 // tag::serverless-with-agent[]
 
-In your `serverless.yml` file add the Layer ARNs of the APM Extension and the APM Agent to your function as follows:
+In your `serverless.yml` file add the Layer ARNs of the {apm-lambda-ext} and the APM agent to your function as follows:
 
 [source,yml]
 ----
@@ -129,7 +129,7 @@ functions:
 // end::serverless-with-agent[]
 
 // tag::terraform-extension-only[]
-To add the APM Extension Layer to your function add the ARN to the `layers` property in your Terraform file:
+To add the {apm-lambda-ext} Layer to your function add the ARN to the `layers` property in your Terraform file:
 
 [source,terraform]
 ----
@@ -144,7 +144,7 @@ resource "aws_lambda_function" "your_lambda_function" {
 // end::terraform-extension-only[]
 
 // tag::terraform-with-agent[]
-To add the APM Extension and the APM Agent to your function add the ARNs to the `layers` property in your Terraform file:
+To add the{apm-lambda-ext} and the APM agent to your function add the ARNs to the `layers` property in your Terraform file:
 
 [source,terraform]
 ----
@@ -159,7 +159,7 @@ resource "aws_lambda_function" "your_lambda_function" {
 // end::terraform-with-agent[]
 
 // tag::container-extension-only[]
-To add the APM Extension to your container-based function extend the Dockerfile of your function image as follows:
+To add the {apm-lambda-ext} to your container-based function extend the Dockerfile of your function image as follows:
 
 [source,Dockerfile]
 ----
@@ -174,7 +174,7 @@ COPY --from=lambda-extension /opt/elastic-apm-extension /opt/extensions/elastic-
 // end::container-extension-only[]
 
 // tag::container-with-agent[]
-To add the APM Extension and the APM Agent to your container-based function extend the Dockerfile of your function image as follows:
+To add the {apm-lambda-ext} and the APM agent to your container-based function extend the Dockerfile of your function image as follows:
 
 [source,Dockerfile]
 ----

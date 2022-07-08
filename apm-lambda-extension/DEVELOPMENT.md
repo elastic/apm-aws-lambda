@@ -3,7 +3,7 @@
 
 ### :robot: Automatically
 
-Releasing a version of the Lambda Extension requires a tag release.
+Releasing a version of the Elastic APM AWS Lambda extension requires a tag release.
 
 Tag the release via your preferred tagging method.  Tagging a release (v0.0.2) via the command line looks something like this.
 
@@ -22,7 +22,7 @@ and a Release in the Github UI.
 
 ### :thumbsdown: Manually
 
-Releasing a version of the Lambda Extension is currently a three step manual process.
+Releasing a version of the Elastic APM AWS Lambda extension is currently a three step manual process.
 
 1. Tag the Release
 2. Create the Build Artifacts
@@ -33,7 +33,7 @@ Releasing a version of the Lambda Extension is currently a three step manual pro
 See the above section regarding tagging a release.
 ### Create the Build Artifacts
 
-Next, create the build artifacts for the release.  These are go binaries of the Lambda Extension, built for both Intel and ARM architectures.
+Next, create the build artifacts for the release.  These are go binaries of the Elastic APM AWS Lambda extension, built for both Intel and ARM architectures.
 
 If you were creating the build artifacts for the v0.0.2 release, that might look something like this
 
