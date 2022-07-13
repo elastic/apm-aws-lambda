@@ -60,10 +60,12 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+		w.WriteHeader(http.StatusAccepted)
 		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
 			t.Fail()
 			return
 		}
+
 	}))
 	defer apmServer.Close()
 
@@ -105,6 +107,7 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 		compressedBytes, _ := ioutil.ReadAll(pr)
 		assert.Equal(t, string(compressedBytes), string(requestBytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+		w.WriteHeader(http.StatusAccepted)
 		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
 			t.Fail()
 			return
@@ -334,6 +337,7 @@ func TestAPMServerRecovery(t *testing.T) {
 		bytes, _ := ioutil.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
+		w.WriteHeader(http.StatusAccepted)
 		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
 			return
 		}
