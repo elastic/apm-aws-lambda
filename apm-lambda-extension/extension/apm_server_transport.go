@@ -185,6 +185,12 @@ func (transport *ApmServerTransport) PostToApmServer(ctx context.Context, agentD
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
+	// On success, the server will respond with a 202 Accepted status code.
+	// Log a warning otherwise.
+	if resp.StatusCode != http.StatusAccepted {
+		Log.Warnf("APM server request failed with status code: %d", resp.StatusCode)
+	}
+
 	transport.SetApmServerTransportState(ctx, Healthy)
 	Log.Debug("Transport status set to healthy")
 	Log.Debugf("APM server response body: %v", string(body))
