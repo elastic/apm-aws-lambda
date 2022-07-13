@@ -65,7 +65,6 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 			t.Fail()
 			return
 		}
-
 	}))
 	defer apmServer.Close()
 
@@ -361,6 +360,52 @@ func TestAPMServerRecovery(t *testing.T) {
 	assert.NoError(t, transport.PostToApmServer(context.Background(), agentData))
 	assert.Equal(t, transport.status, Healthy)
 	assert.Equal(t, transport.reconnectionCount, -1)
+}
+
+func TestAPMServerAuthFails(t *testing.T) {
+	// Compress the data
+	pr, pw := io.Pipe()
+	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
+	go func() {
+		if _, err := gw.Write([]byte("")); err != nil {
+			t.Fail()
+			return
+		}
+		if err := gw.Close(); err != nil {
+			t.Fail()
+			return
+		}
+		if err := pw.Close(); err != nil {
+			t.Fail()
+			return
+		}
+	}()
+
+	// Create AgentData struct with compressed data
+	data, _ := io.ReadAll(pr)
+	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
+
+	// Create apm server and handler
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer apmServer.Close()
+
+	config := extensionConfig{
+		apmServerUrl: apmServer.URL + "/",
+	}
+
+	transport := InitApmServerTransport(&config)
+	transport.SetApmServerTransportState(context.Background(), Healthy)
+	transport.SetApmServerTransportState(context.Background(), Failing)
+	for {
+		if transport.status != Failing {
+			break
+		}
+	}
+	assert.Equal(t, transport.status, Pending)
+	assert.NoError(t, transport.PostToApmServer(context.Background(), agentData))
+	assert.NotEqual(t, transport.status, Healthy)
 }
 
 func TestContinuedAPMServerFailure(t *testing.T) {
