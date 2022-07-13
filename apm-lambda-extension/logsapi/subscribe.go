@@ -19,6 +19,7 @@ package logsapi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -26,8 +27,6 @@ import (
 	"time"
 
 	"elastic/apm-lambda-extension/extension"
-
-	"github.com/pkg/errors"
 )
 
 // TODO: Remove global variable and find another way to retrieve Logs Listener network info when testing main
