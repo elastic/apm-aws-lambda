@@ -122,7 +122,7 @@ func startHTTPServer(ctx context.Context, transport *LogsTransport) error {
 
 	go func() {
 		extension.Log.Infof("Extension listening for Lambda Logs API events on %s", transport.listener.Addr().String())
-		if err = transport.server.Serve(transport.listener); err != nil {
+		if err = transport.server.Serve(transport.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			extension.Log.Errorf("Error upon Logs API server start : %v", err)
 		}
 	}()
