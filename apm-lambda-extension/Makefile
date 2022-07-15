@@ -5,6 +5,10 @@ DOCKER_IMAGE_NAME = observability/apm-lambda-extension
 DOCKER_REGISTRY = docker.elastic.co
 AGENT_VERSION = $(shell echo $${BRANCH_NAME} | cut -f 2 -d 'v')
 
+# Add support for SOURCE_DATE_EPOCH and reproducble buils
+# See https://reproducible-builds.org/specs/source-date-epoch/
+SOURCE_DATE_EPOCH ?= 0
+
 ifndef GOARCH
 	GOARCH=amd64
 endif
@@ -57,7 +61,11 @@ endif
 	GOARCH=${GOARCH} make zip
 	$(MAKE) publish
 zip:
-	cd bin && rm -f extension.zip || true && zip -r extension.zip extensions NOTICE.txt dependencies.asciidoc && cp extension.zip ${GOARCH}.zip
+	cd bin \
+	&& rm -f extension.zip || true \
+	&& find extensions NOTICE.txt dependencies.asciidoc | xargs touch -d @$(SOURCE_DATE_EPOCH) \
+	&& zip -X -r extension.zip extensions NOTICE.txt dependencies.asciidoc \
+	&& cp extension.zip ${GOARCH}.zip
 test:
 	go test extension/*.go -v
 env:
