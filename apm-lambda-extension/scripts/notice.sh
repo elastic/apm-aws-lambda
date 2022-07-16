@@ -22,14 +22,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR=${SCRIPT_DIR}/..
-TEMP_DIR=$(mktemp -d)
-LICENCE_DETECTOR="go.elastic.co/go-licence-detector@v0.3.0"
-
-trap '[[ $TEMP_DIR ]] && rm -rf "$TEMP_DIR"' EXIT
-
-get_licence_detector() {
-    GOBIN="$TEMP_DIR" go install "$LICENCE_DETECTOR"
-}
 
 generate_notice() {
     (
@@ -41,7 +33,7 @@ generate_notice() {
         for pkg in $pkgs; do
           deps+="$(go list -m -json $pkg)\n"
         done
-        echo -e $deps | "${TEMP_DIR}"/go-licence-detector \
+        echo -e $deps | go run go.elastic.co/go-licence-detector@v0.3.0 \
             -depsTemplate="${SCRIPT_DIR}"/templates/dependencies.asciidoc.tmpl \
             -depsOut="${PROJECT_DIR}"/dependencies.asciidoc \
             -noticeTemplate="${SCRIPT_DIR}"/templates/NOTICE.txt.tmpl \
@@ -53,5 +45,4 @@ generate_notice() {
 }
 
 echo "Generating notice file and dependency list"
-get_licence_detector
 generate_notice
