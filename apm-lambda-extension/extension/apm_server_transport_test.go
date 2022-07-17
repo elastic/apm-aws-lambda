@@ -125,7 +125,7 @@ func TestGracePeriod(t *testing.T) {
 
 	transport.reconnectionCount = 0
 	val0 := transport.computeGracePeriod().Seconds()
-	assert.Equal(t, val0, float64(0))
+	assert.LessOrEqual(t, val0, 5.0)
 
 	transport.reconnectionCount = 1
 	val1 := transport.computeGracePeriod().Seconds()
