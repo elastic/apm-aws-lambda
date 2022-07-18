@@ -18,11 +18,12 @@
 package extension
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap/zapcore"
 )
@@ -165,7 +166,7 @@ func TestGetSecretCalled(t *testing.T) {
 
 type mockSecretManager struct{}
 
-func (s *mockSecretManager) GetSecretValue(input *secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error) {
+func (s *mockSecretManager) GetSecretValue(ctx context.Context, input *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error) {
 	switch s := *input.SecretId; s {
 	case "secrettoken":
 		return &secretsmanager.GetSecretValueOutput{SecretString: input.SecretId}, nil

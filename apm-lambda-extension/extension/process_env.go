@@ -18,14 +18,14 @@
 package extension
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -67,16 +67,16 @@ func getIntFromEnv(name string) (int, error) {
 }
 
 type secretManager interface {
-	GetSecretValue(*secretsmanager.GetSecretValueInput) (*secretsmanager.GetSecretValueOutput, error)
+	GetSecretValue(ctx context.Context, params *secretsmanager.GetSecretValueInput, optFns ...func(*secretsmanager.Options)) (*secretsmanager.GetSecretValueOutput, error)
 }
 
 func getSecret(manager secretManager, secretName string) (string, error) {
 	input := &secretsmanager.GetSecretValueInput{
-		SecretId:     aws.String(secretName),
-		VersionStage: aws.String("AWSCURRENT"),
+		SecretId:     ptrFromString(secretName),
+		VersionStage: ptrFromString("AWSCURRENT"),
 	}
 
-	result, err := manager.GetSecretValue(input)
+	result, err := manager.GetSecretValue(context.TODO(), input)
 	if err != nil {
 		return "", err
 	}
@@ -94,6 +94,10 @@ func getSecret(manager secretManager, secretName string) (string, error) {
 	}
 
 	return secretString, nil
+}
+
+func ptrFromString(v string) *string {
+	return &v
 }
 
 // ProcessEnv extracts ENV variables into globals

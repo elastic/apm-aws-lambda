@@ -29,9 +29,8 @@ import (
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/logsapi"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/secretsmanager"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
 var (
@@ -55,14 +54,11 @@ func main() {
 		extension.Log.Infof("Received %v\n, exiting", s)
 	}()
 
-	sess, err := session.NewSession()
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		extension.Log.Fatalf("failed to create new session: %v", err)
+		extension.Log.Fatalf("failed to load default config: %v", err)
 	}
-	// AWS_REGION is automatically set by AWS.
-	// https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html#configuration-envvars-runtime
-	region := os.Getenv("AWS_REGION")
-	manager := secretsmanager.New(sess, aws.NewConfig().WithRegion(region))
+	manager := secretsmanager.NewFromConfig(cfg)
 	// pulls ELASTIC_ env variable into globals for easy access
 	config := extension.ProcessEnv(manager)
 	extension.Log.Level.SetLevel(config.LogLevel)
