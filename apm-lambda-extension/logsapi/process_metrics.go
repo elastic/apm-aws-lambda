@@ -99,7 +99,7 @@ func ProcessPlatformReport(ctx context.Context, metadataContainer *extension.Met
 
 	var jsonWriter fastjson.Writer
 	if err := metricsContainer.MarshalFastJSON(&jsonWriter); err != nil {
-		return extension.AgentData{Data: metricsData}, nil
+		return extension.AgentData{}, err
 	}
 
 	if metadataContainer.Metadata != nil {
