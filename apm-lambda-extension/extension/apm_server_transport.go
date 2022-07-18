@@ -185,6 +185,12 @@ func (transport *ApmServerTransport) PostToApmServer(ctx context.Context, agentD
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
+	if resp.StatusCode == http.StatusUnauthorized {
+		Log.Warnf("Authentication with the APM server failed: response status code: %d", resp.StatusCode)
+		Log.Debugf("APM server response body: %v", string(body))
+		return nil
+	}
+
 	transport.SetApmServerTransportState(ctx, Healthy)
 	Log.Debug("Transport status set to healthy")
 	Log.Debugf("APM server response body: %v", string(body))
