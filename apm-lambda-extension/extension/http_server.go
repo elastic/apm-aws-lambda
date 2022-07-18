@@ -19,6 +19,7 @@ package extension
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"time"
@@ -45,12 +46,10 @@ func StartHttpServer(ctx context.Context, transport *ApmServerTransport) (agentD
 
 	go func() {
 		Log.Infof("Extension listening for apm data on %s", server.Addr)
-		if err = server.Serve(ln); err != nil {
-			if err.Error() == "http: server closed" {
-				Log.Debug(err)
-			} else {
-				Log.Errorf("Error upon APM data server start : %v", err)
-			}
+		if err = server.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			Log.Errorf("received error from http.Serve(): %v", err)
+		} else {
+			Log.Debug("server closed")
 		}
 	}()
 	return server, nil
