@@ -15,34 +15,26 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package main
+package app
 
-import (
-	"context"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"syscall"
+type appConfig struct {
+	awsLambdaRuntimeAPI string
+	extensionName       string
+}
 
-	"elastic/apm-lambda-extension/app"
-	"elastic/apm-lambda-extension/extension"
-)
+type configOption func(*appConfig)
 
-func main() {
-	// Global context
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer cancel()
-
-	app, err := app.New(
-		app.WithExtensionName(filepath.Base(os.Args[0])),
-		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
-	)
-	if err != nil {
-		extension.Log.Fatalf("failed to create the app: %v", err)
+// WithLambdaRuntimeAPI sets the AWS Lambda Runtime API
+// used by the AWS client.
+func WithLambdaRuntimeAPI(api string) configOption {
+	return func(c *appConfig) {
+		c.awsLambdaRuntimeAPI = api
 	}
+}
 
-	if err := app.Run(ctx); err != nil {
-		extension.Log.Fatalf("error while running: %v", err)
+// WithExtensionName sets the extension name.
+func WithExtensionName(name string) configOption {
+	return func(c *appConfig) {
+		c.extensionName = name
 	}
-
 }
