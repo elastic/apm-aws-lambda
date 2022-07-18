@@ -43,16 +43,8 @@ var (
 func main() {
 
 	// Global context
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
-
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
-	go func() {
-		s := <-sigs
-		cancel()
-		extension.Log.Infof("Received %v\n, exiting", s)
-	}()
 
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -102,6 +94,7 @@ func main() {
 	for {
 		select {
 		case <-ctx.Done():
+			extension.Log.Info("Received a signal, exiting...")
 			return
 		default:
 			var backgroundDataSendWg sync.WaitGroup
