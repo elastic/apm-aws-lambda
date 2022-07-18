@@ -20,11 +20,10 @@ package logsapi
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
-	"github.com/pkg/errors"
 )
 
 const lambdaAgentIdentifierHeaderKey string = "Lambda-Extension-Identifier"
@@ -153,7 +152,7 @@ func (c *Client) Subscribe(types []EventType, destinationURI URI, extensionId st
 			Destination:   destination,
 		})
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to marshal SubscribeRequest")
+		return nil, fmt.Errorf("failed to marshal SubscribeRequest: %w", err)
 	}
 
 	headers := make(map[string]string)
@@ -166,14 +165,14 @@ func (c *Client) Subscribe(types []EventType, destinationURI URI, extensionId st
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusAccepted {
-		return nil, errors.Errorf("Logs API is not supported in this environment")
+		return nil, errors.New("Logs API is not supported in this environment")
 	} else if resp.StatusCode != http.StatusOK {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return nil, errors.Errorf("%s failed: %d[%s]", url, resp.StatusCode, resp.Status)
+			return nil, fmt.Errorf("%s failed: %d[%s]", url, resp.StatusCode, resp.Status)
 		}
 
-		return nil, errors.Errorf("%s failed: %d[%s] %s", url, resp.StatusCode, resp.Status, string(body))
+		return nil, fmt.Errorf("%s failed: %d[%s] %s", url, resp.StatusCode, resp.Status, string(body))
 	}
 
 	body, _ := ioutil.ReadAll(resp.Body)

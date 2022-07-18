@@ -22,11 +22,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type MetadataContainer struct {
@@ -38,7 +37,7 @@ type MetadataContainer struct {
 func ProcessMetadata(data AgentData) ([]byte, error) {
 	uncompressedData, err := GetUncompressedBytes(data.Data, data.ContentEncoding)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("Error uncompressing agent data for metadata extraction : %v", err))
+		return nil, fmt.Errorf("Error uncompressing agent data for metadata extraction: %w", err)
 	}
 	scanner := bufio.NewScanner(strings.NewReader(string(uncompressedData)))
 	scanner.Scan()
