@@ -7,7 +7,7 @@ AGENT_VERSION = $(shell echo $${BRANCH_NAME} | cut -f 2 -d 'v')
 
 # Add support for SOURCE_DATE_EPOCH and reproducble buils
 # See https://reproducible-builds.org/specs/source-date-epoch/
-SOURCE_DATE_EPOCH ?= 0
+SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
 
 ifndef GOARCH
 	GOARCH=amd64
