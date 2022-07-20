@@ -25,6 +25,7 @@ type appConfig struct {
 type configOption func(*appConfig)
 
 // WithLambdaRuntimeAPI sets the AWS Lambda Runtime API
+// endpoint (normally taken from $AWS_LAMBDA_RUNTIME_API),
 // used by the AWS client.
 func WithLambdaRuntimeAPI(api string) configOption {
 	return func(c *appConfig) {
