@@ -15,34 +15,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package main
+package app
 
-import (
-	"context"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"syscall"
+import "elastic/apm-lambda-extension/extension"
 
-	"elastic/apm-lambda-extension/app"
-	"elastic/apm-lambda-extension/extension"
-)
+// App is the main application.
+type App struct {
+	extensionName   string
+	extensionClient *extension.Client
+}
 
-func main() {
-	// Global context
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer cancel()
+// New returns an App or an error if the
+// creation failed.
+func New(opts ...configOption) (*App, error) {
+	c := appConfig{}
 
-	app, err := app.New(
-		app.WithExtensionName(filepath.Base(os.Args[0])),
-		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
-	)
-	if err != nil {
-		extension.Log.Fatalf("failed to create the app: %v", err)
+	for _, opt := range opts {
+		opt(&c)
 	}
 
-	if err := app.Run(ctx); err != nil {
-		extension.Log.Fatalf("error while running: %v", err)
+	app := &App{
+		extensionName:   c.extensionName,
+		extensionClient: extension.NewClient(c.awsLambdaRuntimeAPI),
 	}
 
+	return app, nil
 }

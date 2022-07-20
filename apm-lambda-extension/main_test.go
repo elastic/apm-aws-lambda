@@ -182,7 +182,6 @@ func newMockLambdaServer(t *testing.T, eventsChannel chan MockEvent) *MockServer
 	slicedLambdaURL := strings.Split(lambdaServer.URL, "//")
 	strippedLambdaURL := slicedLambdaURL[1]
 	t.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL)
-	extensionClient = extension.NewClient(os.Getenv("AWS_LAMBDA_RUNTIME_API"))
 
 	// Find unused port for the extension to listen to
 	extensionPort, err := e2eTesting.GetFreePort()
