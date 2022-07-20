@@ -62,7 +62,7 @@ endif
 	$(MAKE) publish
 zip:
 	cd bin \
-	&& rm -f extension.zip || true \
+	&& rm -f extension.zip \
 	&& find extensions NOTICE.txt dependencies.asciidoc | xargs touch -d @$(SOURCE_DATE_EPOCH) \
 	&& zip -X -r extension.zip extensions NOTICE.txt dependencies.asciidoc \
 	&& cp extension.zip ${GOARCH}.zip
