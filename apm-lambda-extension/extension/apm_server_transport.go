@@ -238,6 +238,13 @@ func (transport *ApmServerTransport) SetApmServerTransportState(ctx context.Cont
 
 // ComputeGracePeriod https://github.com/elastic/apm/blob/main/specs/agents/transport.md#transport-errors
 func (transport *ApmServerTransport) computeGracePeriod() time.Duration {
+	// If reconnectionCount is 0, returns a random number in an interval.
+	// The grace period for the first reconnection count was 0 but that
+	// leads to collisions with multiple environment.
+	if transport.reconnectionCount == 0 {
+		gracePeriod := rand.Float64() * 5
+		return time.Duration(gracePeriod * float64(time.Second))
+	}
 	gracePeriodWithoutJitter := math.Pow(math.Min(float64(transport.reconnectionCount), 6), 2)
 	jitter := rand.Float64()/5 - 0.1
 	return time.Duration((gracePeriodWithoutJitter + jitter*gracePeriodWithoutJitter) * float64(time.Second))
