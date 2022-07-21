@@ -18,7 +18,6 @@
 package logsapi
 
 import (
-	"context"
 	"math"
 
 	"elastic/apm-lambda-extension/extension"
@@ -63,7 +62,7 @@ func (mc MetricsContainer) MarshalFastJSON(json *fastjson.Writer) error {
 	return nil
 }
 
-func ProcessPlatformReport(ctx context.Context, metadataContainer *extension.MetadataContainer, functionData *extension.NextEventResponse, platformReport LogEvent) (extension.AgentData, error) {
+func ProcessPlatformReport(metadataContainer *extension.MetadataContainer, functionData *extension.NextEventResponse, platformReport LogEvent) (extension.AgentData, error) {
 	var metricsData []byte
 	metricsContainer := MetricsContainer{
 		Metrics: &model.Metrics{},
@@ -77,7 +76,7 @@ func ProcessPlatformReport(ctx context.Context, metadataContainer *extension.Met
 
 	// FaaS Fields
 	metricsContainer.Metrics.FAAS = &model.FAAS{
-		Execution: platformReport.Record.RequestId,
+		Execution: platformReport.Record.RequestID,
 		ID:        functionData.InvokedFunctionArn,
 		Coldstart: platformReportMetrics.InitDurationMs > 0,
 	}

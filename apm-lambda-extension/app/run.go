@@ -66,9 +66,16 @@ func (app *App) Run(ctx context.Context) error {
 	// Use a wait group to ensure the background go routine sending to the APM server
 	// completes before signaling that the extension is ready for the next invocation.
 
-	logsTransport, err := logsapi.Subscribe(ctx, app.extensionClient.ExtensionID, []logsapi.EventType{logsapi.Platform})
-	if err != nil {
+	if err := app.logsClient.StartService([]logsapi.EventType{logsapi.Platform}, app.extensionClient.ExtensionID); err != nil {
 		extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
+
+		// remember to shutdown the service if started
+		if err := app.logsClient.Shutdown(); err != nil {
+			extension.Log.Warnf("failed to shutdown the log service: %v", err)
+		}
+
+		// disable logs API if the service failed to start
+		app.logsClient = nil
 	}
 
 	// The previous event id is used to validate the received Lambda metrics
@@ -81,10 +88,18 @@ func (app *App) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			extension.Log.Info("Received a signal, exiting...")
+
+			// Remember to shutdown the log service if available.
+			if app.logsClient != nil {
+				if err := app.logsClient.Shutdown(); err != nil {
+					extension.Log.Warnf("failed to shutdown the log service: %v", err)
+				}
+			}
+
 			return nil
 		default:
 			var backgroundDataSendWg sync.WaitGroup
-			event := app.processEvent(ctx, apmServerTransport, logsTransport, &backgroundDataSendWg, prevEvent, &metadataContainer)
+			event := app.processEvent(ctx, apmServerTransport, &backgroundDataSendWg, prevEvent, &metadataContainer)
 			if event.EventType == extension.Shutdown {
 				extension.Log.Info("Received shutdown event, exiting...")
 				return nil
@@ -103,7 +118,6 @@ func (app *App) Run(ctx context.Context) error {
 func (app *App) processEvent(
 	ctx context.Context,
 	apmServerTransport *extension.ApmServerTransport,
-	logsTransport *logsapi.LogsTransport,
 	backgroundDataSendWg *sync.WaitGroup,
 	prevEvent *extension.NextEventResponse,
 	metadataContainer *extension.MetadataContainer,
@@ -151,9 +165,9 @@ func (app *App) processEvent(
 	// Lambda Service Logs Processing, also used to extract metrics from APM logs
 	// This goroutine should not be started if subscription failed
 	runtimeDone := make(chan struct{})
-	if logsTransport != nil {
+	if app.logsClient != nil {
 		go func() {
-			if err := logsapi.ProcessLogs(invocationCtx, event.RequestID, apmServerTransport, logsTransport, metadataContainer, runtimeDone, prevEvent); err != nil {
+			if err := app.logsClient.ProcessLogs(invocationCtx, event.RequestID, apmServerTransport, metadataContainer, runtimeDone, prevEvent); err != nil {
 				extension.Log.Errorf("Error while processing Lambda Logs ; %v", err)
 			} else {
 				close(runtimeDone)

@@ -15,35 +15,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package app
+package logsapi
 
-type appConfig struct {
-	awsLambdaRuntimeAPI string
-	extensionName       string
-	disableLogsAPI      bool
-}
-
-type configOption func(*appConfig)
-
-// WithLambdaRuntimeAPI sets the AWS Lambda Runtime API
-// endpoint (normally taken from $AWS_LAMBDA_RUNTIME_API),
-// used by the AWS client.
-func WithLambdaRuntimeAPI(api string) configOption {
-	return func(c *appConfig) {
-		c.awsLambdaRuntimeAPI = api
+// WithListenerAddress sets the listener address of the
+// server listening for logs event.
+func WithListenerAddress(s string) ClientOption {
+	return func(c *Client) {
+		c.listenerAddr = s
 	}
 }
 
-// WithExtensionName sets the extension name.
-func WithExtensionName(name string) configOption {
-	return func(c *appConfig) {
-		c.extensionName = name
+// WithLogsAPIBaseURL sets the logs api base url.
+func WithLogsAPIBaseURL(s string) ClientOption {
+	return func(c *Client) {
+		c.logsAPIBaseURL = s
 	}
 }
 
-// WithoutLogsAPI disables the logs api.
-func WithoutLogsAPI() configOption {
-	return func(c *appConfig) {
-		c.disableLogsAPI = true
+// WithLogBuffer sets the size of the buffer
+// storing queued logs for processing.
+func WithLogBuffer(size int) ClientOption {
+	return func(c *Client) {
+		c.logsChannel = make(chan LogEvent, size)
 	}
 }

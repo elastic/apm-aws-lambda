@@ -18,189 +18,126 @@
 package logsapi
 
 import (
-	"context"
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
-	"os"
-	"time"
 
 	"elastic/apm-lambda-extension/extension"
 )
 
-// TODO: Remove global variable and find another way to retrieve Logs Listener network info when testing main
-// TestListenerAddr For e2e testing purposes
-var TestListenerAddr net.Addr
-
-type LogsTransport struct {
-	logsChannel  chan LogEvent
-	listener     net.Listener
-	listenerHost string
-	server       *http.Server
+// SubscribeRequest is the request body that is sent to Logs API on subscribe
+type SubscribeRequest struct {
+	SchemaVersion SchemaVersion `json:"schemaVersion"`
+	EventTypes    []EventType   `json:"types"`
+	BufferingCfg  BufferingCfg  `json:"buffering"`
+	Destination   Destination   `json:"destination"`
 }
 
-func InitLogsTransport(listenerHost string) *LogsTransport {
-	var transport LogsTransport
-	transport.listenerHost = listenerHost
-	transport.logsChannel = make(chan LogEvent, 100)
-	return &transport
+// SchemaVersion is the Lambda runtime API schema version
+type SchemaVersion string
+
+const (
+	SchemaVersion20210318 = "2021-03-18"
+	SchemaVersionLatest   = SchemaVersion20210318
+)
+
+// BufferingCfg is the configuration set for receiving logs from Logs API. Whichever of the conditions below is met first, the logs will be sent
+type BufferingCfg struct {
+	// MaxItems is the maximum number of events to be buffered in memory. (default: 10000, minimum: 1000, maximum: 10000)
+	MaxItems uint32 `json:"maxItems"`
+	// MaxBytes is the maximum size in bytes of the logs to be buffered in memory. (default: 262144, minimum: 262144, maximum: 1048576)
+	MaxBytes uint32 `json:"maxBytes"`
+	// TimeoutMS is the maximum time (in milliseconds) for a batch to be buffered. (default: 1000, minimum: 100, maximum: 30000)
+	TimeoutMS uint32 `json:"timeoutMs"`
 }
 
-// LogEvent represents an event received from the Logs API
-type LogEvent struct {
-	Time         time.Time    `json:"time"`
-	Type         SubEventType `json:"type"`
-	StringRecord string
-	Record       LogEventRecord
+// Destination is the configuration for listeners who would like to receive logs with HTTP
+type Destination struct {
+	Protocol   string `json:"protocol"`
+	URI        string `json:"URI"`
+	HTTPMethod string `json:"method"`
+	Encoding   string `json:"encoding"`
 }
 
-// LogEventRecord is a sub-object in a Logs API event
-type LogEventRecord struct {
-	RequestId string          `json:"requestId"`
-	Status    string          `json:"status"`
-	Metrics   PlatformMetrics `json:"metrics"`
-}
-
-// Subscribes to the Logs API
-func subscribe(transport *LogsTransport, extensionID string, eventTypes []EventType) error {
-
-	extensionsAPIAddress, ok := os.LookupEnv("AWS_LAMBDA_RUNTIME_API")
-	if !ok {
-		return errors.New("AWS_LAMBDA_RUNTIME_API is not set")
-	}
-
-	logsAPIBaseUrl := fmt.Sprintf("http://%s", extensionsAPIAddress)
-	logsAPIClient, err := NewClient(logsAPIBaseUrl)
+func (lc *Client) startHTTPServer() (string, error) {
+	listener, err := net.Listen("tcp", lc.listenerAddr)
 	if err != nil {
-		return err
+		return "", fmt.Errorf("failed to listen on %s: %w", lc.listenerAddr, err)
 	}
 
-	_, port, _ := net.SplitHostPort(transport.listener.Addr().String())
-	_, err = logsAPIClient.Subscribe(eventTypes, URI("http://"+transport.listenerHost+":"+port), extensionID)
-	return err
-}
-
-// Subscribe starts the HTTP server listening for log events and subscribes to the Logs API
-func Subscribe(ctx context.Context, extensionID string, eventTypes []EventType) (transport *LogsTransport, err error) {
-	if checkAWSSamLocal() {
-		return nil, errors.New("Detected sam local environment")
-	}
-
-	// Init APM server Transport struct
-	// Make channel for collecting logs and create a HTTP server to listen for them
-	if checkLambdaFunction() {
-		transport = InitLogsTransport("sandbox")
-	} else {
-		transport = InitLogsTransport("localhost")
-	}
-
-	if err = startHTTPServer(ctx, transport); err != nil {
-		return nil, err
-	}
-
-	if err = subscribe(transport, extensionID, eventTypes); err != nil {
-		return nil, err
-	}
-	return transport, nil
-}
-
-func startHTTPServer(ctx context.Context, transport *LogsTransport) error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleLogEventsRequest(transport))
-	var err error
-
-	transport.server = &http.Server{
-		Handler: mux,
-	}
-
-	if transport.listener, err = net.Listen("tcp", transport.listenerHost+":0"); err != nil {
-		return err
-	}
-	TestListenerAddr = transport.listener.Addr()
+	addr := listener.Addr().String()
 
 	go func() {
-		extension.Log.Infof("Extension listening for Lambda Logs API events on %s", transport.listener.Addr().String())
-		if err = transport.server.Serve(transport.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		extension.Log.Infof("Extension listening for Lambda Logs API events on %s", addr)
+
+		if err := lc.server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			extension.Log.Errorf("Error upon Logs API server start : %v", err)
 		}
 	}()
 
-	go func() {
-		<-ctx.Done()
-		transport.server.Close()
-	}()
+	return addr, nil
+}
+
+func (lc *Client) subscribe(types []EventType, extensionID string, uri string) error {
+	data, err := json.Marshal(&SubscribeRequest{
+		SchemaVersion: SchemaVersionLatest,
+		EventTypes:    types,
+		BufferingCfg: BufferingCfg{
+			MaxItems:  10000,
+			MaxBytes:  262144,
+			TimeoutMS: 25,
+		},
+		Destination: Destination{
+			Protocol:   "HTTP",
+			URI:        uri,
+			HTTPMethod: http.MethodPost,
+			Encoding:   "JSON",
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to marshal SubscribeRequest: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/2020-08-15/logs", lc.logsAPIBaseURL)
+	resp, err := lc.sendRequest(url, data, extensionID)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusAccepted {
+		return errors.New("logs API is not supported in this environment")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("%s failed: %d[%s]", url, resp.StatusCode, resp.Status)
+		}
+
+		return fmt.Errorf("%s failed: %d[%s] %s", url, resp.StatusCode, resp.Status, string(body))
+	}
 
 	return nil
 }
 
-// checkAWSSamLocal checks if the extension is running in a SAM CLI container.
-// The Logs API is not supported in that scenario.
-func checkAWSSamLocal() bool {
-	envAWSLocal, ok := os.LookupEnv("AWS_SAM_LOCAL")
-	if ok && envAWSLocal == "true" {
-		return true
+func (lc *Client) sendRequest(url string, data []byte, extensionID string) (*http.Response, error) {
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(data))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	return false
-}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Lambda-Extension-Identifier", extensionID)
 
-// checkLambdaFunction checks if the extension is together with an actual Lambda function.
-// It is currently used together with checkAWSSamLocal as a best effort solution to determine if
-// the extension actually runs in dev (unit tests), SAM, or in a local Lambda environment.
-func checkLambdaFunction() bool {
-	lambdaName, ok := os.LookupEnv("AWS_LAMBDA_FUNCTION_NAME")
-	if ok && lambdaName != "" {
-		return true
+	resp, err := lc.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 
-	return false
-}
-
-// ProcessLogs consumes events until a RuntimeDone event corresponding
-// to requestID is received, or ctx is cancelled, and then returns.
-func ProcessLogs(
-	ctx context.Context,
-	requestID string,
-	apmServerTransport *extension.ApmServerTransport,
-	logsTransport *LogsTransport,
-	metadataContainer *extension.MetadataContainer,
-	runtimeDoneSignal chan struct{},
-	prevEvent *extension.NextEventResponse,
-) error {
-	for {
-		select {
-		case logEvent := <-logsTransport.logsChannel:
-			extension.Log.Debugf("Received log event %v", logEvent.Type)
-			switch logEvent.Type {
-			// Check the logEvent for runtimeDone and compare the RequestID
-			// to the id that came in via the Next API
-			case RuntimeDone:
-				if logEvent.Record.RequestId == requestID {
-					extension.Log.Info("Received runtimeDone event for this function invocation")
-					runtimeDoneSignal <- struct{}{}
-					return nil
-				} else {
-					extension.Log.Debug("Log API runtimeDone event request id didn't match")
-				}
-			// Check if the logEvent contains metrics and verify that they can be linked to the previous invocation
-			case Report:
-				if prevEvent != nil && logEvent.Record.RequestId == prevEvent.RequestID {
-					extension.Log.Debug("Received platform report for the previous function invocation")
-					processedMetrics, err := ProcessPlatformReport(ctx, metadataContainer, prevEvent, logEvent)
-					if err != nil {
-						extension.Log.Errorf("Error processing Lambda platform metrics : %v", err)
-					} else {
-						apmServerTransport.EnqueueAPMData(processedMetrics)
-					}
-				} else {
-					extension.Log.Warn("report event request id didn't match the previous event id")
-					extension.Log.Debug("Log API runtimeDone event request id didn't match")
-				}
-			}
-		case <-ctx.Done():
-			extension.Log.Debug("Current invocation over. Interrupting logs processing goroutine")
-			return nil
-		}
-	}
+	return resp, nil
 }
