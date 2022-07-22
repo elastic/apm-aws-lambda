@@ -46,7 +46,7 @@ func TestLogEventUnmarshalReport(t *testing.T) {
 	assert.Equal(t, SubEventType("platform.report"), le.Type)
 	assert.Equal(t, "2020-08-20T12:31:32.123Z", le.Time.Format(time.RFC3339Nano))
 	rec := LogEventRecord{
-		RequestId: "6f7f0961f83442118a7af6fe80b88d56",
+		RequestID: "6f7f0961f83442118a7af6fe80b88d56",
 		Status:    "", // no status was given in sample json
 		Metrics: PlatformMetrics{
 			DurationMs:       101.51,
@@ -95,7 +95,7 @@ func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
 	assert.Equal(t, SubEventType("platform.runtimeDone"), le.Type)
 	assert.Equal(t, "2021-02-04T20:00:05.123Z", le.Time.Format(time.RFC3339Nano))
 	rec := LogEventRecord{
-		RequestId: "6f7f0961f83442118a7af6fe80b88",
+		RequestID: "6f7f0961f83442118a7af6fe80b88",
 		Status:    "success",
 	}
 	assert.Equal(t, rec, le.Record)

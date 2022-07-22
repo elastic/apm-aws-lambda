@@ -17,12 +17,17 @@
 
 package app
 
-import "elastic/apm-lambda-extension/extension"
+import (
+	"elastic/apm-lambda-extension/extension"
+	"elastic/apm-lambda-extension/logsapi"
+	"fmt"
+)
 
 // App is the main application.
 type App struct {
 	extensionName   string
 	extensionClient *extension.Client
+	logsClient      *logsapi.Client
 }
 
 // New returns an App or an error if the
@@ -37,6 +42,19 @@ func New(opts ...configOption) (*App, error) {
 	app := &App{
 		extensionName:   c.extensionName,
 		extensionClient: extension.NewClient(c.awsLambdaRuntimeAPI),
+	}
+
+	if !c.disableLogsAPI {
+		lc, err := logsapi.NewClient(
+			logsapi.WithLogsAPIBaseURL(fmt.Sprintf("http://%s", c.awsLambdaRuntimeAPI)),
+			logsapi.WithListenerAddress("sandbox:0"),
+			logsapi.WithLogBuffer(100),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		app.logsClient = lc
 	}
 
 	return app, nil

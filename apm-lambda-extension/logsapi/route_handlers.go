@@ -25,8 +25,7 @@ import (
 	"elastic/apm-lambda-extension/extension"
 )
 
-func handleLogEventsRequest(transport *LogsTransport) func(w http.ResponseWriter, r *http.Request) {
-
+func handleLogEventsRequest(logsChannel chan LogEvent) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var logEvents []LogEvent
 		if err := json.NewDecoder(r.Body).Decode(&logEvents); err != nil {
@@ -41,7 +40,7 @@ func handleLogEventsRequest(transport *LogsTransport) func(w http.ResponseWriter
 				w.WriteHeader(http.StatusInternalServerError)
 				continue
 			}
-			transport.logsChannel <- logEvents[idx]
+			logsChannel <- logEvents[idx]
 		}
 	}
 }
