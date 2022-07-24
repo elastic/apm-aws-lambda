@@ -51,6 +51,8 @@ func TestClient(t *testing.T) {
 			_, err := logsapi.NewClient(tc.opts...)
 			if tc.expectedErr {
 				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
