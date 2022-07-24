@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -84,6 +85,8 @@ func TestSubscribe(t *testing.T) {
 			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				var subRequest logsapi.SubscribeRequest
 				require.NoError(t, json.NewDecoder(r.Body).Decode(&subRequest))
+				_, err := url.ParseRequestURI(subRequest.Destination.URI)
+				require.NoError(t, err)
 				w.WriteHeader(tc.responseHeader)
 			}))
 			defer s.Close()
