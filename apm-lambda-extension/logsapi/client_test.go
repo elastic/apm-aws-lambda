@@ -86,7 +86,7 @@ func TestSubscribe(t *testing.T) {
 
 			c, err := logsapi.NewClient(append(tc.opts, logsapi.WithLogsAPIBaseURL(s.URL))...)
 			require.NoError(t, err)
-			
+
 			if tc.expectedErr {
 				require.Error(t, c.StartService([]logsapi.EventType{logsapi.Platform}, "foo"))
 			} else {
