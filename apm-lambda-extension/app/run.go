@@ -69,11 +69,6 @@ func (app *App) Run(ctx context.Context) error {
 	if err := app.logsClient.StartService([]logsapi.EventType{logsapi.Platform}, app.extensionClient.ExtensionID); err != nil {
 		extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
 
-		// remember to shutdown the service if started
-		if err := app.logsClient.Shutdown(); err != nil {
-			extension.Log.Warnf("failed to shutdown the log service: %v", err)
-		}
-
 		// disable logs API if the service failed to start
 		app.logsClient = nil
 	}
