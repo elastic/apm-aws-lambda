@@ -19,6 +19,7 @@ package logsapi_test
 
 import (
 	"elastic/apm-lambda-extension/logsapi"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -81,8 +82,9 @@ func TestSubscribe(t *testing.T) {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var subRequest logsapi.SubscribeRequest
+				require.NoError(t, json.NewDecoder(r.Body).Decode(&subRequest))
 				w.WriteHeader(tc.responseHeader)
-
 			}))
 			defer s.Close()
 
