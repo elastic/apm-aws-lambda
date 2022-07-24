@@ -18,6 +18,7 @@
 package logsapi_test
 
 import (
+	"bytes"
 	"elastic/apm-lambda-extension/logsapi"
 	"encoding/json"
 	"net/http"
@@ -100,6 +101,56 @@ func TestSubscribe(t *testing.T) {
 				require.NoError(t, c.StartService([]logsapi.EventType{logsapi.Platform}, "foo"))
 			}
 
+			require.NoError(t, c.Shutdown())
+		})
+	}
+}
+
+func TestSubscribeAWSRequest(t *testing.T) {
+	addr := "localhost:8080"
+
+	testCases := map[string]struct {
+		opts []logsapi.ClientOption
+	}{
+		"valid response": {
+			opts: []logsapi.ClientOption{
+				logsapi.WithListenerAddress(addr),
+			},
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var subRequest logsapi.SubscribeRequest
+				require.NoError(t, json.NewDecoder(r.Body).Decode(&subRequest))
+				_, err := url.ParseRequestURI(subRequest.Destination.URI)
+				require.NoError(t, err)
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer s.Close()
+
+			c, err := logsapi.NewClient(append(tc.opts, logsapi.WithLogsAPIBaseURL(s.URL), logsapi.WithLogBuffer(1))...)
+			require.NoError(t, err)
+			require.NoError(t, c.StartService([]logsapi.EventType{logsapi.Platform}, "testID"))
+
+			// Create a request to send to the logs listener
+			platformDoneEvent := `{
+		"time": "2021-02-04T20:00:05.123Z",
+		"type": "platform.runtimeDone",
+		"record": {
+		   "requestId":"6f7f0961f83442118a7af6fe80b88",
+		   "status": "success"
+		}
+	}`
+			body := []byte(`[` + platformDoneEvent + `]`)
+			req, err := http.NewRequest(http.MethodGet, "http://"+addr, bytes.NewReader(body))
+			require.NoError(t, err)
+
+			// Send the request to the logs listener
+			rsp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, rsp.StatusCode)
+			require.NoError(t, rsp.Body.Close())
 			require.NoError(t, c.Shutdown())
 		})
 	}
