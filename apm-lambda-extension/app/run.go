@@ -66,11 +66,20 @@ func (app *App) Run(ctx context.Context) error {
 	// Use a wait group to ensure the background go routine sending to the APM server
 	// completes before signaling that the extension is ready for the next invocation.
 
-	if err := app.logsClient.StartService([]logsapi.EventType{logsapi.Platform}, app.extensionClient.ExtensionID); err != nil {
-		extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
+	if app.logsClient != nil {
+		if err := app.logsClient.StartService([]logsapi.EventType{logsapi.Platform}, app.extensionClient.ExtensionID); err != nil {
+			extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
 
-		// disable logs API if the service failed to start
-		app.logsClient = nil
+			// disable logs API if the service failed to start
+			app.logsClient = nil
+		} else {
+			// Remember to shutdown the log service if available.
+			defer func() {
+				if err := app.logsClient.Shutdown(); err != nil {
+					extension.Log.Warnf("failed to shutdown the log service: %v", err)
+				}
+			}()
+		}
 	}
 
 	// The previous event id is used to validate the received Lambda metrics
@@ -83,13 +92,6 @@ func (app *App) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			extension.Log.Info("Received a signal, exiting...")
-
-			// Remember to shutdown the log service if available.
-			if app.logsClient != nil {
-				if err := app.logsClient.Shutdown(); err != nil {
-					extension.Log.Warnf("failed to shutdown the log service: %v", err)
-				}
-			}
 
 			return nil
 		default:
