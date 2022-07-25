@@ -19,6 +19,7 @@ package logsapi
 
 import (
 	"context"
+	"elastic/apm-lambda-extension/extension"
 	"errors"
 	"fmt"
 	"net"
@@ -70,20 +71,26 @@ func (lc *Client) StartService(eventTypes []EventType, extensionID string) error
 
 	_, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		lc.Shutdown()
+		if err := lc.Shutdown(); err != nil {
+			extension.Log.Warnf("failed to shutdown the server: %v", err)
+		}
 		return fmt.Errorf("failed to retrieve port from address %s: %w", addr, err)
 	}
 
 	host, _, err := net.SplitHostPort(lc.listenerAddr)
 	if err != nil {
-		lc.Shutdown()
+		if err := lc.Shutdown(); err != nil {
+			extension.Log.Warnf("failed to shutdown the server: %v", err)
+		}
 		return fmt.Errorf("failed to retrieve host from address %s: %w", lc.listenerAddr, err)
 	}
 
 	uri := fmt.Sprintf("http://%s", net.JoinHostPort(host, port))
 
 	if err := lc.subscribe(eventTypes, extensionID, uri); err != nil {
-		lc.Shutdown()
+		if err := lc.Shutdown(); err != nil {
+			extension.Log.Warnf("failed to shutdown the server: %v", err)
+		}
 		return err
 	}
 
