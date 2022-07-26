@@ -31,8 +31,8 @@ import (
 
 type extensionConfig struct {
 	apmServerUrl                string
-	apmServerSecretToken        string
-	apmServerApiKey             string
+	ApmServerSecretToken        string
+	ApmServerApiKey             string
 	dataReceiverServerPort      string
 	SendStrategy                SendStrategy
 	dataReceiverTimeoutSeconds  int
@@ -157,8 +157,8 @@ func ProcessEnv(manager secretManager) *extensionConfig {
 
 	config := &extensionConfig{
 		apmServerUrl:                normalizedApmLambdaServer,
-		apmServerSecretToken:        apmServerSecretToken,
-		apmServerApiKey:             apmServerApiKey,
+		ApmServerSecretToken:        apmServerSecretToken,
+		ApmServerApiKey:             apmServerApiKey,
 		dataReceiverServerPort:      fmt.Sprintf(":%s", os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT")),
 		SendStrategy:                normalizedSendStrategy,
 		dataReceiverTimeoutSeconds:  dataReceiverTimeoutSeconds,
@@ -172,7 +172,7 @@ func ProcessEnv(manager secretManager) *extensionConfig {
 	if config.apmServerUrl == "" {
 		Log.Fatal("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
 	}
-	if config.apmServerSecretToken == "" && config.apmServerApiKey == "" {
+	if config.ApmServerSecretToken == "" && config.ApmServerApiKey == "" {
 		Log.Warn("ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY not specified")
 	}
 

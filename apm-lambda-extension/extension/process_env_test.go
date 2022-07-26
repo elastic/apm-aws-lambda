@@ -52,7 +52,7 @@ func TestProcessEnv(t *testing.T) {
 		t.Fail()
 	}
 
-	if config.apmServerSecretToken != "bar" {
+	if config.ApmServerSecretToken != "bar" {
 		t.Log("Secret Token not set correctly")
 		t.Fail()
 	}
@@ -109,7 +109,7 @@ func TestProcessEnv(t *testing.T) {
 
 	t.Setenv("ELASTIC_APM_API_KEY", "foo")
 	config = ProcessEnv(sm)
-	if config.apmServerApiKey != "foo" {
+	if config.ApmServerApiKey != "foo" {
 		t.Log("API Key not set correctly")
 		t.Fail()
 	}
@@ -153,15 +153,15 @@ func TestGetSecretCalled(t *testing.T) {
 	sm := new(mockSecretManager)
 
 	config := ProcessEnv(sm)
-	assert.Equal(t, "secrettoken", config.apmServerSecretToken)
-	assert.Equal(t, "apikey", config.apmServerApiKey)
+	assert.Equal(t, "secrettoken", config.ApmServerSecretToken)
+	assert.Equal(t, "apikey", config.ApmServerApiKey)
 
 	t.Setenv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID", "")
 	t.Setenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID", "")
 
 	config = ProcessEnv(sm)
-	assert.Equal(t, "unmanagedsecret", config.apmServerSecretToken)
-	assert.Equal(t, "unmanagedapikey", config.apmServerApiKey)
+	assert.Equal(t, "unmanagedsecret", config.ApmServerSecretToken)
+	assert.Equal(t, "unmanagedapikey", config.ApmServerApiKey)
 }
 
 type mockSecretManager struct{}

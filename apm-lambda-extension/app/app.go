@@ -18,9 +18,13 @@
 package app
 
 import (
+	"elastic/apm-lambda-extension/apm"
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/logsapi"
 	"fmt"
+	"os"
+	"strconv"
+	"time"
 )
 
 // App is the main application.
@@ -28,6 +32,7 @@ type App struct {
 	extensionName   string
 	extensionClient *extension.Client
 	logsClient      *logsapi.Client
+	apmClient       *apm.Client
 }
 
 // New returns an App or an error if the
@@ -57,5 +62,50 @@ func New(opts ...configOption) (*App, error) {
 		app.logsClient = lc
 	}
 
+	var apmOpts []apm.Option
+
+	receiverTimeoutSeconds, err := getIntFromEnvIfAvailable("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
+	if err != nil {
+		return nil, err
+	}
+	if receiverTimeoutSeconds != 0 {
+		apmOpts = append(apmOpts, apm.WithReceiverTimeout(time.Duration(receiverTimeoutSeconds)*time.Second))
+	}
+
+	dataForwarderTimeoutSeconds, err := getIntFromEnvIfAvailable("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS")
+	if err != nil {
+		return nil, err
+	}
+	if dataForwarderTimeoutSeconds != 0 {
+		apmOpts = append(apmOpts, apm.WithDataForwarderTimeout(time.Duration(dataForwarderTimeoutSeconds)*time.Second))
+	}
+
+	if port := os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"); port != "" {
+		apmOpts = append(apmOpts, apm.WithReceiverAddress(fmt.Sprintf(":%s", port)))
+	}
+
+	apmOpts = append(apmOpts, apm.WithURL(os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")))
+
+	ac, err := apm.NewClient(apmOpts...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	app.apmClient = ac
+
 	return app, nil
+}
+
+func getIntFromEnvIfAvailable(name string) (int, error) {
+	strValue := os.Getenv(name)
+	if strValue == "" {
+		return 0, nil
+	}
+
+	value, err := strconv.Atoi(strValue)
+	if err != nil {
+		return -1, err
+	}
+	return value, nil
 }

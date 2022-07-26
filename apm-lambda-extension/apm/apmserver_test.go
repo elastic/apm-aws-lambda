@@ -15,22 +15,23 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package extension
+package apm_test
 
 import (
 	"compress/gzip"
 	"context"
+	"elastic/apm-lambda-extension/apm"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPostToApmServerDataCompressed(t *testing.T) {
-
 	s := "A long time ago in a galaxy far, far away..."
 
 	// Compress the data
@@ -52,12 +53,12 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 	}()
 
 	// Create AgentData struct with compressed data
-	data, _ := ioutil.ReadAll(pr)
-	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
+	data, _ := io.ReadAll(pr)
+	agentData := apm.AgentData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes, _ := ioutil.ReadAll(r.Body)
+		bytes, _ := io.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		w.WriteHeader(http.StatusAccepted)
@@ -68,18 +69,17 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
-	}
-	transport := InitApmServerTransport(&config)
-	err := transport.PostToApmServer(context.Background(), agentData)
-	assert.Equal(t, nil, err)
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+	)
+	require.NoError(t, err)
+	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
 }
 
 func TestPostToApmServerDataNotCompressed(t *testing.T) {
 	s := "A long time ago in a galaxy far, far away..."
 	body := []byte(s)
-	agentData := AgentData{Data: body, ContentEncoding: ""}
+	agentData := apm.AgentData{Data: body, ContentEncoding: ""}
 
 	// Compress the data, so it can be compared with what
 	// the apm server receives
@@ -102,8 +102,8 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestBytes, _ := ioutil.ReadAll(r.Body)
-		compressedBytes, _ := ioutil.ReadAll(pr)
+		requestBytes, _ := io.ReadAll(r.Body)
+		compressedBytes, _ := io.ReadAll(pr)
 		assert.Equal(t, string(compressedBytes), string(requestBytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		w.WriteHeader(http.StatusAccepted)
@@ -114,94 +114,109 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
-	}
-	transport := InitApmServerTransport(&config)
-	err := transport.PostToApmServer(context.Background(), agentData)
-	assert.Equal(t, nil, err)
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+	)
+	require.NoError(t, err)
+	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
 }
 
 func TestGracePeriod(t *testing.T) {
-	transport := InitApmServerTransport(&extensionConfig{})
+	apmClient, err := apm.NewClient(
+		apm.WithURL("https://example.com"),
+	)
+	require.NoError(t, err)
 
-	transport.reconnectionCount = 0
-	val0 := transport.computeGracePeriod().Seconds()
+	apmClient.ReconnectionCount = 0
+	val0 := apmClient.ComputeGracePeriod().Seconds()
 	assert.Equal(t, val0, float64(0))
 
-	transport.reconnectionCount = 1
-	val1 := transport.computeGracePeriod().Seconds()
+	apmClient.ReconnectionCount = 1
+	val1 := apmClient.ComputeGracePeriod().Seconds()
 	assert.InDelta(t, val1, float64(1), 0.1*1)
 
-	transport.reconnectionCount = 2
-	val2 := transport.computeGracePeriod().Seconds()
+	apmClient.ReconnectionCount = 2
+	val2 := apmClient.ComputeGracePeriod().Seconds()
 	assert.InDelta(t, val2, float64(4), 0.1*4)
 
-	transport.reconnectionCount = 3
-	val3 := transport.computeGracePeriod().Seconds()
+	apmClient.ReconnectionCount = 3
+	val3 := apmClient.ComputeGracePeriod().Seconds()
 	assert.InDelta(t, val3, float64(9), 0.1*9)
 
-	transport.reconnectionCount = 4
-	val4 := transport.computeGracePeriod().Seconds()
+	apmClient.ReconnectionCount = 4
+	val4 := apmClient.ComputeGracePeriod().Seconds()
 	assert.InDelta(t, val4, float64(16), 0.1*16)
 
-	transport.reconnectionCount = 5
-	val5 := transport.computeGracePeriod().Seconds()
+	apmClient.ReconnectionCount = 5
+	val5 := apmClient.ComputeGracePeriod().Seconds()
 	assert.InDelta(t, val5, float64(25), 0.1*25)
 
-	transport.reconnectionCount = 6
-	val6 := transport.computeGracePeriod().Seconds()
+	apmClient.ReconnectionCount = 6
+	val6 := apmClient.ComputeGracePeriod().Seconds()
 	assert.InDelta(t, val6, float64(36), 0.1*36)
 
-	transport.reconnectionCount = 7
-	val7 := transport.computeGracePeriod().Seconds()
+	apmClient.ReconnectionCount = 7
+	val7 := apmClient.ComputeGracePeriod().Seconds()
 	assert.InDelta(t, val7, float64(36), 0.1*36)
 }
 
 func TestSetHealthyTransport(t *testing.T) {
-	transport := InitApmServerTransport(&extensionConfig{})
-	transport.SetApmServerTransportState(context.Background(), Healthy)
-	assert.True(t, transport.status == Healthy)
-	assert.Equal(t, transport.reconnectionCount, -1)
+	apmClient, err := apm.NewClient(
+		apm.WithURL("https://example.com"),
+	)
+	require.NoError(t, err)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Healthy)
+	assert.True(t, apmClient.Status == apm.Healthy)
+	assert.Equal(t, apmClient.ReconnectionCount, -1)
 }
 
 func TestSetFailingTransport(t *testing.T) {
 	// By explicitly setting the reconnection count to 0, we ensure that the grace period will not be 0
 	// and avoid a race between reaching the pending status and the test assertion.
-	transport := InitApmServerTransport(&extensionConfig{})
-	transport.reconnectionCount = 0
-	transport.SetApmServerTransportState(context.Background(), Failing)
-	assert.True(t, transport.status == Failing)
-	assert.Equal(t, transport.reconnectionCount, 1)
+	apmClient, err := apm.NewClient(
+		apm.WithURL("https://example.com"),
+	)
+	require.NoError(t, err)
+	apmClient.ReconnectionCount = 0
+	apmClient.SetApmServerTransportState(context.Background(), apm.Failing)
+	assert.True(t, apmClient.Status == apm.Failing)
+	assert.Equal(t, apmClient.ReconnectionCount, 1)
 }
 
 func TestSetPendingTransport(t *testing.T) {
-	transport := InitApmServerTransport(&extensionConfig{})
-	transport.SetApmServerTransportState(context.Background(), Healthy)
-	transport.SetApmServerTransportState(context.Background(), Failing)
-	for {
-		if transport.status != Failing {
-			break
-		}
-	}
-	assert.True(t, transport.status == Pending)
-	assert.Equal(t, transport.reconnectionCount, 0)
+	apmClient, err := apm.NewClient(
+		apm.WithURL("https://example.com"),
+	)
+	require.NoError(t, err)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Healthy)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Failing)
+	require.Eventually(t, func() bool {
+		return apmClient.Status != apm.Failing
+	}, 1*time.Second, 50*time.Millisecond)
+	assert.True(t, apmClient.Status == apm.Pending)
+	assert.Equal(t, apmClient.ReconnectionCount, 0)
 }
 
 func TestSetPendingTransportExplicitly(t *testing.T) {
-	transport := InitApmServerTransport(&extensionConfig{})
-	transport.SetApmServerTransportState(context.Background(), Healthy)
-	transport.SetApmServerTransportState(context.Background(), Pending)
-	assert.True(t, transport.status == Healthy)
-	assert.Equal(t, transport.reconnectionCount, -1)
+	apmClient, err := apm.NewClient(
+		apm.WithURL("https://example.com"),
+	)
+	require.NoError(t, err)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Healthy)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Pending)
+	assert.True(t, apmClient.Status == apm.Healthy)
+	assert.Equal(t, apmClient.ReconnectionCount, -1)
 }
 
 func TestSetInvalidTransport(t *testing.T) {
-	transport := InitApmServerTransport(&extensionConfig{})
-	transport.SetApmServerTransportState(context.Background(), Healthy)
-	transport.SetApmServerTransportState(context.Background(), "Invalid")
-	assert.True(t, transport.status == Healthy)
-	assert.Equal(t, transport.reconnectionCount, -1)
+	apmClient, err := apm.NewClient(
+		apm.WithURL("https://example.com"),
+	)
+	require.NoError(t, err)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Healthy)
+	apmClient.SetApmServerTransportState(context.Background(), "Invalid")
+	assert.True(t, apmClient.Status == apm.Healthy)
+	assert.Equal(t, apmClient.ReconnectionCount, -1)
 }
 
 func TestEnterBackoffFromHealthy(t *testing.T) {
@@ -224,33 +239,33 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 	}()
 
 	// Create AgentData struct with compressed data
-	data, _ := ioutil.ReadAll(pr)
-	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
+	data, _ := io.ReadAll(pr)
+	agentData := apm.AgentData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes, _ := ioutil.ReadAll(r.Body)
+		bytes, _ := io.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
 			return
 		}
 	}))
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
-	}
-	transport := InitApmServerTransport(&config)
-	transport.SetApmServerTransportState(context.Background(), Healthy)
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+	)
+	require.NoError(t, err)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Healthy)
 
 	// Close the APM server early so that POST requests fail and that backoff is enabled
 	apmServer.Close()
 
-	if err := transport.PostToApmServer(context.Background(), agentData); err != nil {
+	if err := apmClient.PostToApmServer(context.Background(), agentData); err != nil {
 		return
 	}
 	// No way to know for sure if failing or pending (0 sec grace period)
-	assert.True(t, transport.status != Healthy)
-	assert.Equal(t, transport.reconnectionCount, 0)
+	assert.True(t, apmClient.Status != apm.Healthy)
+	assert.Equal(t, apmClient.ReconnectionCount, 0)
 }
 
 func TestEnterBackoffFromFailing(t *testing.T) {
@@ -273,12 +288,12 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	}()
 
 	// Create AgentData struct with compressed data
-	data, _ := ioutil.ReadAll(pr)
-	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
+	data, _ := io.ReadAll(pr)
+	agentData := apm.AgentData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes, _ := ioutil.ReadAll(r.Body)
+		bytes, _ := io.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
@@ -289,23 +304,21 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	// Close the APM server early so that POST requests fail and that backoff is enabled
 	apmServer.Close()
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
-	}
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+	)
+	require.NoError(t, err)
 
-	transport := InitApmServerTransport(&config)
-	transport.SetApmServerTransportState(context.Background(), Healthy)
-	transport.SetApmServerTransportState(context.Background(), Failing)
-	for {
-		if transport.status != Failing {
-			break
-		}
-	}
-	assert.Equal(t, transport.status, Pending)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Healthy)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Failing)
+	require.Eventually(t, func() bool {
+		return apmClient.Status != apm.Failing
+	}, 1*time.Second, 50*time.Millisecond)
+	assert.Equal(t, apmClient.Status, apm.Pending)
 
-	assert.Error(t, transport.PostToApmServer(context.Background(), agentData))
-	assert.Equal(t, transport.status, Failing)
-	assert.Equal(t, transport.reconnectionCount, 1)
+	assert.Error(t, apmClient.PostToApmServer(context.Background(), agentData))
+	assert.Equal(t, apmClient.Status, apm.Failing)
+	assert.Equal(t, apmClient.ReconnectionCount, 1)
 }
 
 func TestAPMServerRecovery(t *testing.T) {
@@ -328,12 +341,13 @@ func TestAPMServerRecovery(t *testing.T) {
 	}()
 
 	// Create AgentData struct with compressed data
-	data, _ := ioutil.ReadAll(pr)
-	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
+	data, _ := io.ReadAll(pr)
+	agentData := apm.AgentData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes, _ := ioutil.ReadAll(r.Body)
+		bytes, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		w.WriteHeader(http.StatusAccepted)
@@ -343,23 +357,20 @@ func TestAPMServerRecovery(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
-	}
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+	)
+	require.NoError(t, err)
 
-	transport := InitApmServerTransport(&config)
-	transport.SetApmServerTransportState(context.Background(), Healthy)
-	transport.SetApmServerTransportState(context.Background(), Failing)
-	for {
-		if transport.status != Failing {
-			break
-		}
-	}
-	assert.Equal(t, transport.status, Pending)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Healthy)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Failing)
+	require.Eventually(t, func() bool {
+		return apmClient.Status != apm.Failing
+	}, 1*time.Second, 50*time.Millisecond)
+	assert.Equal(t, apmClient.Status, apm.Pending)
 
-	assert.NoError(t, transport.PostToApmServer(context.Background(), agentData))
-	assert.Equal(t, transport.status, Healthy)
-	assert.Equal(t, transport.reconnectionCount, -1)
+	assert.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	assert.Equal(t, apmClient.Status, apm.Healthy)
 }
 
 func TestAPMServerAuthFails(t *testing.T) {
@@ -383,7 +394,7 @@ func TestAPMServerAuthFails(t *testing.T) {
 
 	// Create AgentData struct with compressed data
 	data, _ := io.ReadAll(pr)
-	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
+	agentData := apm.AgentData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -391,21 +402,18 @@ func TestAPMServerAuthFails(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
-	}
-
-	transport := InitApmServerTransport(&config)
-	transport.SetApmServerTransportState(context.Background(), Healthy)
-	transport.SetApmServerTransportState(context.Background(), Failing)
-	for {
-		if transport.status != Failing {
-			break
-		}
-	}
-	assert.Equal(t, transport.status, Pending)
-	assert.NoError(t, transport.PostToApmServer(context.Background(), agentData))
-	assert.NotEqual(t, transport.status, Healthy)
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+	)
+	require.NoError(t, err)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Healthy)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Failing)
+	require.Eventually(t, func() bool {
+		return apmClient.Status != apm.Failing
+	}, 1*time.Second, 50*time.Millisecond)
+	assert.Equal(t, apmClient.Status, apm.Pending)
+	assert.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	assert.NotEqual(t, apmClient.Status, apm.Healthy)
 }
 
 func TestContinuedAPMServerFailure(t *testing.T) {
@@ -428,12 +436,12 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 	}()
 
 	// Create AgentData struct with compressed data
-	data, _ := ioutil.ReadAll(pr)
-	agentData := AgentData{Data: data, ContentEncoding: "gzip"}
+	data, _ := io.ReadAll(pr)
+	agentData := apm.AgentData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes, _ := ioutil.ReadAll(r.Body)
+		bytes, _ := io.ReadAll(r.Body)
 		assert.Equal(t, string(data), string(bytes))
 		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
 		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
@@ -442,29 +450,24 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 	}))
 	apmServer.Close()
 
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
-	}
-
-	transport := InitApmServerTransport(&config)
-	transport.SetApmServerTransportState(context.Background(), Healthy)
-	transport.SetApmServerTransportState(context.Background(), Failing)
-	for {
-		if transport.status != Failing {
-			break
-		}
-	}
-	assert.Equal(t, transport.status, Pending)
-	assert.Error(t, transport.PostToApmServer(context.Background(), agentData))
-	assert.Equal(t, transport.status, Failing)
-	assert.Equal(t, transport.reconnectionCount, 1)
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+	)
+	require.NoError(t, err)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Healthy)
+	apmClient.SetApmServerTransportState(context.Background(), apm.Failing)
+	require.Eventually(t, func() bool {
+		return apmClient.Status != apm.Failing
+	}, 1*time.Second, 50*time.Millisecond)
+	assert.Equal(t, apmClient.Status, apm.Pending)
+	assert.Error(t, apmClient.PostToApmServer(context.Background(), agentData))
+	assert.Equal(t, apmClient.Status, apm.Failing)
 }
 
 func BenchmarkPostToAPM(b *testing.B) {
-
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, err := io.Copy(ioutil.Discard, r.Body); err != nil {
+		if _, err := io.Copy(io.Discard, r.Body); err != nil {
 			return
 		}
 		if err := r.Body.Close(); err != nil {
@@ -475,11 +478,11 @@ func BenchmarkPostToAPM(b *testing.B) {
 			return
 		}
 	}))
-	config := extensionConfig{
-		apmServerUrl: apmServer.URL + "/",
-	}
 
-	transport := InitApmServerTransport(&config)
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+	)
+	require.NoError(b, err)
 
 	// Copied from https://github.com/elastic/apm-server/blob/master/testdata/intake-v2/transactions.ndjson.
 	benchBody := []byte(`{"metadata": {"service": {"name": "1234_service-12a3","node": {"configured_name": "node-123"},"version": "5.1.3","environment": "staging","language": {"name": "ecmascript","version": "8"},"runtime": {"name": "node","version": "8.0.0"},"framework": {"name": "Express","version": "1.2.3"},"agent": {"name": "elastic-node","version": "3.14.0"}},"user": {"id": "123user", "username": "bar", "email": "bar@user.com"}, "labels": {"tag0": null, "tag1": "one", "tag2": 2}, "process": {"pid": 1234,"ppid": 6789,"title": "node","argv": ["node","server.js"]},"system": {"hostname": "prod1.example.com","architecture": "x64","platform": "darwin", "container": {"id": "container-id"}, "kubernetes": {"namespace": "namespace1", "pod": {"uid": "pod-uid", "name": "pod-name"}, "node": {"name": "node-name"}}},"cloud":{"account":{"id":"account_id","name":"account_name"},"availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"project":{"id":"project_id","name":"project_name"},"provider":"cloud_provider","region":"cloud_region","service":{"name":"lambda"}}}}
@@ -489,11 +492,11 @@ func BenchmarkPostToAPM(b *testing.B) {
 {"transaction": { "id": "00xxxxFFaaaa1234", "trace_id": "0123456789abcdef0123456789abcdef", "name": "amqp receive", "parent_id": "abcdefabcdef01234567", "type": "messaging", "duration": 3, "span_count": { "started": 1 }, "context": {"message": {"queue": { "name": "new_users"}, "age":{ "ms": 1577958057123}, "headers": {"user_id": "1ax3", "involved_services": ["user", "auth"]}, "body": "user created", "routing_key": "user-created-transaction"}},"session":{"id":"sunday","sequence":123}}}
 {"transaction": { "name": "july-2021-delete-after-july-31", "type": "lambda", "result": "success", "id": "142e61450efb8574", "trace_id": "eb56529a1f461c5e7e2f66ecb075e983", "subtype": null, "action": null, "duration": 38.853, "timestamp": 1631736666365048, "sampled": true, "context": { "cloud": { "origin": { "account": { "id": "abc123" }, "provider": "aws", "region": "us-east-1", "service": { "name": "serviceName" } } }, "service": { "origin": { "id": "abc123", "name": "service-name", "version": "1.0" } }, "user": {}, "tags": {}, "custom": { } }, "sync": true, "span_count": { "started": 0 }, "outcome": "unknown", "faas": { "coldstart": false, "execution": "2e13b309-23e1-417f-8bf7-074fc96bc683", "trigger": { "request_id": "FuH2Cir_vHcEMUA=", "type": "http" } }, "sample_rate": 1 } }
 `)
-	agentData := AgentData{Data: benchBody, ContentEncoding: ""}
+	agentData := apm.AgentData{Data: benchBody, ContentEncoding: ""}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := transport.PostToApmServer(context.Background(), agentData); err != nil {
+		if err := apmClient.PostToApmServer(context.Background(), agentData); err != nil {
 			b.Fatal(err)
 		}
 	}

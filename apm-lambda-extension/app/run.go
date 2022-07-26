@@ -19,6 +19,7 @@ package app
 
 import (
 	"context"
+	"elastic/apm-lambda-extension/apm"
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/logsapi"
 	"sync"
@@ -39,6 +40,10 @@ func (app *App) Run(ctx context.Context) error {
 	config := extension.ProcessEnv(manager)
 	extension.Log.Level.SetLevel(config.LogLevel)
 
+	// TODO move to functional options
+	app.apmClient.ServerAPIKey = config.ApmServerApiKey
+	app.apmClient.ServerSecretToken = config.ApmServerSecretToken
+
 	// register extension with AWS Extension API
 	res, err := app.extensionClient.Register(ctx, app.extensionName)
 	if err != nil {
@@ -55,16 +60,16 @@ func (app *App) Run(ctx context.Context) error {
 	}
 	extension.Log.Debugf("Register response: %v", extension.PrettyPrint(res))
 
-	// Init APM Server Transport struct and start http server to receive data from agent
-	apmServerTransport := extension.InitApmServerTransport(config)
-	agentDataServer, err := extension.StartHttpServer(ctx, apmServerTransport)
+	// start http server to receive data from agent
+	err = app.apmClient.StartReceiver()
 	if err != nil {
 		extension.Log.Errorf("Could not start APM data receiver : %v", err)
 	}
-	defer agentDataServer.Close()
-
-	// Use a wait group to ensure the background go routine sending to the APM server
-	// completes before signaling that the extension is ready for the next invocation.
+	defer func() {
+		if err := app.apmClient.Shutdown(); err != nil {
+			extension.Log.Warnf("Error while shutting down the apm receiver: %v", err)
+		}
+	}()
 
 	if app.logsClient != nil {
 		if err := app.logsClient.StartService([]logsapi.EventType{logsapi.Platform}, app.extensionClient.ExtensionID); err != nil {
@@ -86,7 +91,7 @@ func (app *App) Run(ctx context.Context) error {
 	var prevEvent *extension.NextEventResponse
 	// This data structure contains metadata tied to the current Lambda instance. If empty, it is populated once for each
 	// active Lambda environment
-	metadataContainer := extension.MetadataContainer{}
+	metadataContainer := apm.MetadataContainer{}
 
 	for {
 		select {
@@ -95,8 +100,10 @@ func (app *App) Run(ctx context.Context) error {
 
 			return nil
 		default:
+			// Use a wait group to ensure the background go routine sending to the APM server
+			// completes before signaling that the extension is ready for the next invocation.
 			var backgroundDataSendWg sync.WaitGroup
-			event := app.processEvent(ctx, apmServerTransport, &backgroundDataSendWg, prevEvent, &metadataContainer)
+			event := app.processEvent(ctx, &backgroundDataSendWg, prevEvent, &metadataContainer)
 			if event.EventType == extension.Shutdown {
 				extension.Log.Info("Received shutdown event, exiting...")
 				return nil
@@ -105,7 +112,7 @@ func (app *App) Run(ctx context.Context) error {
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
 				// Flush APM data now that the function invocation has completed
-				apmServerTransport.FlushAPMData(ctx)
+				app.apmClient.FlushAPMData(ctx)
 			}
 			prevEvent = event
 		}
@@ -114,10 +121,9 @@ func (app *App) Run(ctx context.Context) error {
 
 func (app *App) processEvent(
 	ctx context.Context,
-	apmServerTransport *extension.ApmServerTransport,
 	backgroundDataSendWg *sync.WaitGroup,
 	prevEvent *extension.NextEventResponse,
-	metadataContainer *extension.MetadataContainer,
+	metadataContainer *apm.MetadataContainer,
 ) *extension.NextEventResponse {
 
 	// Invocation context
@@ -149,12 +155,12 @@ func (app *App) processEvent(
 	}
 
 	// APM Data Processing
-	apmServerTransport.AgentDoneSignal = make(chan struct{})
-	defer close(apmServerTransport.AgentDoneSignal)
+	app.apmClient.AgentDoneSignal = make(chan struct{})
+	defer close(app.apmClient.AgentDoneSignal)
 	backgroundDataSendWg.Add(1)
 	go func() {
 		defer backgroundDataSendWg.Done()
-		if err := apmServerTransport.ForwardApmData(invocationCtx, metadataContainer); err != nil {
+		if err := app.apmClient.ForwardApmData(invocationCtx, metadataContainer); err != nil {
 			extension.Log.Error(err)
 		}
 	}()
@@ -164,7 +170,7 @@ func (app *App) processEvent(
 	runtimeDone := make(chan struct{})
 	if app.logsClient != nil {
 		go func() {
-			if err := app.logsClient.ProcessLogs(invocationCtx, event.RequestID, apmServerTransport, metadataContainer, runtimeDone, prevEvent); err != nil {
+			if err := app.logsClient.ProcessLogs(invocationCtx, event.RequestID, app.apmClient, metadataContainer, runtimeDone, prevEvent); err != nil {
 				extension.Log.Errorf("Error while processing Lambda Logs ; %v", err)
 			} else {
 				close(runtimeDone)
@@ -190,7 +196,7 @@ func (app *App) processEvent(
 	// 3) [Backup 2] If all else fails, the extension relies of the timeout of the Lambda function to interrupt itself 100 ms before the specified deadline.
 	// This time interval is large enough to attempt a last flush attempt (if SendStrategy == syncFlush) before the environment gets shut down.
 	select {
-	case <-apmServerTransport.AgentDoneSignal:
+	case <-app.apmClient.AgentDoneSignal:
 		extension.Log.Debug("Received agent done signal")
 	case <-runtimeDone:
 		extension.Log.Debug("Received runtimeDone signal")

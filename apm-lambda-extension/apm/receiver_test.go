@@ -15,13 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package extension
+package apm_test
 
 import (
 	"bytes"
-	"context"
-	"errors"
-	"io/ioutil"
+	"elastic/apm-lambda-extension/apm"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -30,6 +29,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestInfoProxy(t *testing.T) {
@@ -43,37 +43,32 @@ func TestInfoProxy(t *testing.T) {
 			assert.Equal(t, headers[key], r.Header[key][0])
 		}
 		w.Header().Add("test", "header")
-		if _, err := w.Write([]byte(`{"foo": "bar"}`)); err != nil {
-			t.Fail()
-			return
-		}
+		_, err := w.Write([]byte(`{"foo": "bar"}`))
+		require.NoError(t, err)
 	}))
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		apmServerSecretToken:       "foo",
-		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
-	}
-	transport := InitApmServerTransport(&config)
-	agentDataServer, err := StartHttpServer(context.Background(), transport)
-	if err != nil {
-		t.Fail()
-		return
-	}
-	defer agentDataServer.Close()
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+		apm.WithSecretToken("foo"),
+		apm.WithAPIKey("bar"),
+		apm.WithReceiverAddress(":1234"),
+		apm.WithReceiverTimeout(15*time.Second),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, apmClient.StartReceiver())
+	defer func() {
+		require.NoError(t, apmClient.Shutdown())
+	}()
 
 	hosts, _ := net.LookupHost("localhost")
 	url := "http://" + hosts[0] + ":1234"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		t.Logf("Could not create request")
-	}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	require.NoError(t, err)
 	for name, value := range headers {
 		req.Header.Add(name, value)
 	}
@@ -81,59 +76,49 @@ func TestInfoProxy(t *testing.T) {
 	// Send the request to the extension
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if err != nil {
-		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
-		t.Fail()
-	} else {
-		body, _ := ioutil.ReadAll(resp.Body)
-		assert.Equal(t, string(body), wantResp)
-		assert.Equal(t, "header", resp.Header.Get("test"))
-		resp.Body.Close()
-	}
+	require.NoError(t, err)
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, string(body), wantResp)
+	assert.Equal(t, "header", resp.Header.Get("test"))
+	require.NoError(t, resp.Body.Close())
 }
 
 func TestInfoProxyErrorStatusCode(t *testing.T) {
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(401)
+		w.WriteHeader(http.StatusUnauthorized)
 	}))
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		apmServerSecretToken:       "foo",
-		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
-	}
-	transport := InitApmServerTransport(&config)
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+		apm.WithSecretToken("foo"),
+		apm.WithAPIKey("bar"),
+		apm.WithReceiverAddress(":1234"),
+		apm.WithReceiverTimeout(15*time.Second),
+	)
+	require.NoError(t, err)
 
-	agentDataServer, err := StartHttpServer(context.Background(), transport)
-	if err != nil {
-		t.Fail()
-		return
-	}
-	defer agentDataServer.Close()
+	require.NoError(t, apmClient.StartReceiver())
+	defer func() {
+		require.NoError(t, apmClient.Shutdown())
+	}()
 
 	hosts, _ := net.LookupHost("localhost")
 	url := "http://" + hosts[0] + ":1234"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		t.Logf("Could not create request")
-	}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	require.NoError(t, err)
 
 	// Send the request to the extension
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if err != nil {
-		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
-		t.Fail()
-	} else {
-		assert.Equal(t, 401, resp.StatusCode)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
 func Test_handleInfoRequest(t *testing.T) {
@@ -145,29 +130,26 @@ func Test_handleInfoRequest(t *testing.T) {
 `
 
 	// Create extension config
-	config := extensionConfig{
-		apmServerSecretToken:       "foo",
-		apmServerApiKey:            "bar",
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
-	}
-	transport := InitApmServerTransport(&config)
+	apmClient, err := apm.NewClient(
+		apm.WithURL("https://example.com"),
+		apm.WithSecretToken("foo"),
+		apm.WithAPIKey("bar"),
+		apm.WithReceiverAddress(":1234"),
+		apm.WithReceiverTimeout(15*time.Second),
+	)
+	require.NoError(t, err)
 
 	// Start extension server
-	agentDataServer, err := StartHttpServer(context.Background(), transport)
-	if err != nil {
-		t.Fail()
-		return
-	}
-	defer agentDataServer.Close()
+	require.NoError(t, apmClient.StartReceiver())
+	defer func() {
+		require.NoError(t, apmClient.Shutdown())
+	}()
 
 	// Create a request to send to the extension
 	hosts, _ := net.LookupHost("localhost")
 	url := "http://" + hosts[0] + ":1234/intake/v2/events"
-	req, err := http.NewRequest("POST", url, strings.NewReader(agentRequestBody))
-	if err != nil {
-		t.Logf("Could not create request")
-	}
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(agentRequestBody))
+	require.NoError(t, err)
 	// Add headers to the request
 	for name, value := range headers {
 		req.Header.Add(name, value)
@@ -176,30 +158,8 @@ func Test_handleInfoRequest(t *testing.T) {
 	// Send the request to the extension
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if err != nil {
-		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
-		t.Fail()
-	} else {
-		assert.Equal(t, 202, resp.StatusCode)
-	}
-}
-
-type errReader int
-
-func (errReader) Read(_ []byte) (int, error) {
-	return 0, errors.New("test error")
-}
-
-func Test_handleInfoRequestInvalidBody(t *testing.T) {
-	transport := InitApmServerTransport(&extensionConfig{})
-	mux := http.NewServeMux()
-	urlPath := "/intake/v2/events"
-	mux.HandleFunc(urlPath, handleIntakeV2Events(transport))
-	req := httptest.NewRequest(http.MethodGet, urlPath, errReader(0))
-	recorder := httptest.NewRecorder()
-
-	mux.ServeHTTP(recorder, req)
-	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 }
 
 func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
@@ -211,45 +171,36 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
-	}
-	transport := InitApmServerTransport(&config)
-	transport.AgentDoneSignal = make(chan struct{}, 1)
-	agentDataServer, err := StartHttpServer(context.Background(), transport)
-	if err != nil {
-		t.Fail()
-		return
-	}
-	defer agentDataServer.Close()
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+		apm.WithReceiverAddress(":1234"),
+		apm.WithReceiverTimeout(15*time.Second),
+	)
+	require.NoError(t, err)
+	apmClient.AgentDoneSignal = make(chan struct{}, 1)
+	require.NoError(t, apmClient.StartReceiver())
+	defer func() {
+		require.NoError(t, apmClient.Shutdown())
+	}()
 
 	hosts, _ := net.LookupHost("localhost")
 	url := "http://" + hosts[0] + ":1234/intake/v2/events?flushed=true"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
-	if err != nil {
-		t.Logf("Could not create request")
-	}
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	require.NoError(t, err)
 
 	// Send the request to the extension
 	client := &http.Client{}
 	go func() {
-		if _, err := client.Do(req); err != nil {
-			t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
-			t.Fail()
-		}
+		_, err := client.Do(req)
+		require.NoError(t, err)
 	}()
 
-	timer := time.NewTimer(1 * time.Second)
-	defer timer.Stop()
-
 	select {
-	case <-transport.AgentDoneSignal:
-		<-transport.dataChannel
-	case <-timer.C:
+	case <-apmClient.AgentDoneSignal:
+		<-apmClient.DataChannel
+	case <-time.After(1 * time.Second):
 		t.Log("Timed out waiting for server to send FuncDone signal")
 		t.Fail()
 	}
@@ -264,25 +215,23 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
-	}
-	transport := InitApmServerTransport(&config)
-	transport.AgentDoneSignal = make(chan struct{}, 1)
-	agentDataServer, err := StartHttpServer(context.Background(), transport)
-	if err != nil {
-		t.Fail()
-		return
-	}
-	defer agentDataServer.Close()
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+		apm.WithReceiverAddress(":1234"),
+		apm.WithReceiverTimeout(15*time.Second),
+	)
+	require.NoError(t, err)
+	apmClient.AgentDoneSignal = make(chan struct{}, 1)
+	require.NoError(t, apmClient.StartReceiver())
+	defer func() {
+		require.NoError(t, apmClient.Shutdown())
+	}()
 
 	hosts, _ := net.LookupHost("localhost")
 	url := "http://" + hosts[0] + ":1234/intake/v2/events"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
 		t.Logf("Could not create request")
 	}
@@ -290,12 +239,14 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 	// Send the request to the extension
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	if err != nil {
-		t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
+	require.NoError(t, err)
+	select {
+	case <-apmClient.DataChannel:
+	case <-time.After(1 * time.Second):
+		t.Log("Timed out waiting for server to send FuncDone signal")
 		t.Fail()
 	}
-	<-transport.dataChannel
-	assert.Equal(t, 202, resp.StatusCode)
+	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 }
 
 func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
@@ -307,44 +258,35 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	config := extensionConfig{
-		apmServerUrl:               apmServer.URL,
-		dataReceiverServerPort:     ":1234",
-		dataReceiverTimeoutSeconds: 15,
-	}
-	transport := InitApmServerTransport(&config)
-	transport.AgentDoneSignal = make(chan struct{}, 1)
-	agentDataServer, err := StartHttpServer(context.Background(), transport)
-	if err != nil {
-		t.Fail()
-		return
-	}
-	defer agentDataServer.Close()
+	apmClient, err := apm.NewClient(
+		apm.WithURL(apmServer.URL),
+		apm.WithReceiverAddress(":1234"),
+		apm.WithReceiverTimeout(15*time.Second),
+	)
+	require.NoError(t, err)
+	apmClient.AgentDoneSignal = make(chan struct{}, 1)
+	require.NoError(t, apmClient.StartReceiver())
+	defer func() {
+		require.NoError(t, apmClient.Shutdown())
+	}()
 
 	hosts, _ := net.LookupHost("localhost")
 	url := "http://" + hosts[0] + ":1234/intake/v2/events?flushed=true"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
-	if err != nil {
-		t.Logf("Could not create request")
-	}
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	require.NoError(t, err)
 
 	// Send the request to the extension
 	client := &http.Client{}
 	go func() {
-		if _, err := client.Do(req); err != nil {
-			t.Logf("Error fetching %s, [%v]", agentDataServer.Addr, err)
-			t.Fail()
-		}
+		_, err := client.Do(req)
+		require.NoError(t, err)
 	}()
 
-	timer := time.NewTimer(1 * time.Second)
-	defer timer.Stop()
-
 	select {
-	case <-transport.AgentDoneSignal:
-	case <-timer.C:
+	case <-apmClient.AgentDoneSignal:
+	case <-time.After(1 * time.Second):
 		t.Log("Timed out waiting for server to send FuncDone signal")
 		t.Fail()
 	}
