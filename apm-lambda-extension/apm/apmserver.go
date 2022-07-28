@@ -31,7 +31,7 @@ import (
 	"time"
 )
 
-// StartBackgroundApmDataForwarding Receive agent data as it comes in and post it to the APM server.
+// ForwardApmData receives agent data as it comes in and posts it to the APM server.
 // Stop checking for, and sending agent data when the function invocation
 // has completed, signaled via a channel.
 func (c *Client) ForwardApmData(ctx context.Context, metadataContainer *MetadataContainer) error {
