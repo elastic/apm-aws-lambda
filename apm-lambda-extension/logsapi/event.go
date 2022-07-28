@@ -19,7 +19,7 @@ package logsapi
 
 import (
 	"context"
-	"elastic/apm-lambda-extension/apm"
+	"elastic/apm-lambda-extension/apmproxy"
 	"elastic/apm-lambda-extension/extension"
 	"time"
 )
@@ -67,8 +67,8 @@ type LogEventRecord struct {
 func (lc *Client) ProcessLogs(
 	ctx context.Context,
 	requestID string,
-	apmClient *apm.Client,
-	metadataContainer *apm.MetadataContainer,
+	apmClient *apmproxy.Client,
+	metadataContainer *apmproxy.MetadataContainer,
 	runtimeDoneSignal chan struct{},
 	prevEvent *extension.NextEventResponse,
 ) error {

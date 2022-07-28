@@ -20,7 +20,7 @@ package logsapi
 import (
 	"math"
 
-	"elastic/apm-lambda-extension/apm"
+	"elastic/apm-lambda-extension/apmproxy"
 	"elastic/apm-lambda-extension/extension"
 
 	"go.elastic.co/apm/v2/model"
@@ -63,7 +63,7 @@ func (mc MetricsContainer) MarshalFastJSON(json *fastjson.Writer) error {
 	return nil
 }
 
-func ProcessPlatformReport(metadataContainer *apm.MetadataContainer, functionData *extension.NextEventResponse, platformReport LogEvent) (apm.AgentData, error) {
+func ProcessPlatformReport(metadataContainer *apmproxy.MetadataContainer, functionData *extension.NextEventResponse, platformReport LogEvent) (apmproxy.AgentData, error) {
 	var metricsData []byte
 	metricsContainer := MetricsContainer{
 		Metrics: &model.Metrics{},
@@ -99,7 +99,7 @@ func ProcessPlatformReport(metadataContainer *apm.MetadataContainer, functionDat
 
 	var jsonWriter fastjson.Writer
 	if err := metricsContainer.MarshalFastJSON(&jsonWriter); err != nil {
-		return apm.AgentData{}, err
+		return apmproxy.AgentData{}, err
 	}
 
 	if metadataContainer.Metadata != nil {
@@ -107,5 +107,5 @@ func ProcessPlatformReport(metadataContainer *apm.MetadataContainer, functionDat
 	}
 
 	metricsData = append(metricsData, jsonWriter.Bytes()...)
-	return apm.AgentData{Data: metricsData}, nil
+	return apmproxy.AgentData{Data: metricsData}, nil
 }

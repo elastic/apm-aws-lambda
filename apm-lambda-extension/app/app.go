@@ -18,7 +18,7 @@
 package app
 
 import (
-	"elastic/apm-lambda-extension/apm"
+	"elastic/apm-lambda-extension/apmproxy"
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/logsapi"
 	"fmt"
@@ -32,7 +32,7 @@ type App struct {
 	extensionName   string
 	extensionClient *extension.Client
 	logsClient      *logsapi.Client
-	apmClient       *apm.Client
+	apmClient       *apmproxy.Client
 }
 
 // New returns an App or an error if the
@@ -62,14 +62,14 @@ func New(opts ...configOption) (*App, error) {
 		app.logsClient = lc
 	}
 
-	var apmOpts []apm.Option
+	var apmOpts []apmproxy.Option
 
 	receiverTimeoutSeconds, err := getIntFromEnvIfAvailable("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
 		return nil, err
 	}
 	if receiverTimeoutSeconds != 0 {
-		apmOpts = append(apmOpts, apm.WithReceiverTimeout(time.Duration(receiverTimeoutSeconds)*time.Second))
+		apmOpts = append(apmOpts, apmproxy.WithReceiverTimeout(time.Duration(receiverTimeoutSeconds)*time.Second))
 	}
 
 	dataForwarderTimeoutSeconds, err := getIntFromEnvIfAvailable("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS")
@@ -77,16 +77,16 @@ func New(opts ...configOption) (*App, error) {
 		return nil, err
 	}
 	if dataForwarderTimeoutSeconds != 0 {
-		apmOpts = append(apmOpts, apm.WithDataForwarderTimeout(time.Duration(dataForwarderTimeoutSeconds)*time.Second))
+		apmOpts = append(apmOpts, apmproxy.WithDataForwarderTimeout(time.Duration(dataForwarderTimeoutSeconds)*time.Second))
 	}
 
 	if port := os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"); port != "" {
-		apmOpts = append(apmOpts, apm.WithReceiverAddress(fmt.Sprintf(":%s", port)))
+		apmOpts = append(apmOpts, apmproxy.WithReceiverAddress(fmt.Sprintf(":%s", port)))
 	}
 
-	apmOpts = append(apmOpts, apm.WithURL(os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")))
+	apmOpts = append(apmOpts, apmproxy.WithURL(os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")))
 
-	ac, err := apm.NewClient(apmOpts...)
+	ac, err := apmproxy.NewClient(apmOpts...)
 
 	if err != nil {
 		return nil, err

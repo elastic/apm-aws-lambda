@@ -15,11 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package apm_test
+package apmproxy_test
 
 import (
 	"bytes"
-	"elastic/apm-lambda-extension/apm"
+	"elastic/apm-lambda-extension/apmproxy"
 	"io"
 	"net"
 	"net/http"
@@ -49,12 +49,12 @@ func TestInfoProxy(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	apmClient, err := apm.NewClient(
-		apm.WithURL(apmServer.URL),
-		apm.WithSecretToken("foo"),
-		apm.WithAPIKey("bar"),
-		apm.WithReceiverAddress(":1234"),
-		apm.WithReceiverTimeout(15*time.Second),
+	apmClient, err := apmproxy.NewClient(
+		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithSecretToken("foo"),
+		apmproxy.WithAPIKey("bar"),
+		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverTimeout(15*time.Second),
 	)
 	require.NoError(t, err)
 
@@ -93,12 +93,12 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	apmClient, err := apm.NewClient(
-		apm.WithURL(apmServer.URL),
-		apm.WithSecretToken("foo"),
-		apm.WithAPIKey("bar"),
-		apm.WithReceiverAddress(":1234"),
-		apm.WithReceiverTimeout(15*time.Second),
+	apmClient, err := apmproxy.NewClient(
+		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithSecretToken("foo"),
+		apmproxy.WithAPIKey("bar"),
+		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverTimeout(15*time.Second),
 	)
 	require.NoError(t, err)
 
@@ -130,12 +130,12 @@ func Test_handleInfoRequest(t *testing.T) {
 `
 
 	// Create extension config
-	apmClient, err := apm.NewClient(
-		apm.WithURL("https://example.com"),
-		apm.WithSecretToken("foo"),
-		apm.WithAPIKey("bar"),
-		apm.WithReceiverAddress(":1234"),
-		apm.WithReceiverTimeout(15*time.Second),
+	apmClient, err := apmproxy.NewClient(
+		apmproxy.WithURL("https://example.com"),
+		apmproxy.WithSecretToken("foo"),
+		apmproxy.WithAPIKey("bar"),
+		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverTimeout(15*time.Second),
 	)
 	require.NoError(t, err)
 
@@ -171,10 +171,10 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	apmClient, err := apm.NewClient(
-		apm.WithURL(apmServer.URL),
-		apm.WithReceiverAddress(":1234"),
-		apm.WithReceiverTimeout(15*time.Second),
+	apmClient, err := apmproxy.NewClient(
+		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverTimeout(15*time.Second),
 	)
 	require.NoError(t, err)
 	apmClient.AgentDoneSignal = make(chan struct{}, 1)
@@ -215,10 +215,10 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	apmClient, err := apm.NewClient(
-		apm.WithURL(apmServer.URL),
-		apm.WithReceiverAddress(":1234"),
-		apm.WithReceiverTimeout(15*time.Second),
+	apmClient, err := apmproxy.NewClient(
+		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverTimeout(15*time.Second),
 	)
 	require.NoError(t, err)
 	apmClient.AgentDoneSignal = make(chan struct{}, 1)
@@ -258,10 +258,10 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	defer apmServer.Close()
 
 	// Create extension config and start the server
-	apmClient, err := apm.NewClient(
-		apm.WithURL(apmServer.URL),
-		apm.WithReceiverAddress(":1234"),
-		apm.WithReceiverTimeout(15*time.Second),
+	apmClient, err := apmproxy.NewClient(
+		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverTimeout(15*time.Second),
 	)
 	require.NoError(t, err)
 	apmClient.AgentDoneSignal = make(chan struct{}, 1)

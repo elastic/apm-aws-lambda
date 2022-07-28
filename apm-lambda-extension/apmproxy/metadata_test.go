@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package apm_test
+package apmproxy_test
 
 import (
-	"elastic/apm-lambda-extension/apm"
+	"elastic/apm-lambda-extension/apmproxy"
 	"elastic/apm-lambda-extension/extension"
 	"testing"
 
@@ -37,8 +37,8 @@ func Test_processMetadata(t *testing.T) {
 {"transaction": { "name": "july-2021-delete-after-july-31", "type": "lambda", "result": "success", "id": "142e61450efb8574", "trace_id": "eb56529a1f461c5e7e2f66ecb075e983", "subtype": null, "action": null, "duration": 38.853, "timestamp": 1631736666365048, "sampled": true, "context": { "cloud": { "origin": { "account": { "id": "abc123" }, "provider": "aws", "region": "us-east-1", "service": { "name": "serviceName" } } }, "service": { "origin": { "id": "abc123", "name": "service-name", "version": "1.0" } }, "user": {}, "tags": {}, "custom": { } }, "sync": true, "span_count": { "started": 0 }, "outcome": "unknown", "faas": { "coldstart": false, "execution": "2e13b309-23e1-417f-8bf7-074fc96bc683", "trigger": { "request_id": "FuH2Cir_vHcEMUA=", "type": "http" } }, "sample_rate": 1 } }
 `)
 
-	agentData := apm.AgentData{Data: benchBody, ContentEncoding: ""}
-	extractedMetadata, err := apm.ProcessMetadata(agentData)
+	agentData := apmproxy.AgentData{Data: benchBody, ContentEncoding: ""}
+	extractedMetadata, err := apmproxy.ProcessMetadata(agentData)
 	require.NoError(t, err)
 
 	// Metadata is extracted as is.

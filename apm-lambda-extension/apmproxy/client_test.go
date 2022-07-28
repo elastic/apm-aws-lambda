@@ -15,10 +15,10 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package apm_test
+package apmproxy_test
 
 import (
-	"elastic/apm-lambda-extension/apm"
+	"elastic/apm-lambda-extension/apmproxy"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,27 +26,27 @@ import (
 
 func TestClient(t *testing.T) {
 	testCases := map[string]struct {
-		opts        []apm.Option
+		opts        []apmproxy.Option
 		expectedErr bool
 	}{
 		"empty": {
 			expectedErr: true,
 		},
 		"missing base url": {
-			opts: []apm.Option{
-				apm.WithURL(""),
+			opts: []apmproxy.Option{
+				apmproxy.WithURL(""),
 			},
 			expectedErr: true,
 		},
 		"valid": {
-			opts: []apm.Option{
-				apm.WithURL("https://example.com"),
+			opts: []apmproxy.Option{
+				apmproxy.WithURL("https://example.com"),
 			},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			_, err := apm.NewClient(tc.opts...)
+			_, err := apmproxy.NewClient(tc.opts...)
 			if tc.expectedErr {
 				require.Error(t, err)
 			} else {

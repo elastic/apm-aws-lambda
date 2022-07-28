@@ -19,7 +19,7 @@ package app
 
 import (
 	"context"
-	"elastic/apm-lambda-extension/apm"
+	"elastic/apm-lambda-extension/apmproxy"
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/logsapi"
 	"sync"
@@ -91,7 +91,7 @@ func (app *App) Run(ctx context.Context) error {
 	var prevEvent *extension.NextEventResponse
 	// This data structure contains metadata tied to the current Lambda instance. If empty, it is populated once for each
 	// active Lambda environment
-	metadataContainer := apm.MetadataContainer{}
+	metadataContainer := apmproxy.MetadataContainer{}
 
 	for {
 		select {
@@ -123,7 +123,7 @@ func (app *App) processEvent(
 	ctx context.Context,
 	backgroundDataSendWg *sync.WaitGroup,
 	prevEvent *extension.NextEventResponse,
-	metadataContainer *apm.MetadataContainer,
+	metadataContainer *apmproxy.MetadataContainer,
 ) *extension.NextEventResponse {
 
 	// Invocation context

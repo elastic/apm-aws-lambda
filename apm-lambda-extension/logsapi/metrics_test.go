@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"elastic/apm-lambda-extension/apm"
+	"elastic/apm-lambda-extension/apmproxy"
 	"elastic/apm-lambda-extension/extension"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +32,7 @@ import (
 )
 
 func Test_processPlatformReportColdstart(t *testing.T) {
-	mc := apm.MetadataContainer{
+	mc := apmproxy.MetadataContainer{
 		Metadata: []byte(fmt.Sprintf(`{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"%s"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`, extension.Version)),
 	}
 
@@ -78,7 +78,7 @@ func Test_processPlatformReportColdstart(t *testing.T) {
 	rawBytes, err := ProcessPlatformReport(&mc, &event, logEvent)
 	require.NoError(t, err)
 
-	requestBytes, err := apm.GetUncompressedBytes(rawBytes.Data, "")
+	requestBytes, err := apmproxy.GetUncompressedBytes(rawBytes.Data, "")
 	require.NoError(t, err)
 
 	out := string(requestBytes)
@@ -92,7 +92,7 @@ func Test_processPlatformReportColdstart(t *testing.T) {
 
 func Test_processPlatformReportNoColdstart(t *testing.T) {
 
-	mc := apm.MetadataContainer{
+	mc := apmproxy.MetadataContainer{
 		Metadata: []byte(fmt.Sprintf(`{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"%s"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`, extension.Version)),
 	}
 
@@ -138,7 +138,7 @@ func Test_processPlatformReportNoColdstart(t *testing.T) {
 	rawBytes, err := ProcessPlatformReport(&mc, &event, logEvent)
 	require.NoError(t, err)
 
-	requestBytes, err := apm.GetUncompressedBytes(rawBytes.Data, "")
+	requestBytes, err := apmproxy.GetUncompressedBytes(rawBytes.Data, "")
 	require.NoError(t, err)
 
 	out := string(requestBytes)
