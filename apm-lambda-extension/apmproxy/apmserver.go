@@ -47,7 +47,7 @@ func (c *Client) ForwardApmData(ctx context.Context, metadataContainer *Metadata
 			if metadataContainer.Metadata == nil {
 				metadata, err := ProcessMetadata(agentData)
 				if err != nil {
-					extension.Log.Errorf("Error extracting metadata from agent payload %v", err)
+					return fmt.Errorf("failed to extract metadata from agent payload %w", err)
 				}
 				metadataContainer.Metadata = metadata
 			}
