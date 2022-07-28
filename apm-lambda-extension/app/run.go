@@ -22,6 +22,7 @@ import (
 	"elastic/apm-lambda-extension/apmproxy"
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/logsapi"
+	"fmt"
 	"sync"
 	"time"
 
@@ -33,7 +34,7 @@ import (
 func (app *App) Run(ctx context.Context) error {
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		extension.Log.Fatalf("failed to load default config: %v", err)
+		return fmt.Errorf("failed to load AWS default config: %w", err)
 	}
 	manager := secretsmanager.NewFromConfig(cfg)
 	// pulls ELASTIC_ env variable into globals for easy access
@@ -63,7 +64,7 @@ func (app *App) Run(ctx context.Context) error {
 	// start http server to receive data from agent
 	err = app.apmClient.StartReceiver()
 	if err != nil {
-		extension.Log.Errorf("Could not start APM data receiver : %v", err)
+		return fmt.Errorf("failed to start the APM data receiver : %w", err)
 	}
 	defer func() {
 		if err := app.apmClient.Shutdown(); err != nil {
@@ -103,7 +104,11 @@ func (app *App) Run(ctx context.Context) error {
 			// Use a wait group to ensure the background go routine sending to the APM server
 			// completes before signaling that the extension is ready for the next invocation.
 			var backgroundDataSendWg sync.WaitGroup
-			event := app.processEvent(ctx, &backgroundDataSendWg, prevEvent, &metadataContainer)
+			event, err := app.processEvent(ctx, &backgroundDataSendWg, prevEvent, &metadataContainer)
+			if err != nil {
+				return err
+			}
+
 			if event.EventType == extension.Shutdown {
 				extension.Log.Info("Received shutdown event, exiting...")
 				return nil
@@ -124,7 +129,7 @@ func (app *App) processEvent(
 	backgroundDataSendWg *sync.WaitGroup,
 	prevEvent *extension.NextEventResponse,
 	metadataContainer *apmproxy.MetadataContainer,
-) *extension.NextEventResponse {
+) (*extension.NextEventResponse, error) {
 
 	// Invocation context
 	invocationCtx, invocationCancel := context.WithCancel(ctx)
@@ -135,14 +140,16 @@ func (app *App) processEvent(
 	extension.Log.Infof("Waiting for next event...")
 	event, err := app.extensionClient.NextEvent(ctx)
 	if err != nil {
-		status, err := app.extensionClient.ExitError(ctx, err.Error())
-		if err != nil {
-			panic(err)
-		}
 		extension.Log.Errorf("Error: %s", err)
+
+		status, errRuntime := app.extensionClient.ExitError(ctx, err.Error())
+		if errRuntime != nil {
+			return nil, errRuntime
+		}
+
 		extension.Log.Infof("Exit signal sent to runtime : %s", status)
 		extension.Log.Infof("Exiting")
-		return nil
+		return nil, err
 	}
 
 	// Used to compute Lambda Timeout
@@ -151,7 +158,7 @@ func (app *App) processEvent(
 	extension.Log.Debugf("%v", extension.PrettyPrint(event))
 
 	if event.EventType == extension.Shutdown {
-		return event
+		return event, nil
 	}
 
 	// APM Data Processing
@@ -204,5 +211,5 @@ func (app *App) processEvent(
 		extension.Log.Info("Time expired waiting for agent signal or runtimeDone event")
 	}
 
-	return event
+	return event, nil
 }
