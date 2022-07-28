@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package extension
+package apmproxy
 
 import (
 	"bufio"
@@ -24,7 +24,7 @@ import (
 	"compress/zlib"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"strings"
 )
 
@@ -55,9 +55,9 @@ func GetUncompressedBytes(rawBytes []byte, encodingType string) ([]byte, error) 
 		if err != nil {
 			return nil, fmt.Errorf("could not create zlib.NewReader: %v", err)
 		}
-		bodyBytes, err := ioutil.ReadAll(zlibreader)
+		bodyBytes, err := io.ReadAll(zlibreader)
 		if err != nil {
-			return nil, fmt.Errorf("could not read from zlib reader using ioutil.ReadAll: %v", err)
+			return nil, fmt.Errorf("could not read from zlib reader using io.ReadAll: %v", err)
 		}
 		return bodyBytes, nil
 	case "gzip":
@@ -66,9 +66,9 @@ func GetUncompressedBytes(rawBytes []byte, encodingType string) ([]byte, error) 
 		if err != nil {
 			return nil, fmt.Errorf("could not create gzip.NewReader: %v", err)
 		}
-		bodyBytes, err := ioutil.ReadAll(zlibreader)
+		bodyBytes, err := io.ReadAll(zlibreader)
 		if err != nil {
-			return nil, fmt.Errorf("could not read from gzip reader using ioutil.ReadAll: %v", err)
+			return nil, fmt.Errorf("could not read from gzip reader using io.ReadAll: %v", err)
 		}
 		return bodyBytes, nil
 	default:

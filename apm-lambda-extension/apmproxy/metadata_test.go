@@ -15,9 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package extension
+package apmproxy_test
 
 import (
+	"elastic/apm-lambda-extension/apmproxy"
+	"elastic/apm-lambda-extension/extension"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,14 +37,14 @@ func Test_processMetadata(t *testing.T) {
 {"transaction": { "name": "july-2021-delete-after-july-31", "type": "lambda", "result": "success", "id": "142e61450efb8574", "trace_id": "eb56529a1f461c5e7e2f66ecb075e983", "subtype": null, "action": null, "duration": 38.853, "timestamp": 1631736666365048, "sampled": true, "context": { "cloud": { "origin": { "account": { "id": "abc123" }, "provider": "aws", "region": "us-east-1", "service": { "name": "serviceName" } } }, "service": { "origin": { "id": "abc123", "name": "service-name", "version": "1.0" } }, "user": {}, "tags": {}, "custom": { } }, "sync": true, "span_count": { "started": 0 }, "outcome": "unknown", "faas": { "coldstart": false, "execution": "2e13b309-23e1-417f-8bf7-074fc96bc683", "trigger": { "request_id": "FuH2Cir_vHcEMUA=", "type": "http" } }, "sample_rate": 1 } }
 `)
 
-	agentData := AgentData{Data: benchBody, ContentEncoding: ""}
-	extractedMetadata, err := ProcessMetadata(agentData)
+	agentData := apmproxy.AgentData{Data: benchBody, ContentEncoding: ""}
+	extractedMetadata, err := apmproxy.ProcessMetadata(agentData)
 	require.NoError(t, err)
 
 	// Metadata is extracted as is.
 	desiredMetadata := []byte(`{"metadata":{"service":{"name":"1234_service-12a3","version":"5.1.3","environment":"staging","agent":{"name":"elastic-node","version":"3.14.0"},"framework":{"name":"Express","version":"1.2.3"},"language":{"name":"ecmascript","version":"8"},"runtime":{"name":"node","version":"8.0.0"},"node":{"configured_name":"node-123"}},"user":{"username":"bar","id":"123user","email":"bar@user.com"},"labels":{"tag0":null,"tag1":"one","tag2":2},"process":{"pid":1234,"ppid":6789,"title":"node","argv":["node","server.js"]},"system":{"architecture":"x64","hostname":"prod1.example.com","platform":"darwin","container":{"id":"container-id"},"kubernetes":{"namespace":"namespace1","node":{"name":"node-name"},"pod":{"name":"pod-name","uid":"pod-uid"}}},"cloud":{"provider":"cloud_provider","region":"cloud_region","availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"account":{"id":"account_id","name":"account_name"},"project":{"id":"project_id","name":"project_name"},"service":{"name":"lambda"}}}}`)
 	if err != nil {
-		Log.Errorf("Could not marshal extracted Metadata : %v", err)
+		extension.Log.Errorf("Could not marshal extracted Metadata : %v", err)
 	}
 
 	assert.JSONEq(t, string(desiredMetadata), string(extractedMetadata))

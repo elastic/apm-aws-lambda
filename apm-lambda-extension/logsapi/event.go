@@ -19,6 +19,7 @@ package logsapi
 
 import (
 	"context"
+	"elastic/apm-lambda-extension/apmproxy"
 	"elastic/apm-lambda-extension/extension"
 	"time"
 )
@@ -66,8 +67,8 @@ type LogEventRecord struct {
 func (lc *Client) ProcessLogs(
 	ctx context.Context,
 	requestID string,
-	apmServerTransport *extension.ApmServerTransport,
-	metadataContainer *extension.MetadataContainer,
+	apmClient *apmproxy.Client,
+	metadataContainer *apmproxy.MetadataContainer,
 	runtimeDoneSignal chan struct{},
 	prevEvent *extension.NextEventResponse,
 ) error {
@@ -94,7 +95,7 @@ func (lc *Client) ProcessLogs(
 					if err != nil {
 						extension.Log.Errorf("Error processing Lambda platform metrics : %v", err)
 					} else {
-						apmServerTransport.EnqueueAPMData(processedMetrics)
+						apmClient.EnqueueAPMData(processedMetrics)
 					}
 				} else {
 					extension.Log.Warn("report event request id didn't match the previous event id")

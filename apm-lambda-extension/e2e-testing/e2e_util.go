@@ -30,6 +30,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"elastic/apm-lambda-extension/apmproxy"
 	"elastic/apm-lambda-extension/extension"
 )
 
@@ -155,7 +156,7 @@ func GetDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 	if req.Body != nil {
 		rawBytes, _ = ioutil.ReadAll(req.Body)
 	}
-	return extension.GetUncompressedBytes(rawBytes, req.Header.Get("Content-Encoding"))
+	return apmproxy.GetUncompressedBytes(rawBytes, req.Header.Get("Content-Encoding"))
 }
 
 // GetFreePort is a function that queries the kernel and obtains an unused port.
