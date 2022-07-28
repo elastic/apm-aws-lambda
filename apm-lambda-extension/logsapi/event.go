@@ -93,10 +93,10 @@ func (lc *Client) ProcessLogs(
 					extension.Log.Debug("Received platform report for the previous function invocation")
 					processedMetrics, err := ProcessPlatformReport(metadataContainer, prevEvent, logEvent)
 					if err != nil {
-						extension.Log.Errorf("Error processing Lambda platform metrics : %v", err)
-					} else {
-						apmClient.EnqueueAPMData(processedMetrics)
+						return err
 					}
+
+					apmClient.EnqueueAPMData(processedMetrics)
 				} else {
 					extension.Log.Warn("report event request id didn't match the previous event id")
 					extension.Log.Debug("Log API runtimeDone event request id didn't match")
