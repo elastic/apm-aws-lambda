@@ -25,6 +25,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 const (
@@ -48,6 +50,7 @@ type Client struct {
 	serverURL            string
 	dataForwarderTimeout time.Duration
 	receiver             *http.Server
+	logger               *zap.SugaredLogger
 }
 
 func NewClient(opts ...Option) (*Client, error) {
@@ -76,6 +79,10 @@ func NewClient(opts ...Option) (*Client, error) {
 
 	if c.serverURL == "" {
 		return nil, errors.New("APM Server URL cannot be empty")
+	}
+
+	if c.logger == nil {
+		return nil, errors.New("logger cannot be empty")
 	}
 
 	// normalize server URL

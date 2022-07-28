@@ -75,35 +75,35 @@ func (lc *Client) ProcessLogs(
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
-			extension.Log.Debugf("Received log event %v", logEvent.Type)
+			lc.logger.Debugf("Received log event %v", logEvent.Type)
 			switch logEvent.Type {
 			// Check the logEvent for runtimeDone and compare the RequestID
 			// to the id that came in via the Next API
 			case RuntimeDone:
 				if logEvent.Record.RequestID == requestID {
-					extension.Log.Info("Received runtimeDone event for this function invocation")
+					lc.logger.Info("Received runtimeDone event for this function invocation")
 					runtimeDoneSignal <- struct{}{}
 					return nil
 				}
 
-				extension.Log.Debug("Log API runtimeDone event request id didn't match")
+				lc.logger.Debug("Log API runtimeDone event request id didn't match")
 			// Check if the logEvent contains metrics and verify that they can be linked to the previous invocation
 			case Report:
 				if prevEvent != nil && logEvent.Record.RequestID == prevEvent.RequestID {
-					extension.Log.Debug("Received platform report for the previous function invocation")
+					lc.logger.Debug("Received platform report for the previous function invocation")
 					processedMetrics, err := ProcessPlatformReport(metadataContainer, prevEvent, logEvent)
 					if err != nil {
-						extension.Log.Errorf("Error processing Lambda platform metrics : %v", err)
+						lc.logger.Errorf("Error processing Lambda platform metrics : %v", err)
 					} else {
 						apmClient.EnqueueAPMData(processedMetrics)
 					}
 				} else {
-					extension.Log.Warn("report event request id didn't match the previous event id")
-					extension.Log.Debug("Log API runtimeDone event request id didn't match")
+					lc.logger.Warn("report event request id didn't match the previous event id")
+					lc.logger.Debug("Log API runtimeDone event request id didn't match")
 				}
 			}
 		case <-ctx.Done():
-			extension.Log.Debug("Current invocation over. Interrupting logs processing goroutine")
+			lc.logger.Debug("Current invocation over. Interrupting logs processing goroutine")
 			return nil
 		}
 	}

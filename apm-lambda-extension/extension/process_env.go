@@ -19,6 +19,7 @@ package extension
 
 import (
 	"context"
+	"elastic/apm-lambda-extension/logger"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -26,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -101,7 +103,7 @@ func ptrFromString(v string) *string {
 }
 
 // ProcessEnv extracts ENV variables into globals
-func ProcessEnv(manager secretManager) *extensionConfig {
+func ProcessEnv(manager secretManager, Log *zap.SugaredLogger) *extensionConfig {
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
 		dataReceiverTimeoutSeconds = defaultDataReceiverTimeoutSeconds
@@ -120,7 +122,7 @@ func ProcessEnv(manager secretManager) *extensionConfig {
 		normalizedApmLambdaServer = normalizedApmLambdaServer + "/"
 	}
 
-	logLevel, err := ParseLogLevel(strings.ToLower(os.Getenv("ELASTIC_APM_LOG_LEVEL")))
+	logLevel, err := logger.ParseLogLevel(strings.ToLower(os.Getenv("ELASTIC_APM_LOG_LEVEL")))
 	if err != nil {
 		logLevel = zapcore.InfoLevel
 		Log.Warnf("Could not read ELASTIC_APM_LOG_LEVEL, defaulting to %s", logLevel)

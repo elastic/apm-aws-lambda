@@ -19,12 +19,16 @@ package apmproxy_test
 
 import (
 	"elastic/apm-lambda-extension/apmproxy"
+	"elastic/apm-lambda-extension/logger"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestClient(t *testing.T) {
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	testCases := map[string]struct {
 		opts        []apmproxy.Option
 		expectedErr bool
@@ -35,17 +39,26 @@ func TestClient(t *testing.T) {
 		"missing base url": {
 			opts: []apmproxy.Option{
 				apmproxy.WithURL(""),
+				apmproxy.WithLogger(l),
+			},
+			expectedErr: true,
+		},
+		"missing logger": {
+			opts: []apmproxy.Option{
+				apmproxy.WithURL("https://example.com"),
 			},
 			expectedErr: true,
 		},
 		"valid": {
 			opts: []apmproxy.Option{
 				apmproxy.WithURL("https://example.com"),
+				apmproxy.WithLogger(l),
 			},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+
 			_, err := apmproxy.NewClient(tc.opts...)
 			if tc.expectedErr {
 				require.Error(t, err)

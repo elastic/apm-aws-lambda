@@ -21,6 +21,7 @@ import (
 	"compress/gzip"
 	"context"
 	"elastic/apm-lambda-extension/apmproxy"
+	"elastic/apm-lambda-extension/logger"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -69,8 +70,12 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
@@ -114,16 +119,24 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
 }
 
 func TestGracePeriod(t *testing.T) {
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 
@@ -161,8 +174,12 @@ func TestGracePeriod(t *testing.T) {
 }
 
 func TestSetHealthyTransport(t *testing.T) {
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
@@ -171,10 +188,14 @@ func TestSetHealthyTransport(t *testing.T) {
 }
 
 func TestSetFailingTransport(t *testing.T) {
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	// By explicitly setting the reconnection count to 0, we ensure that the grace period will not be 0
 	// and avoid a race between reaching the pending status and the test assertion.
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 	apmClient.ReconnectionCount = 0
@@ -184,8 +205,12 @@ func TestSetFailingTransport(t *testing.T) {
 }
 
 func TestSetPendingTransport(t *testing.T) {
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
@@ -198,8 +223,12 @@ func TestSetPendingTransport(t *testing.T) {
 }
 
 func TestSetPendingTransportExplicitly(t *testing.T) {
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
@@ -209,8 +238,12 @@ func TestSetPendingTransportExplicitly(t *testing.T) {
 }
 
 func TestSetInvalidTransport(t *testing.T) {
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
@@ -251,8 +284,12 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 			return
 		}
 	}))
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
@@ -304,8 +341,12 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	// Close the APM server early so that POST requests fail and that backoff is enabled
 	apmServer.Close()
 
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 
@@ -357,8 +398,12 @@ func TestAPMServerRecovery(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 
@@ -402,8 +447,12 @@ func TestAPMServerAuthFails(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
@@ -450,8 +499,12 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 	}))
 	apmServer.Close()
 
+	l, err := logger.New()
+	require.NoError(t, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(t, err)
 	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
@@ -479,8 +532,12 @@ func BenchmarkPostToAPM(b *testing.B) {
 		}
 	}))
 
+	l, err := logger.New()
+	require.NoError(b, err)
+
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithLogger(l),
 	)
 	require.NoError(b, err)
 

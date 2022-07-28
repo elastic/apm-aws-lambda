@@ -19,6 +19,7 @@ package extension
 
 import (
 	"context"
+	"elastic/apm-lambda-extension/logger"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -51,7 +52,10 @@ func TestRegister(t *testing.T) {
 	}))
 	defer runtimeServer.Close()
 
-	client := NewClient(runtimeServer.Listener.Addr().String())
+	l, err := logger.New()
+	require.NoError(t, err)
+
+	client := NewClient(runtimeServer.Listener.Addr().String(), l)
 	res, err := client.Register(ctx, extensionName)
 	require.NoError(t, err)
 	assert.Equal(t, "helloWorld", res.FunctionName)
@@ -83,7 +87,10 @@ func TestNextEvent(t *testing.T) {
 	}))
 	defer runtimeServer.Close()
 
-	client := NewClient(runtimeServer.Listener.Addr().String())
+	l, err := logger.New()
+	require.NoError(t, err)
+
+	client := NewClient(runtimeServer.Listener.Addr().String(), l)
 	res, err := client.NextEvent(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, Invoke, res.EventType)
