@@ -109,10 +109,10 @@ func (c *Client) PostToApmServer(ctx context.Context, agentData AgentData) error
 			return err
 		}
 		if _, err := gw.Write(agentData.Data); err != nil {
-			extension.Log.Errorf("Failed to compress data: %v", err)
+			return fmt.Errorf("failed to compress data: %w", err)
 		}
 		if err := gw.Close(); err != nil {
-			extension.Log.Errorf("Failed write compressed data to buffer: %v", err)
+			return fmt.Errorf("failed to write compressed data to buffer: %w", err)
 		}
 		r = buf
 	}
