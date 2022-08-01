@@ -65,3 +65,10 @@ func WithReceiverAddress(addr string) Option {
 		c.receiver.Addr = addr
 	}
 }
+
+// WithAgentDataBufferSize sets the agent data buffer size.
+func WithAgentDataBufferSize(size int) Option {
+	return func(c *Client) {
+		c.DataChannel = make(chan AgentData, size)
+	}
+}

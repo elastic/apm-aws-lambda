@@ -84,6 +84,14 @@ func New(opts ...configOption) (*App, error) {
 		apmOpts = append(apmOpts, apmproxy.WithReceiverAddress(fmt.Sprintf(":%s", port)))
 	}
 
+	if bufferSize := os.Getenv("ELASTIC_APM_LAMBDA_AGENT_DATA_BUFFER_SIZE"); bufferSize != "" {
+		if size, err := strconv.Atoi(bufferSize); err != nil {
+			return nil, err
+		} else {
+			apmOpts = append(apmOpts, apmproxy.WithAgentDataBufferSize(size))
+		}
+	}
+
 	apmOpts = append(apmOpts, apmproxy.WithURL(os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")))
 
 	ac, err := apmproxy.NewClient(apmOpts...)
