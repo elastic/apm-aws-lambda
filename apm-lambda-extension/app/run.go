@@ -88,6 +88,14 @@ func (app *App) Run(ctx context.Context) error {
 		}
 	}
 
+	// Flush all data before shutting down.
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		app.apmClient.FlushAPMData(ctx)
+	}()
+
 	// The previous event id is used to validate the received Lambda metrics
 	var prevEvent *extension.NextEventResponse
 	// This data structure contains metadata tied to the current Lambda instance. If empty, it is populated once for each
@@ -115,7 +123,7 @@ func (app *App) Run(ctx context.Context) error {
 			}
 			extension.Log.Debug("Waiting for background data send to end")
 			backgroundDataSendWg.Wait()
-			if config.SendStrategy == extension.SyncFlush {
+			if app.apmClient.ShouldFlush() {
 				// Flush APM data now that the function invocation has completed
 				app.apmClient.FlushAPMData(ctx)
 			}
@@ -162,8 +170,6 @@ func (app *App) processEvent(
 	}
 
 	// APM Data Processing
-	app.apmClient.AgentDoneSignal = make(chan struct{})
-	defer close(app.apmClient.AgentDoneSignal)
 	backgroundDataSendWg.Add(1)
 	go func() {
 		defer backgroundDataSendWg.Done()
@@ -203,7 +209,7 @@ func (app *App) processEvent(
 	// 3) [Backup 2] If all else fails, the extension relies of the timeout of the Lambda function to interrupt itself 100 ms before the specified deadline.
 	// This time interval is large enough to attempt a last flush attempt (if SendStrategy == syncFlush) before the environment gets shut down.
 	select {
-	case <-app.apmClient.AgentDoneSignal:
+	case <-app.apmClient.Done():
 		extension.Log.Debug("Received agent done signal")
 	case <-runtimeDone:
 		extension.Log.Debug("Received runtimeDone signal")

@@ -177,7 +177,6 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 		apmproxy.WithReceiverTimeout(15*time.Second),
 	)
 	require.NoError(t, err)
-	apmClient.AgentDoneSignal = make(chan struct{}, 1)
 	require.NoError(t, apmClient.StartReceiver())
 	defer func() {
 		require.NoError(t, apmClient.Shutdown())
@@ -198,7 +197,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	}()
 
 	select {
-	case <-apmClient.AgentDoneSignal:
+	case <-apmClient.Done():
 		<-apmClient.DataChannel
 	case <-time.After(1 * time.Second):
 		t.Log("Timed out waiting for server to send FuncDone signal")
@@ -221,7 +220,6 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		apmproxy.WithReceiverTimeout(15*time.Second),
 	)
 	require.NoError(t, err)
-	apmClient.AgentDoneSignal = make(chan struct{}, 1)
 	require.NoError(t, apmClient.StartReceiver())
 	defer func() {
 		require.NoError(t, apmClient.Shutdown())
@@ -264,7 +262,6 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 		apmproxy.WithReceiverTimeout(15*time.Second),
 	)
 	require.NoError(t, err)
-	apmClient.AgentDoneSignal = make(chan struct{}, 1)
 	require.NoError(t, apmClient.StartReceiver())
 	defer func() {
 		require.NoError(t, apmClient.Shutdown())
@@ -285,7 +282,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	}()
 
 	select {
-	case <-apmClient.AgentDoneSignal:
+	case <-apmClient.Done():
 	case <-time.After(1 * time.Second):
 		t.Log("Timed out waiting for server to send FuncDone signal")
 		t.Fail()

@@ -212,3 +212,18 @@ func (c *Client) EnqueueAPMData(agentData AgentData) {
 		extension.Log.Warn("Channel full: dropping a subset of agent data")
 	}
 }
+
+// ShouldFlush returns true if the client should flush APM data after processing the event.
+func (c *Client) ShouldFlush() bool {
+	select {
+	case <-c.done:
+		return true
+	default:
+		return c.sendStrategy == SyncFlush
+	}
+}
+
+// Done returns a channel that's closed when work done on behalf of the agent is completed.
+func (c *Client) Done() <-chan struct{} {
+	return c.done
+}

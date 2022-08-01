@@ -26,7 +26,19 @@ import (
 	"time"
 )
 
+// SendStrategy represents the type of sending strategy the extension uses
+type SendStrategy string
+
 const (
+	// Background send strategy allows the extension to send remaining buffered
+	// agent data on the next function invocation
+	Background SendStrategy = "background"
+
+	// SyncFlush send strategy indicates that the extension will synchronously
+	// flush remaining buffered agent data when it receives a signal that the
+	// function is complete
+	SyncFlush SendStrategy = "syncflush"
+
 	defaultDataReceiverTimeout  time.Duration = 15 * time.Second
 	defaultDataForwarderTimeout time.Duration = 3 * time.Second
 	defaultReceiverAddr                       = ":8200"
@@ -36,7 +48,6 @@ const (
 type Client struct {
 	mu                   sync.Mutex
 	bufferPool           sync.Pool
-	AgentDoneSignal      chan struct{}
 	DataChannel          chan AgentData
 	client               *http.Client
 	Status               Status
@@ -46,6 +57,8 @@ type Client struct {
 	serverURL            string
 	dataForwarderTimeout time.Duration
 	receiver             *http.Server
+	sendStrategy         SendStrategy
+	done                 chan struct{}
 }
 
 func NewClient(opts ...Option) (*Client, error) {
@@ -66,6 +79,8 @@ func NewClient(opts ...Option) (*Client, error) {
 			WriteTimeout:   defaultDataReceiverTimeout,
 			MaxHeaderBytes: 1 << 20,
 		},
+		sendStrategy: SyncFlush,
+		done: make(chan struct{}),
 	}
 
 	for _, opt := range opts {

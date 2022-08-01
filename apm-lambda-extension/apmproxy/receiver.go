@@ -127,7 +127,7 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 		}
 
 		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {
-			c.AgentDoneSignal <- struct{}{}
+			close(c.done)
 		}
 
 		w.WriteHeader(http.StatusAccepted)

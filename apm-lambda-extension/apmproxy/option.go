@@ -65,3 +65,10 @@ func WithReceiverAddress(addr string) Option {
 		c.receiver.Addr = addr
 	}
 }
+
+// WithSendStrategy sets the sendstrategy.
+func WithSendStrategy(strategy SendStrategy) Option {
+	return func(c *Client) {
+		c.sendStrategy = strategy
+	}
+}
