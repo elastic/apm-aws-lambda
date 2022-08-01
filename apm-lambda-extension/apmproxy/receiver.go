@@ -38,7 +38,13 @@ type AgentData struct {
 // StartHttpServer starts the server listening for APM agent data.
 func (c *Client) StartReceiver() error {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", c.handleInfoRequest())
+
+	handleInfoRequest, err := c.handleInfoRequest()
+	if err != nil {
+		return err
+	}
+
+	mux.HandleFunc("/", handleInfoRequest)
 	mux.HandleFunc("/intake/v2/events", c.handleIntakeV2Events())
 
 	c.receiver.Handler = mux
@@ -68,27 +74,26 @@ func (c *Client) Shutdown() error {
 }
 
 // URL: http://server/
-func (c *Client) handleInfoRequest() func(w http.ResponseWriter, r *http.Request) {
+func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Request), error) {
+	// Init reverse proxy
+	parsedApmServerUrl, err := url.Parse(c.serverURL)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse APM server URL: %w", err)
+	}
+
+	reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
+
+	customTransport := http.DefaultTransport.(*http.Transport).Clone()
+	customTransport.ResponseHeaderTimeout = c.dataForwarderTimeout
+	reverseProxy.Transport = customTransport
+
+	reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		c.SetApmServerTransportState(r.Context(), Failing)
+		extension.Log.Errorf("Error querying version from the APM server: %v", err)
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		extension.Log.Debug("Handling APM server Info Request")
-
-		// Init reverse proxy
-		parsedApmServerUrl, err := url.Parse(c.serverURL)
-		if err != nil {
-			extension.Log.Errorf("could not parse APM server URL: %v", err)
-			return
-		}
-
-		reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
-
-		customTransport := http.DefaultTransport.(*http.Transport).Clone()
-		customTransport.ResponseHeaderTimeout = c.dataForwarderTimeout
-		reverseProxy.Transport = customTransport
-
-		reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-			c.SetApmServerTransportState(r.Context(), Failing)
-			extension.Log.Errorf("Error querying version from the APM server: %v", err)
-		}
 
 		// Process request (the Golang doc suggests removing any pre-existing X-Forwarded-For header coming
 		// from the client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
@@ -102,7 +107,7 @@ func (c *Client) handleInfoRequest() func(w http.ResponseWriter, r *http.Request
 
 		// Forward request to the APM server
 		reverseProxy.ServeHTTP(w, r)
-	}
+	}, nil
 }
 
 // URL: http://server/intake/v2/events
