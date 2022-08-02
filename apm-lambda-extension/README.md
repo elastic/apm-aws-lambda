@@ -1,16 +1,26 @@
-# Experimental: AWS Lambda Extension
+[![Build Status](https://apm-ci.elastic.co/buildStatus/icon?job=library%2Fapm-aws-lambda-mbp%2Fmain)](https://apm-ci.elastic.co/job/library/job/apm-aws-lambda-mbp/job/main/)
 
-The code implements an AWS Lambda Extension for Elastic's Node.js Agents.  This extension 
+# Elastic APM AWS Lambda extension
 
-1. Listen for data once per function invocation
+Elastic APM Agents can be used with AWS Lambda to monitor the execution of your AWS Lambda functions.
+Currently the Node.js, Python and Java Agents are supported. 
 
-2. Forwards data on to APM Server
+The extension listens for data once per function invocation and forwards data to an APM Server.
 
-At the time of this writing users must compile this extension themselves and then deploy the compiled extension as an Amazon Lambda Layer.  APM Agents must then be configured to send data to this extension.
+## Getting Started
+Ready to use Elastic APM to monitor your Lambda functions? 
+See [Monitoring AWS Lambda Functions](https://www.elastic.co/guide/en/apm/guide/current/monitoring-aws-lambda.html) to get started and learn more about available configuration options. 
 
-## Compile package and dependencies
+## Contributing
 
-To run this extension, you will need to ensure that your build architecture matches that of the Lambda execution environment by compiling with `GOOS=linux` and `GOARCH=amd64` if you are not running in a Linux environment.
+See [contributing](CONTRIBUTING.md) for details about reporting bugs, requesting features, or code contributions.
+
+## Testing unreleased versions
+If you need to test an unreleased version you can compile the package and it's dependencies and make them available as AWS Lambda Layer. 
+
+### Compile package and dependencies
+
+To run an unreleased version of this extension, you will need to ensure that your build architecture matches that of the Lambda execution environment by compiling with `GOOS=linux` and `GOARCH=amd64` if you are not running in a Linux environment.
 
 To build the extension into the `bin/extensions` folder, run the following commands. 
 
@@ -20,7 +30,7 @@ $ GOOS=linux GOARCH=amd64 go build -o bin/extensions/apm-lambda-extension main.g
 $ chmod +x bin/extensions/apm-lambda-extension
 ```
 
-## Layer Setup Process
+### Layer Setup Process
 
 Once you've compiled the extension, the next step is to make it available as an AWS Lambda Layer.  In order to do this we'll need to create a zip file with the extension binary, and then use the `lambda publish-layer-version`  command/sub-command of the AWS CLI.
 
@@ -51,7 +61,7 @@ The out from the above command will include a `LayverVersionArn` field, which co
 
 This is the string you'll enter in the AWS Lambda Console to add this layer to your Lambda function.
 
-## One Step Build
+### One Step Build
 
 The `Makefile` also provides a `build-and-publish` command which will perform the above steps for use, using ENV variable for credentials and other information.
 
@@ -61,6 +71,6 @@ The `Makefile` also provides a `build-and-publish` command which will perform th
     AWS_SECRET_ACCESS_KEY=h...E \
     make build-and-publish
 
-## Configure the Agent
+## Release procedure
 
-    TODO: instructions on configuring the agent
+See [release](RELEASE.md) for details about the release procedure. 
