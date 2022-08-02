@@ -74,7 +74,7 @@ func BenchmarkProcessMetadata(b *testing.B) {
 		b.Run(bench.name, func(b *testing.B) {
 			b.ReportAllocs()
 			for i := 0; i < b.N; i++ {
-				apmproxy.ProcessMetadata(agentData)
+				_, _ = apmproxy.ProcessMetadata(agentData)
 			}
 		})
 	}
