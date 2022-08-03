@@ -20,6 +20,7 @@ package apmproxy
 import (
 	"bytes"
 	"errors"
+	"math/rand"
 	"net/http"
 	"strings"
 	"sync"
@@ -81,6 +82,8 @@ func NewClient(opts ...Option) (*Client, error) {
 	if !strings.HasSuffix(c.serverURL, "/") {
 		c.serverURL = c.serverURL + "/"
 	}
+
+	rand.Seed(time.Now().UnixNano())
 
 	return &c, nil
 }
