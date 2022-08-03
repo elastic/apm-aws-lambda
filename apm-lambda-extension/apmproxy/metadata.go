@@ -40,12 +40,7 @@ func ProcessMetadata(data AgentData) ([]byte, error) {
 
 	before, _, _ := bytes.Cut(uncompressedData, []byte("\n"))
 
-	// Try without lowercase first to avoid allocations.
 	if bytes.Contains(before, []byte("metadata")) {
-		return before, nil
-	}
-
-	if bytes.Contains(bytes.ToLower(before), []byte("metadata")) {
 		return before, nil
 	}
 
