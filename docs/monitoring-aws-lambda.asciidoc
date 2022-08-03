@@ -45,6 +45,9 @@ The following configuration options are particularly relevant for the {apm-lambd
 === `ELASTIC_APM_LAMBDA_APM_SERVER`
 This required config option controls where the {apm-lambda-ext} will ship data. This should be the URL of the final APM Server destination for your telemetry.
 
+=== `ELASTIC_APM_LAMBDA_AGENT_DATA_BUFFER_SIZE`
+The size of the buffer that stores APM agent data to be forwarded to the APM server. The _default_ is `100`.
+
 [[aws-lambda-config-authentication-keys]]
 === `ELASTIC_APM_SECRET_TOKEN` or `ELASTIC_APM_API_KEY`
 One of these (or, alternatively, the corresponding settings for the AWS Secrets Manager IDs) needs to be set as the authentication method that the {apm-lambda-ext} uses when sending data to the URL configured via `ELASTIC_APM_LAMBDA_APM_SERVER`. Alternatively, you can store your APM Server credentials <<aws-lambda-secrets-manager, using the AWS Secrets Manager>> and use the <<aws-lambda-config-secrets-manager-options>> config options, instead. Sending data to the APM Server if none of these options is set is possible, but your APM agent must be allowed to send data to your APM server in https://www.elastic.co/guide/en/apm/guide/current/configuration-anonymous.html[anonymous mode].
