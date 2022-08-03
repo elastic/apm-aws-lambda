@@ -32,6 +32,7 @@ https://github.com/elastic/apm-aws-lambda/compare/v1.0.2...main[View commits]
 - Handle main loop errors correctly {pull}252[252]
 - Avoid sending corrupted compressed data to APM Server {pull}257[257]
 - Avoid creating http transports on each info request {pull}260[260]
+- Randomise the initial grace period to avoid collisions {pull}240[240]
 
 
 [[release-notes-1.0.2]]
