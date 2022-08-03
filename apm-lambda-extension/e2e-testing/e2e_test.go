@@ -22,7 +22,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -163,7 +162,7 @@ func retrieveJavaAgent(samJavaPath string, version string) {
 func changeJavaAgentPermissions(samJavaPath string) {
 	agentFolderPath := filepath.Join(samJavaPath, "agent")
 	extension.Log.Info("Setting appropriate permissions for Java agent files...")
-	agentFiles, err := ioutil.ReadDir(agentFolderPath)
+	agentFiles, err := os.ReadDir(agentFolderPath)
 	ProcessError(err)
 	for _, f := range agentFiles {
 		if err = os.Chmod(filepath.Join(agentFolderPath, f.Name()), 0755); err != nil {

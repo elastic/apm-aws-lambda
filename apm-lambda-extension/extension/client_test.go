@@ -19,7 +19,7 @@ package extension
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -42,7 +42,7 @@ func TestRegister(t *testing.T) {
 	`)
 
 	runtimeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bytes, _ := ioutil.ReadAll(r.Body)
+		bytes, _ := io.ReadAll(r.Body)
 		assert.Equal(t, expectedRequest, string(bytes))
 		if _, err := w.Write(response); err != nil {
 			t.Fail()
