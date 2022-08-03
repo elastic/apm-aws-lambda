@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
-	"errors"
 	"fmt"
 	"io"
 )
@@ -39,12 +38,7 @@ func ProcessMetadata(data AgentData) ([]byte, error) {
 	}
 
 	before, _, _ := bytes.Cut(uncompressedData, []byte("\n"))
-
-	if bytes.Contains(before, []byte("metadata")) {
-		return before, nil
-	}
-
-	return nil, errors.New("No metadata found in APM agent payload")
+	return before, nil
 }
 
 func GetUncompressedBytes(rawBytes []byte, encodingType string) ([]byte, error) {
