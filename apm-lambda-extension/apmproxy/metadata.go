@@ -18,14 +18,11 @@
 package apmproxy
 
 import (
-	"bufio"
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
-	"errors"
 	"fmt"
 	"io"
-	"strings"
 )
 
 type MetadataContainer struct {
@@ -39,18 +36,15 @@ func ProcessMetadata(data AgentData) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error uncompressing agent data for metadata extraction: %w", err)
 	}
-	scanner := bufio.NewScanner(strings.NewReader(string(uncompressedData)))
-	scanner.Scan()
-	if strings.Contains(strings.ToLower(scanner.Text()), "metadata") {
-		return scanner.Bytes(), nil
-	}
-	return nil, errors.New("No metadata found in APM agent payload")
+
+	before, _, _ := bytes.Cut(uncompressedData, []byte("\n"))
+	return before, nil
 }
 
 func GetUncompressedBytes(rawBytes []byte, encodingType string) ([]byte, error) {
 	switch encodingType {
 	case "deflate":
-		reader := bytes.NewReader([]byte(rawBytes))
+		reader := bytes.NewReader(rawBytes)
 		zlibreader, err := zlib.NewReader(reader)
 		if err != nil {
 			return nil, fmt.Errorf("could not create zlib.NewReader: %v", err)
@@ -61,7 +55,7 @@ func GetUncompressedBytes(rawBytes []byte, encodingType string) ([]byte, error) 
 		}
 		return bodyBytes, nil
 	case "gzip":
-		reader := bytes.NewReader([]byte(rawBytes))
+		reader := bytes.NewReader(rawBytes)
 		zlibreader, err := gzip.NewReader(reader)
 		if err != nil {
 			return nil, fmt.Errorf("could not create gzip.NewReader: %v", err)
