@@ -47,6 +47,8 @@ https://github.com/elastic/apm-aws-lambda/compare/v1.0.1...v1.0.2[View commits]
 [[release-notes-1.0.1]]
 === 1.0.1 - 2022/06/03
 
+https://github.com/elastic/apm-aws-lambda/compare/v1.0.0...v1.0.1[View commits]
+
 [float]
 ==== Features
 - Add support for building and pushing docker images {pull}199[199]
@@ -54,5 +56,7 @@ https://github.com/elastic/apm-aws-lambda/compare/v1.0.1...v1.0.2[View commits]
 
 [[release-notes-1.0.0]]
 === 1.0.0 - 2022/04/26
+
+https://github.com/elastic/apm-aws-lambda/commits/46e65781912ca0448642e1574c1f8162ffa8dec0[View commits]
 
 First stable release of the Elastic AWS Lambda Extension.

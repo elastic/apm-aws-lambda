@@ -71,6 +71,6 @@ The `Makefile` also provides a `build-and-publish` command which will perform th
     AWS_SECRET_ACCESS_KEY=h...E \
     make build-and-publish
 
-## Release procedure
+## Release Procedure
 
-See [release](RELEASE.md) for details about the release procedure. 
+See [release](RELEASE.md) for details.
