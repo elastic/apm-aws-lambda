@@ -18,15 +18,18 @@
 package apmproxy_test
 
 import (
+	"bytes"
+	"compress/gzip"
+	"compress/zlib"
 	"elastic/apm-lambda-extension/apmproxy"
-	"elastic/apm-lambda-extension/extension"
+	"io"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func Test_processMetadata(t *testing.T) {
+	expected := []byte(`{"metadata": {"service": {"name": "1234_service-12a3","node": {"configured_name": "node-123"},"version": "5.1.3","environment": "staging","language": {"name": "ecmascript","version": "8"},"runtime": {"name": "node","version": "8.0.0"},"framework": {"name": "Express","version": "1.2.3"},"agent": {"name": "elastic-node","version": "3.14.0"}},"user": {"id": "123user", "username": "bar", "email": "bar@user.com"}, "labels": {"tag0": null, "tag1": "one", "tag2": 2}, "process": {"pid": 1234,"ppid": 6789,"title": "node","argv": ["node","server.js"]},"system": {"hostname": "prod1.example.com","architecture": "x64","platform": "darwin", "container": {"id": "container-id"}, "kubernetes": {"namespace": "namespace1", "pod": {"uid": "pod-uid", "name": "pod-name"}, "node": {"name": "node-name"}}},"cloud":{"account":{"id":"account_id","name":"account_name"},"availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"project":{"id":"project_id","name":"project_name"},"provider":"cloud_provider","region":"cloud_region","service":{"name":"lambda"}}}}`)
 
 	// Copied from https://github.com/elastic/apm-server/blob/master/testdata/intake-v2/transactions.ndjson.
 	benchBody := []byte(`{"metadata": {"service": {"name": "1234_service-12a3","node": {"configured_name": "node-123"},"version": "5.1.3","environment": "staging","language": {"name": "ecmascript","version": "8"},"runtime": {"name": "node","version": "8.0.0"},"framework": {"name": "Express","version": "1.2.3"},"agent": {"name": "elastic-node","version": "3.14.0"}},"user": {"id": "123user", "username": "bar", "email": "bar@user.com"}, "labels": {"tag0": null, "tag1": "one", "tag2": 2}, "process": {"pid": 1234,"ppid": 6789,"title": "node","argv": ["node","server.js"]},"system": {"hostname": "prod1.example.com","architecture": "x64","platform": "darwin", "container": {"id": "container-id"}, "kubernetes": {"namespace": "namespace1", "pod": {"uid": "pod-uid", "name": "pod-name"}, "node": {"name": "node-name"}}},"cloud":{"account":{"id":"account_id","name":"account_name"},"availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"project":{"id":"project_id","name":"project_name"},"provider":"cloud_provider","region":"cloud_region","service":{"name":"lambda"}}}}
@@ -37,17 +40,106 @@ func Test_processMetadata(t *testing.T) {
 {"transaction": { "name": "july-2021-delete-after-july-31", "type": "lambda", "result": "success", "id": "142e61450efb8574", "trace_id": "eb56529a1f461c5e7e2f66ecb075e983", "subtype": null, "action": null, "duration": 38.853, "timestamp": 1631736666365048, "sampled": true, "context": { "cloud": { "origin": { "account": { "id": "abc123" }, "provider": "aws", "region": "us-east-1", "service": { "name": "serviceName" } } }, "service": { "origin": { "id": "abc123", "name": "service-name", "version": "1.0" } }, "user": {}, "tags": {}, "custom": { } }, "sync": true, "span_count": { "started": 0 }, "outcome": "unknown", "faas": { "coldstart": false, "execution": "2e13b309-23e1-417f-8bf7-074fc96bc683", "trigger": { "request_id": "FuH2Cir_vHcEMUA=", "type": "http" } }, "sample_rate": 1 } }
 `)
 
-	agentData := apmproxy.AgentData{Data: benchBody, ContentEncoding: ""}
-	extractedMetadata, err := apmproxy.ProcessMetadata(agentData)
-	require.NoError(t, err)
+	testCases := map[string]struct {
+		data         func() []byte
+		encodingType string
+		expectError  error
+	}{
+		"none": {
+			data: func() []byte {
+				return benchBody
+			},
+			encodingType: "",
+		},
+		"gzip": {
+			data: func() []byte {
+				var b bytes.Buffer
 
-	// Metadata is extracted as is.
-	desiredMetadata := []byte(`{"metadata":{"service":{"name":"1234_service-12a3","version":"5.1.3","environment":"staging","agent":{"name":"elastic-node","version":"3.14.0"},"framework":{"name":"Express","version":"1.2.3"},"language":{"name":"ecmascript","version":"8"},"runtime":{"name":"node","version":"8.0.0"},"node":{"configured_name":"node-123"}},"user":{"username":"bar","id":"123user","email":"bar@user.com"},"labels":{"tag0":null,"tag1":"one","tag2":2},"process":{"pid":1234,"ppid":6789,"title":"node","argv":["node","server.js"]},"system":{"architecture":"x64","hostname":"prod1.example.com","platform":"darwin","container":{"id":"container-id"},"kubernetes":{"namespace":"namespace1","node":{"name":"node-name"},"pod":{"name":"pod-name","uid":"pod-uid"}}},"cloud":{"provider":"cloud_provider","region":"cloud_region","availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"account":{"id":"account_id","name":"account_name"},"project":{"id":"project_id","name":"project_name"},"service":{"name":"lambda"}}}}`)
-	if err != nil {
-		extension.Log.Errorf("Could not marshal extracted Metadata : %v", err)
+				w := gzip.NewWriter(&b)
+
+				_, err := w.Write(benchBody)
+				require.NoError(t, err)
+
+				require.NoError(t, w.Close())
+
+				return b.Bytes()
+			},
+			encodingType: "gzip",
+		},
+		"invalid gzip": {
+			data: func() []byte {
+				return benchBody
+			},
+			expectError:  gzip.ErrHeader,
+			encodingType: "gzip",
+		},
+		"malformed gzip": {
+			data: func() []byte {
+				var b bytes.Buffer
+
+				w := gzip.NewWriter(&b)
+
+				_, err := w.Write(benchBody)
+				require.NoError(t, err)
+
+				return b.Bytes()
+			},
+			expectError:  io.ErrUnexpectedEOF,
+			encodingType: "gzip",
+		},
+		"deflate": {
+			data: func() []byte {
+				var b bytes.Buffer
+
+				w := zlib.NewWriter(&b)
+
+				_, err := w.Write(benchBody)
+				require.NoError(t, err)
+
+				require.NoError(t, w.Close())
+
+				return b.Bytes()
+			},
+			encodingType: "deflate",
+		},
+		"invalid deflate": {
+			data: func() []byte {
+				return benchBody
+			},
+			expectError:  zlib.ErrHeader,
+			encodingType: "deflate",
+		},
+		"malformed deflate": {
+			data: func() []byte {
+				var b bytes.Buffer
+
+				w := zlib.NewWriter(&b)
+
+				_, err := w.Write(benchBody)
+				require.NoError(t, err)
+
+				return b.Bytes()
+			},
+			expectError:  io.ErrUnexpectedEOF,
+			encodingType: "deflate",
+		},
 	}
 
-	assert.JSONEq(t, string(desiredMetadata), string(extractedMetadata))
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			agentData := apmproxy.AgentData{Data: tc.data(), ContentEncoding: tc.encodingType}
+			extractedMetadata, err := apmproxy.ProcessMetadata(agentData)
+
+			if tc.expectError != nil {
+				require.Nil(t, extractedMetadata)
+				require.ErrorIs(t, err, tc.expectError)
+				return
+			}
+
+			require.NoError(t, err)
+			require.JSONEq(t, string(expected), string(extractedMetadata))
+		})
+	}
 }
 
 func BenchmarkProcessMetadata(b *testing.B) {
