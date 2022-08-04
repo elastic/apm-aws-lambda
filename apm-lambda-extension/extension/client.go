@@ -94,25 +94,25 @@ func (e *Client) Register(ctx context.Context, filename string) (*RegisterRespon
 		"events": []EventType{Invoke, Shutdown},
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal register request body: %w", err)
 	}
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(reqBody))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(reqBody))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create register request: %w", err)
 	}
 	httpReq.Header.Set(extensionNameHeader, filename)
 	httpRes, err := e.httpClient.Do(httpReq)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extension register request failed: %w", err)
 	}
 	defer httpRes.Body.Close()
 
-	if httpRes.StatusCode != 200 {
+	if httpRes.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("extension register request failed with status %s", httpRes.Status)
 	}
 	res := RegisterResponse{}
 	if err := json.NewDecoder(httpRes.Body).Decode(&res); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode register response body: %w", err)
 	}
 	e.ExtensionID = httpRes.Header.Get(extensionIdentiferHeader)
 	Log.Debugf("ExtensionID : %s", e.ExtensionID)
@@ -124,23 +124,23 @@ func (e *Client) NextEvent(ctx context.Context) (*NextEventResponse, error) {
 	const action = "/event/next"
 	url := e.baseURL + action
 
-	httpReq, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create next event request: %w", err)
 	}
 	httpReq.Header.Set(extensionIdentiferHeader, e.ExtensionID)
 	httpRes, err := e.httpClient.Do(httpReq)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("next event request failed: %w", err)
 	}
 	defer httpRes.Body.Close()
 
-	if httpRes.StatusCode != 200 {
+	if httpRes.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("next event request failed with status %s", httpRes.Status)
 	}
 	res := NextEventResponse{}
 	if err := json.NewDecoder(httpRes.Body).Decode(&res); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode next event response body: %w", err)
 	}
 	return &res, nil
 }
@@ -150,15 +150,15 @@ func (e *Client) InitError(ctx context.Context, errorType string) (*StatusRespon
 	const action = "/init/error"
 	url := e.baseURL + action
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create init error request: %w", err)
 	}
 	httpReq.Header.Set(extensionIdentiferHeader, e.ExtensionID)
 	httpReq.Header.Set(extensionErrorType, errorType)
 	httpRes, err := e.httpClient.Do(httpReq)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initialization error request failed: %w", err)
 	}
 	defer httpRes.Body.Close()
 
@@ -167,7 +167,7 @@ func (e *Client) InitError(ctx context.Context, errorType string) (*StatusRespon
 	}
 	res := StatusResponse{}
 	if err := json.NewDecoder(httpRes.Body).Decode(&res); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode init error response body: %w", err)
 	}
 	return &res, nil
 }
@@ -177,15 +177,15 @@ func (e *Client) ExitError(ctx context.Context, errorType string) (*StatusRespon
 	const action = "/exit/error"
 	url := e.baseURL + action
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create exit error request: %w", err)
 	}
 	httpReq.Header.Set(extensionIdentiferHeader, e.ExtensionID)
 	httpReq.Header.Set(extensionErrorType, errorType)
 	httpRes, err := e.httpClient.Do(httpReq)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("exit error request failed: %w", err)
 	}
 	defer httpRes.Body.Close()
 
@@ -194,7 +194,7 @@ func (e *Client) ExitError(ctx context.Context, errorType string) (*StatusRespon
 	}
 	res := StatusResponse{}
 	if err := json.NewDecoder(httpRes.Body).Decode(&res); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode exit error response body: %w", err)
 	}
 	return &res, nil
 }

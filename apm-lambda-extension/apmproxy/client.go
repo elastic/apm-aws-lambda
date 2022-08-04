@@ -20,6 +20,7 @@ package apmproxy
 import (
 	"bytes"
 	"errors"
+	"math/rand"
 	"net/http"
 	"strings"
 	"sync"
@@ -42,6 +43,7 @@ const (
 	defaultDataReceiverTimeout  time.Duration = 15 * time.Second
 	defaultDataForwarderTimeout time.Duration = 3 * time.Second
 	defaultReceiverAddr                       = ":8200"
+	defaultAgentBufferSize      int           = 100
 )
 
 // Client is the client used to communicate with the apm server.
@@ -66,7 +68,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		bufferPool: sync.Pool{New: func() interface{} {
 			return &bytes.Buffer{}
 		}},
-		DataChannel: make(chan AgentData, 100),
+		DataChannel: make(chan AgentData, defaultAgentBufferSize),
 		client: &http.Client{
 			Transport: http.DefaultTransport.(*http.Transport).Clone(),
 		},
@@ -95,6 +97,8 @@ func NewClient(opts ...Option) (*Client, error) {
 	if !strings.HasSuffix(c.serverURL, "/") {
 		c.serverURL = c.serverURL + "/"
 	}
+
+	rand.Seed(time.Now().UnixNano())
 
 	return &c, nil
 }

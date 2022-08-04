@@ -22,7 +22,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -154,7 +153,7 @@ func IsStringInSlice(a string, list []string) bool {
 func GetDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 	var rawBytes []byte
 	if req.Body != nil {
-		rawBytes, _ = ioutil.ReadAll(req.Body)
+		rawBytes, _ = io.ReadAll(req.Body)
 	}
 	return apmproxy.GetUncompressedBytes(rawBytes, req.Header.Get("Content-Encoding"))
 }

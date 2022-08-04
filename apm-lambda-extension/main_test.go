@@ -23,7 +23,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -280,7 +280,7 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 		}
 		var rawBytes []byte
 		if res.Body != nil {
-			rawBytes, _ = ioutil.ReadAll(res.Body)
+			rawBytes, _ = io.ReadAll(res.Body)
 		}
 		internals.Data += string(rawBytes)
 		extension.Log.Debugf("Response seen by the agent : %d", res.StatusCode)

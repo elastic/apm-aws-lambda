@@ -1,0 +1,64 @@
+////
+[[release-notes-x.x.x]]
+==== x.x.x - YYYY/MM/DD
+
+[float]
+===== Breaking changes
+
+[float]
+===== Features
+- Cool new feature: {pull}2526[#2526]
+
+[float]
+===== Bug fixes
+////
+
+[[unreleased]]
+=== Unreleased
+
+https://github.com/elastic/apm-aws-lambda/compare/v1.0.2...main[View commits]
+
+
+[float]
+==== Features
+- Added support for Secret Manager {pull}208[208]
+- Added support for Lambda platform metrics {pull}202[202]
+- Migrated to AWS SDK for Go v2 {pull}232[232]
+- Make buffer size for agent data configurable {pull}262[262]
+
+[float]
+==== Bug fixes
+- Log a warning when authentication with APM Server fails {pull}228[228]
+- Handle http.ErrServerClosed correctly {pull}234[234]
+- Handle main loop errors correctly {pull}252[252]
+- Avoid sending corrupted compressed data to APM Server {pull}257[257]
+- Avoid creating http transports on each info request {pull}260[260]
+- Randomise the initial grace period to avoid collisions {pull}240[240]
+
+
+[[release-notes-1.0.2]]
+=== 1.0.2 - 2022/06/09
+
+https://github.com/elastic/apm-aws-lambda/compare/v1.0.1...v1.0.2[View commits]
+
+[float]
+==== Bug fixes
+- Only add executables to extension {pull}216[216]
+
+
+[[release-notes-1.0.1]]
+=== 1.0.1 - 2022/06/03
+
+https://github.com/elastic/apm-aws-lambda/compare/v1.0.0...v1.0.1[View commits]
+
+[float]
+==== Features
+- Add support for building and pushing docker images {pull}199[199]
+
+
+[[release-notes-1.0.0]]
+=== 1.0.0 - 2022/04/26
+
+https://github.com/elastic/apm-aws-lambda/commits/46e65781912ca0448642e1574c1f8162ffa8dec0[View commits]
+
+First stable release of the Elastic AWS Lambda Extension.
