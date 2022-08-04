@@ -49,6 +49,7 @@ func GetUncompressedBytes(rawBytes []byte, encodingType string) ([]byte, error) 
 		if err != nil {
 			return nil, fmt.Errorf("could not create zlib.NewReader: %v", err)
 		}
+		defer zlibreader.Close()
 		bodyBytes, err := io.ReadAll(zlibreader)
 		if err != nil {
 			return nil, fmt.Errorf("could not read from zlib reader using io.ReadAll: %v", err)
@@ -56,11 +57,12 @@ func GetUncompressedBytes(rawBytes []byte, encodingType string) ([]byte, error) 
 		return bodyBytes, nil
 	case "gzip":
 		reader := bytes.NewReader(rawBytes)
-		zlibreader, err := gzip.NewReader(reader)
+		gzipreader, err := gzip.NewReader(reader)
 		if err != nil {
 			return nil, fmt.Errorf("could not create gzip.NewReader: %v", err)
 		}
-		bodyBytes, err := io.ReadAll(zlibreader)
+		defer gzipreader.Close()
+		bodyBytes, err := io.ReadAll(gzipreader)
 		if err != nil {
 			return nil, fmt.Errorf("could not read from gzip reader using io.ReadAll: %v", err)
 		}
