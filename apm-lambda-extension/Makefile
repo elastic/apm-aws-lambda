@@ -41,8 +41,8 @@ update-licenses:
 	go run github.com/elastic/go-licenser@v0.4.0 -ext .java .
 
 lint:
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.0 --version
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.0 run
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 version
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 run
 
 build: check-licenses gen-notice
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
