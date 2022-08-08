@@ -25,6 +25,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // SendStrategy represents the type of sending strategy the extension uses
@@ -61,6 +63,7 @@ type Client struct {
 	receiver             *http.Server
 	sendStrategy         SendStrategy
 	done                 chan struct{}
+	logger               *zap.SugaredLogger
 }
 
 func NewClient(opts ...Option) (*Client, error) {
@@ -91,6 +94,10 @@ func NewClient(opts ...Option) (*Client, error) {
 
 	if c.serverURL == "" {
 		return nil, errors.New("APM Server URL cannot be empty")
+	}
+
+	if c.logger == nil {
+		return nil, errors.New("logger cannot be empty")
 	}
 
 	// normalize server URL

@@ -26,13 +26,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestProcessEnv(t *testing.T) {
+	l := zaptest.NewLogger(t).Sugar()
+
 	sm := new(mockSecretManager)
 	t.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "bar.example.com/")
 	t.Setenv("ELASTIC_APM_SECRET_TOKEN", "foo")
-	config := ProcessEnv(sm)
+	config := ProcessEnv(sm, l)
 	t.Logf("%v", config)
 
 	if config.apmServerUrl != "bar.example.com/" {
@@ -43,7 +46,7 @@ func TestProcessEnv(t *testing.T) {
 	t.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "foo.example.com")
 	t.Setenv("ELASTIC_APM_SECRET_TOKEN", "bar")
 
-	config = ProcessEnv(sm)
+	config = ProcessEnv(sm, l)
 	t.Logf("%v", config)
 
 	// config normalizes string to ensure it ends in a `/`
@@ -73,70 +76,70 @@ func TestProcessEnv(t *testing.T) {
 	}
 
 	t.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", "8201")
-	config = ProcessEnv(sm)
+	config = ProcessEnv(sm, l)
 	if config.dataReceiverServerPort != ":8201" {
 		t.Log("Env port not set correctly")
 		t.Fail()
 	}
 
 	t.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "10")
-	config = ProcessEnv(sm)
+	config = ProcessEnv(sm, l)
 	if config.dataReceiverTimeoutSeconds != 10 {
 		t.Log("APM data receiver timeout not set correctly")
 		t.Fail()
 	}
 
 	t.Setenv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS", "foo")
-	config = ProcessEnv(sm)
+	config = ProcessEnv(sm, l)
 	if config.dataReceiverTimeoutSeconds != 15 {
 		t.Log("APM data receiver timeout not set correctly")
 		t.Fail()
 	}
 
 	t.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "10")
-	config = ProcessEnv(sm)
+	config = ProcessEnv(sm, l)
 	if config.DataForwarderTimeoutSeconds != 10 {
 		t.Log("APM data forwarder timeout not set correctly")
 		t.Fail()
 	}
 
 	t.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "foo")
-	config = ProcessEnv(sm)
+	config = ProcessEnv(sm, l)
 	if config.DataForwarderTimeoutSeconds != 3 {
 		t.Log("APM data forwarder not set correctly")
 		t.Fail()
 	}
 
 	t.Setenv("ELASTIC_APM_API_KEY", "foo")
-	config = ProcessEnv(sm)
+	config = ProcessEnv(sm, l)
 	if config.ApmServerApiKey != "foo" {
 		t.Log("API Key not set correctly")
 		t.Fail()
 	}
 
 	t.Setenv("ELASTIC_APM_SEND_STRATEGY", "Background")
-	config = ProcessEnv(sm)
+	config = ProcessEnv(sm, l)
 	if config.SendStrategy != "background" {
 		t.Log("Background send strategy not set correctly")
 		t.Fail()
 	}
 
 	t.Setenv("ELASTIC_APM_SEND_STRATEGY", "invalid")
-	config = ProcessEnv(sm)
+	config = ProcessEnv(sm, l)
 	if config.SendStrategy != "syncflush" {
 		t.Log("Syncflush send strategy not set correctly")
 		t.Fail()
 	}
 
 	t.Setenv("ELASTIC_APM_LOG_LEVEL", "debug")
-	config = ProcessEnv(sm)
+	config = ProcessEnv(sm, l)
 	if config.LogLevel != zapcore.DebugLevel {
 		t.Log("Log level not set correctly")
 		t.Fail()
 	}
 
 	t.Setenv("ELASTIC_APM_LOG_LEVEL", "invalid")
-	config = ProcessEnv(sm)
+	config = ProcessEnv(sm, l)
 	if config.LogLevel != zapcore.InfoLevel {
 		t.Log("Log level not set correctly")
 		t.Fail()
@@ -151,15 +154,16 @@ func TestGetSecretCalled(t *testing.T) {
 	t.Setenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID", "apikey")
 
 	sm := new(mockSecretManager)
+	l := zaptest.NewLogger(t).Sugar()
 
-	config := ProcessEnv(sm)
+	config := ProcessEnv(sm, l)
 	assert.Equal(t, "secrettoken", config.ApmServerSecretToken)
 	assert.Equal(t, "apikey", config.ApmServerApiKey)
 
 	t.Setenv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID", "")
 	t.Setenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID", "")
 
-	config = ProcessEnv(sm)
+	config = ProcessEnv(sm, l)
 	assert.Equal(t, "unmanagedsecret", config.ApmServerSecretToken)
 	assert.Equal(t, "unmanagedapikey", config.ApmServerApiKey)
 }

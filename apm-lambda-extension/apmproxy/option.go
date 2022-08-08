@@ -17,7 +17,11 @@
 
 package apmproxy
 
-import "time"
+import (
+	"time"
+
+	"go.uber.org/zap"
+)
 
 type Option func(*Client)
 
@@ -77,5 +81,11 @@ func WithSendStrategy(strategy SendStrategy) Option {
 func WithAgentDataBufferSize(size int) Option {
 	return func(c *Client) {
 		c.DataChannel = make(chan AgentData, size)
+	}
+}
+
+func WithLogger(logger *zap.SugaredLogger) Option {
+	return func(c *Client) {
+		c.logger = logger
 	}
 }

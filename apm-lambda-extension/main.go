@@ -19,13 +19,13 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
 
 	"elastic/apm-lambda-extension/app"
-	"elastic/apm-lambda-extension/extension"
 )
 
 func main() {
@@ -36,13 +36,13 @@ func main() {
 	app, err := app.New(
 		app.WithExtensionName(filepath.Base(os.Args[0])),
 		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
+		app.WithLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL")),
 	)
 	if err != nil {
-		extension.Log.Fatalf("failed to create the app: %v", err)
+		log.Fatalf("failed to create the app: %v", err)
 	}
 
 	if err := app.Run(ctx); err != nil {
-		extension.Log.Fatalf("error while running: %v", err)
+		log.Fatalf("error while running: %v", err)
 	}
-
 }

@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"elastic/apm-lambda-extension/extension"
 	"errors"
 	"fmt"
 	"io"
@@ -41,7 +40,7 @@ func (c *Client) ForwardApmData(ctx context.Context, metadataContainer *Metadata
 	for {
 		select {
 		case <-ctx.Done():
-			extension.Log.Debug("Invocation context cancelled, not processing any more agent data")
+			c.logger.Debug("Invocation context cancelled, not processing any more agent data")
 			return nil
 		case agentData := <-c.DataChannel:
 			if metadataContainer.Metadata == nil {
@@ -61,19 +60,19 @@ func (c *Client) ForwardApmData(ctx context.Context, metadataContainer *Metadata
 // FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
 func (c *Client) FlushAPMData(ctx context.Context) {
 	if c.Status == Failing {
-		extension.Log.Debug("Flush skipped - Transport failing")
+		c.logger.Debug("Flush skipped - Transport failing")
 		return
 	}
-	extension.Log.Debug("Flush started - Checking for agent data")
+	c.logger.Debug("Flush started - Checking for agent data")
 	for {
 		select {
 		case agentData := <-c.DataChannel:
-			extension.Log.Debug("Flush in progress - Processing agent data")
+			c.logger.Debug("Flush in progress - Processing agent data")
 			if err := c.PostToApmServer(ctx, agentData); err != nil {
-				extension.Log.Errorf("Error sending to APM server, skipping: %v", err)
+				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		default:
-			extension.Log.Debug("Flush ended - No agent data on buffer")
+			c.logger.Debug("Flush ended - No agent data on buffer")
 			return
 		}
 	}
@@ -129,7 +128,7 @@ func (c *Client) PostToApmServer(ctx context.Context, agentData AgentData) error
 		req.Header.Add("Authorization", "Bearer "+c.ServerSecretToken)
 	}
 
-	extension.Log.Debug("Sending data chunk to APM server")
+	c.logger.Debug("Sending data chunk to APM server")
 	resp, err := c.client.Do(req)
 	if err != nil {
 		c.SetApmServerTransportState(ctx, Failing)
@@ -145,15 +144,15 @@ func (c *Client) PostToApmServer(ctx context.Context, agentData AgentData) error
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		extension.Log.Warnf("Authentication with the APM server failed: response status code: %d", resp.StatusCode)
-		extension.Log.Debugf("APM server response body: %v", string(body))
+		c.logger.Warnf("Authentication with the APM server failed: response status code: %d", resp.StatusCode)
+		c.logger.Debugf("APM server response body: %v", string(body))
 		return nil
 	}
 
 	c.SetApmServerTransportState(ctx, Healthy)
-	extension.Log.Debug("Transport status set to healthy")
-	extension.Log.Debugf("APM server response body: %v", string(body))
-	extension.Log.Debugf("APM server response status code: %v", resp.StatusCode)
+	c.logger.Debug("Transport status set to healthy")
+	c.logger.Debugf("APM server response body: %v", string(body))
+	c.logger.Debugf("APM server response status code: %v", resp.StatusCode)
 	return nil
 }
 
@@ -169,29 +168,29 @@ func (c *Client) SetApmServerTransportState(ctx context.Context, status Status) 
 	case Healthy:
 		c.mu.Lock()
 		c.Status = status
-		extension.Log.Debugf("APM server Transport status set to %s", c.Status)
+		c.logger.Debugf("APM server Transport status set to %s", c.Status)
 		c.ReconnectionCount = -1
 		c.mu.Unlock()
 	case Failing:
 		c.mu.Lock()
 		c.Status = status
-		extension.Log.Debugf("APM server Transport status set to %s", c.Status)
+		c.logger.Debugf("APM server Transport status set to %s", c.Status)
 		c.ReconnectionCount++
 		gracePeriodTimer := time.NewTimer(c.ComputeGracePeriod())
-		extension.Log.Debugf("Grace period entered, reconnection count : %d", c.ReconnectionCount)
+		c.logger.Debugf("Grace period entered, reconnection count : %d", c.ReconnectionCount)
 		go func() {
 			select {
 			case <-gracePeriodTimer.C:
-				extension.Log.Debug("Grace period over - timer timed out")
+				c.logger.Debug("Grace period over - timer timed out")
 			case <-ctx.Done():
-				extension.Log.Debug("Grace period over - context done")
+				c.logger.Debug("Grace period over - context done")
 			}
 			c.Status = Pending
-			extension.Log.Debugf("APM server Transport status set to %s", c.Status)
+			c.logger.Debugf("APM server Transport status set to %s", c.Status)
 			c.mu.Unlock()
 		}()
 	default:
-		extension.Log.Errorf("Cannot set APM server Transport status to %s", status)
+		c.logger.Errorf("Cannot set APM server Transport status to %s", status)
 	}
 }
 
@@ -214,9 +213,9 @@ func (c *Client) ComputeGracePeriod() time.Duration {
 func (c *Client) EnqueueAPMData(agentData AgentData) {
 	select {
 	case c.DataChannel <- agentData:
-		extension.Log.Debug("Adding agent data to buffer to be sent to apm server")
+		c.logger.Debug("Adding agent data to buffer to be sent to apm server")
 	default:
-		extension.Log.Warn("Channel full: dropping a subset of agent data")
+		c.logger.Warn("Channel full: dropping a subset of agent data")
 	}
 }
 
