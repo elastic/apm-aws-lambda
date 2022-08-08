@@ -103,17 +103,17 @@ func ptrFromString(v string) *string {
 }
 
 // ProcessEnv extracts ENV variables into globals
-func ProcessEnv(manager secretManager, Log *zap.SugaredLogger) *extensionConfig {
+func ProcessEnv(manager secretManager, log *zap.SugaredLogger) *extensionConfig {
 	dataReceiverTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
 	if err != nil {
 		dataReceiverTimeoutSeconds = defaultDataReceiverTimeoutSeconds
-		Log.Warnf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to %d: %v", dataReceiverTimeoutSeconds, err)
+		log.Warnf("Could not read ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS, defaulting to %d: %v", dataReceiverTimeoutSeconds, err)
 	}
 
 	dataForwarderTimeoutSeconds, err := getIntFromEnv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS")
 	if err != nil {
 		dataForwarderTimeoutSeconds = defaultDataForwarderTimeoutSeconds
-		Log.Warnf("Could not read ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS, defaulting to %d: %v", dataForwarderTimeoutSeconds, err)
+		log.Warnf("Could not read ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS, defaulting to %d: %v", dataForwarderTimeoutSeconds, err)
 	}
 
 	// add trailing slash to server name if missing
@@ -125,7 +125,7 @@ func ProcessEnv(manager secretManager, Log *zap.SugaredLogger) *extensionConfig 
 	logLevel, err := logger.ParseLogLevel(strings.ToLower(os.Getenv("ELASTIC_APM_LOG_LEVEL")))
 	if err != nil {
 		logLevel = zapcore.InfoLevel
-		Log.Warnf("Could not read ELASTIC_APM_LOG_LEVEL, defaulting to %s", logLevel)
+		log.Warnf("Could not read ELASTIC_APM_LOG_LEVEL, defaulting to %s", logLevel)
 	}
 
 	// Get the send strategy, convert to lowercase
@@ -140,9 +140,9 @@ func ProcessEnv(manager secretManager, Log *zap.SugaredLogger) *extensionConfig 
 	if apmServerApiKeySMSecretId != "" {
 		result, err := getSecret(manager, apmServerApiKeySMSecretId)
 		if err != nil {
-			Log.Fatalf("Failed loading APM Server ApiKey from Secrets Manager: %v", err)
+			log.Fatalf("Failed loading APM Server ApiKey from Secrets Manager: %v", err)
 		}
-		Log.Infof("Using the APM API key retrieved from Secrets Manager.")
+		log.Infof("Using the APM API key retrieved from Secrets Manager.")
 		apmServerApiKey = result
 	}
 
@@ -151,9 +151,9 @@ func ProcessEnv(manager secretManager, Log *zap.SugaredLogger) *extensionConfig 
 	if apmServerSecretTokenSMSecretId != "" {
 		result, err := getSecret(manager, apmServerSecretTokenSMSecretId)
 		if err != nil {
-			Log.Fatalf("Failed loading APM Server Secret Token from Secrets Manager: %v", err)
+			log.Fatalf("Failed loading APM Server Secret Token from Secrets Manager: %v", err)
 		}
-		Log.Infof("Using the APM secret token retrieved from Secrets Manager.")
+		log.Infof("Using the APM secret token retrieved from Secrets Manager.")
 		apmServerSecretToken = result
 	}
 
@@ -172,10 +172,10 @@ func ProcessEnv(manager secretManager, Log *zap.SugaredLogger) *extensionConfig 
 		config.dataReceiverServerPort = ":8200"
 	}
 	if config.apmServerUrl == "" {
-		Log.Fatal("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
+		log.Fatal("please set ELASTIC_APM_LAMBDA_APM_SERVER, exiting")
 	}
 	if config.ApmServerSecretToken == "" && config.ApmServerApiKey == "" {
-		Log.Warn("ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY not specified")
+		log.Warn("ELASTIC_APM_SECRET_TOKEN or ELASTIC_APM_API_KEY not specified")
 	}
 
 	return config
