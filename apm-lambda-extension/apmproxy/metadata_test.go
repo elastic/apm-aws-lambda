@@ -73,7 +73,7 @@ func Test_processMetadata(t *testing.T) {
 			expectError:  gzip.ErrHeader,
 			encodingType: "gzip",
 		},
-		"malformed gzip": {
+		"incomplete gzip": {
 			data: func() []byte {
 				var b bytes.Buffer
 
@@ -112,7 +112,7 @@ func Test_processMetadata(t *testing.T) {
 			expectError:  zlib.ErrHeader,
 			encodingType: "deflate",
 		},
-		"malformed deflate": {
+		"incomplete deflate": {
 			data: func() []byte {
 				var b bytes.Buffer
 
