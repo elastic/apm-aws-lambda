@@ -6,6 +6,7 @@ pipeline {
   agent { label 'ubuntu-18 && immutable' }
   environment {
     REPO = 'apm-aws-lambda'
+    GO_VERSION = '1.19'
     BASE_DIR = "src/github.com/elastic/${env.REPO}"
     PIPELINE_LOG_LEVEL = 'INFO'
     SUFFIX_ARN_FILE = 'arn-file.md'
@@ -72,10 +73,6 @@ pipeline {
           axis {
             name 'PLATFORM'
             values 'macosx && x86_64', 'ubuntu-18 && immutable'
-          }
-          axis {
-            name 'GO_VERSION'
-            values '1.18'
           }
         }
         stages {
