@@ -18,7 +18,7 @@
 package e2eTesting
 
 import (
-	"elastic/apm-lambda-extension/extension"
+	"elastic/apm-lambda-extension/logger"
 	"flag"
 	"fmt"
 	"io"
@@ -33,6 +33,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 )
 
 var rebuildPtr = flag.Bool("rebuild", false, "rebuild lambda functions")
@@ -46,35 +48,39 @@ func TestEndToEnd(t *testing.T) {
 		panic("No config file")
 	}
 
-	if os.Getenv("ELASTIC_APM_LOG_LEVEL") != "" {
-		logLevel, _ := extension.ParseLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
-		extension.Log.Level.SetLevel(logLevel)
-	}
+	logLevel, err := logger.ParseLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL"))
+	require.NoError(t, err)
+
+	l, err := logger.New(
+		logger.WithLevel(logLevel),
+	)
+	require.NoError(t, err)
+
 	if GetEnvVarValueOrSetDefault("RUN_E2E_TESTS", "false") != "true" {
 		t.Skip("Skipping E2E tests. Please set the env. variable RUN_E2E_TESTS=true if you want to run them.")
 	}
 
-	extension.Log.Info("If the end-to-end tests are failing unexpectedly, please verify that Docker is running on your machine.")
+	l.Info("If the end-to-end tests are failing unexpectedly, please verify that Docker is running on your machine.")
 
 	languageName := strings.ToLower(*langPtr)
 	supportedLanguages := []string{"nodejs", "python", "java"}
 	if !IsStringInSlice(languageName, supportedLanguages) {
-		ProcessError(fmt.Errorf(fmt.Sprintf("Unsupported language %s ! Supported languages are %v", languageName, supportedLanguages)))
+		ProcessError(l, fmt.Errorf(fmt.Sprintf("Unsupported language %s ! Supported languages are %v", languageName, supportedLanguages)))
 	}
 
 	samPath := "sam-" + languageName
 	samServiceName := "sam-testing-" + languageName
 
 	// Build and download required binaries (extension and Java agent)
-	buildExtensionBinaries()
+	buildExtensionBinaries(l)
 
 	// Java agent processing
 	if languageName == "java" {
 		if !FolderExists(filepath.Join(samPath, "agent")) {
-			extension.Log.Warn("Java agent not found ! Collecting archive from Github...")
-			retrieveJavaAgent(samPath, *javaAgentVerPtr)
+			l.Warn("Java agent not found ! Collecting archive from Github...")
+			retrieveJavaAgent(l, samPath, *javaAgentVerPtr)
 		}
-		changeJavaAgentPermissions(samPath)
+		changeJavaAgentPermissions(l, samPath)
 	}
 
 	// Initialize Mock APM Server
@@ -89,19 +95,19 @@ func TestEndToEnd(t *testing.T) {
 
 	resultsChan := make(chan string, 1)
 
-	testUuid := runTestWithTimer(samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
-	extension.Log.Infof("UUID generated during the test : %s", testUuid)
+	testUuid := runTestWithTimer(l, samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
+	l.Infof("UUID generated during the test : %s", testUuid)
 	if testUuid == "" {
 		t.Fail()
 	}
-	extension.Log.Infof("Querying the mock server for transaction bound to %s...", samServiceName)
+	l.Infof("Querying the mock server for transaction bound to %s...", samServiceName)
 	assert.True(t, strings.Contains(mockAPMServerLog, testUuid))
 }
 
-func runTestWithTimer(path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) string {
+func runTestWithTimer(l *zap.SugaredLogger, path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) string {
 	timer := time.NewTimer(time.Duration(lambdaFuncTimeout) * time.Second * 2)
 	defer timer.Stop()
-	go runTest(path, serviceName, serverURL, buildFlag, lambdaFuncTimeout, resultsChan)
+	go runTest(l, path, serviceName, serverURL, buildFlag, lambdaFuncTimeout, resultsChan)
 	select {
 	case testUuid := <-resultsChan:
 		return testUuid
@@ -110,63 +116,63 @@ func runTestWithTimer(path string, serviceName string, serverURL string, buildFl
 	}
 }
 
-func buildExtensionBinaries() {
-	RunCommandInDir("make", []string{}, "..")
+func buildExtensionBinaries(l *zap.SugaredLogger) {
+	RunCommandInDir(l, "make", []string{}, "..")
 }
 
-func runTest(path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) {
-	extension.Log.Infof("Starting to test %s", serviceName)
+func runTest(l *zap.SugaredLogger, path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) {
+	l.Infof("Starting to test %s", serviceName)
 
 	if !FolderExists(filepath.Join(path, ".aws-sam")) || buildFlag {
-		extension.Log.Infof("Building the Lambda function %s", serviceName)
-		RunCommandInDir("sam", []string{"build"}, path)
+		l.Infof("Building the Lambda function %s", serviceName)
+		RunCommandInDir(l, "sam", []string{"build"}, path)
 	}
 
-	extension.Log.Infof("Invoking the Lambda function %s", serviceName)
+	l.Infof("Invoking the Lambda function %s", serviceName)
 	uuidWithHyphen := uuid.New().String()
 	urlSlice := strings.Split(serverURL, ":")
 	port := urlSlice[len(urlSlice)-1]
-	RunCommandInDir("sam", []string{"local", "invoke", "--parameter-overrides",
+	RunCommandInDir(l, "sam", []string{"local", "invoke", "--parameter-overrides",
 		fmt.Sprintf("ParameterKey=ApmServerURL,ParameterValue=http://host.docker.internal:%s", port),
 		fmt.Sprintf("ParameterKey=TestUUID,ParameterValue=%s", uuidWithHyphen),
 		fmt.Sprintf("ParameterKey=TimeoutParam,ParameterValue=%d", lambdaFuncTimeout)},
 		path)
-	extension.Log.Infof("%s execution complete", serviceName)
+	l.Infof("%s execution complete", serviceName)
 
 	resultsChan <- uuidWithHyphen
 }
 
-func retrieveJavaAgent(samJavaPath string, version string) {
+func retrieveJavaAgent(l *zap.SugaredLogger, samJavaPath string, version string) {
 
 	agentFolderPath := filepath.Join(samJavaPath, "agent")
 	agentArchivePath := filepath.Join(samJavaPath, "agent.zip")
 
 	// Download archive
 	out, err := os.Create(agentArchivePath)
-	ProcessError(err)
+	ProcessError(l, err)
 	defer out.Close()
 	resp, err := http.Get(fmt.Sprintf("https://github.com/elastic/apm-agent-java/releases/download/v%[1]s/elastic-apm-java-aws-lambda-layer-%[1]s.zip", version))
-	ProcessError(err)
+	ProcessError(l, err)
 	defer resp.Body.Close()
 	if _, err = io.Copy(out, resp.Body); err != nil {
-		extension.Log.Errorf("Could not retrieve java agent : %v", err)
+		l.Errorf("Could not retrieve java agent : %v", err)
 	}
 
 	// Unzip archive and delete it
-	extension.Log.Info("Unzipping Java Agent archive...")
-	Unzip(agentArchivePath, agentFolderPath)
+	l.Info("Unzipping Java Agent archive...")
+	Unzip(l, agentArchivePath, agentFolderPath)
 	err = os.Remove(agentArchivePath)
-	ProcessError(err)
+	ProcessError(l, err)
 }
 
-func changeJavaAgentPermissions(samJavaPath string) {
+func changeJavaAgentPermissions(l *zap.SugaredLogger, samJavaPath string) {
 	agentFolderPath := filepath.Join(samJavaPath, "agent")
-	extension.Log.Info("Setting appropriate permissions for Java agent files...")
+	l.Info("Setting appropriate permissions for Java agent files...")
 	agentFiles, err := os.ReadDir(agentFolderPath)
-	ProcessError(err)
+	ProcessError(l, err)
 	for _, f := range agentFiles {
 		if err = os.Chmod(filepath.Join(agentFolderPath, f.Name()), 0755); err != nil {
-			extension.Log.Errorf("Could not change java agent permissions : %v", err)
+			l.Errorf("Could not change java agent permissions : %v", err)
 		}
 	}
 }

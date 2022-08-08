@@ -26,6 +26,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestRegister(t *testing.T) {
@@ -51,7 +52,7 @@ func TestRegister(t *testing.T) {
 	}))
 	defer runtimeServer.Close()
 
-	client := NewClient(runtimeServer.Listener.Addr().String())
+	client := NewClient(runtimeServer.Listener.Addr().String(), zaptest.NewLogger(t).Sugar())
 	res, err := client.Register(ctx, extensionName)
 	require.NoError(t, err)
 	assert.Equal(t, "helloWorld", res.FunctionName)
@@ -83,7 +84,7 @@ func TestNextEvent(t *testing.T) {
 	}))
 	defer runtimeServer.Close()
 
-	client := NewClient(runtimeServer.Listener.Addr().String())
+	client := NewClient(runtimeServer.Listener.Addr().String(), zaptest.NewLogger(t).Sugar())
 	res, err := client.NextEvent(ctx)
 	require.NoError(t, err)
 	assert.Equal(t, Invoke, res.EventType)

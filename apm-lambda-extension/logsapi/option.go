@@ -17,6 +17,8 @@
 
 package logsapi
 
+import "go.uber.org/zap"
+
 // WithListenerAddress sets the listener address of the
 // server listening for logs event.
 func WithListenerAddress(s string) ClientOption {
@@ -37,5 +39,12 @@ func WithLogsAPIBaseURL(s string) ClientOption {
 func WithLogBuffer(size int) ClientOption {
 	return func(c *Client) {
 		c.logsChannel = make(chan LogEvent, size)
+	}
+}
+
+// WithLogger sets the logger.
+func WithLogger(logger *zap.SugaredLogger) ClientOption {
+	return func(c *Client) {
+		c.logger = logger
 	}
 }

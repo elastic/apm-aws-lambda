@@ -30,7 +30,8 @@ import (
 	"strings"
 
 	"elastic/apm-lambda-extension/apmproxy"
-	"elastic/apm-lambda-extension/extension"
+
+	"go.uber.org/zap"
 )
 
 // GetEnvVarValueOrSetDefault retrieves the environment variable envVarName.
@@ -45,26 +46,26 @@ func GetEnvVarValueOrSetDefault(envVarName string, defaultVal string) string {
 
 // RunCommandInDir runs a shell command with a given set of args in a specified folder.
 // The stderr and stdout can be enabled or disabled.
-func RunCommandInDir(command string, args []string, dir string) {
+func RunCommandInDir(l *zap.SugaredLogger, command string, args []string, dir string) {
 	e := exec.Command(command, args...)
 	e.Dir = dir
 	stdout, _ := e.StdoutPipe()
 	stderr, _ := e.StderrPipe()
 	if err := e.Start(); err != nil {
-		extension.Log.Errorf("Could not retrieve run %s : %v", command, err)
+		l.Errorf("Could not retrieve run %s : %v", command, err)
 	}
 	scannerOut := bufio.NewScanner(stdout)
 	for scannerOut.Scan() {
 		m := scannerOut.Text()
-		extension.Log.Debugf(m)
+		l.Debugf(m)
 	}
 	scannerErr := bufio.NewScanner(stderr)
 	for scannerErr.Scan() {
 		m := scannerErr.Text()
-		extension.Log.Debugf(m)
+		l.Debugf(m)
 	}
 	if err := e.Wait(); err != nil {
-		extension.Log.Errorf("Could not wait for the execution of %s : %v", command, err)
+		l.Errorf("Could not wait for the execution of %s : %v", command, err)
 	}
 
 }
@@ -77,23 +78,23 @@ func FolderExists(path string) bool {
 
 // ProcessError is a shorthand function to handle fatal errors, the idiomatic Go way.
 // This should only be used for showstopping errors.
-func ProcessError(err error) {
+func ProcessError(l *zap.SugaredLogger, err error) {
 	if err != nil {
-		extension.Log.Panic(err.Error())
+		l.Panic(err.Error())
 	}
 }
 
 // Unzip is a utility function that unzips a specified zip archive to a specified destination.
-func Unzip(archivePath string, destinationFolderPath string) {
+func Unzip(l *zap.SugaredLogger, archivePath string, destinationFolderPath string) {
 
 	openedArchive, err := zip.OpenReader(archivePath)
-	ProcessError(err)
+	ProcessError(l, err)
 	defer openedArchive.Close()
 
 	// Permissions setup
 	err = os.MkdirAll(destinationFolderPath, 0755)
 	if err != nil {
-		extension.Log.Errorf("Could not create folders required to unzip, %v", err)
+		l.Errorf("Could not create folders required to unzip, %v", err)
 	}
 
 	// Closure required, so that Close() calls do not pile up when unzipping archives with a lot of files
@@ -117,24 +118,24 @@ func Unzip(archivePath string, destinationFolderPath string) {
 
 		if f.FileInfo().IsDir() {
 			if err := os.MkdirAll(path, f.Mode()); err != nil {
-				extension.Log.Errorf("Could not unzip folder : %v", err)
+				l.Errorf("Could not unzip folder : %v", err)
 			}
 		} else {
 			if err = os.MkdirAll(filepath.Dir(path), f.Mode()); err != nil {
-				extension.Log.Errorf("Could not unzip file : %v", err)
+				l.Errorf("Could not unzip file : %v", err)
 			}
 			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-			ProcessError(err)
+			ProcessError(l, err)
 			defer f.Close()
 			_, err = io.Copy(f, rc)
-			ProcessError(err)
+			ProcessError(l, err)
 		}
 		return nil
 	}
 
 	for _, f := range openedArchive.File {
 		err := extractAndWriteFile(f)
-		ProcessError(err)
+		ProcessError(l, err)
 	}
 }
 

@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // RegisterResponse is the body of the response for /register
@@ -74,14 +76,16 @@ type Client struct {
 	baseURL     string
 	httpClient  *http.Client
 	ExtensionID string
+	logger      *zap.SugaredLogger
 }
 
 // NewClient returns a Lambda Extensions API Client
-func NewClient(awsLambdaRuntimeAPI string) *Client {
+func NewClient(awsLambdaRuntimeAPI string, logger *zap.SugaredLogger) *Client {
 	baseURL := fmt.Sprintf("http://%s/2020-01-01/extension", awsLambdaRuntimeAPI)
 	return &Client{
 		baseURL:    baseURL,
 		httpClient: &http.Client{},
+		logger:     logger,
 	}
 }
 
@@ -115,7 +119,7 @@ func (e *Client) Register(ctx context.Context, filename string) (*RegisterRespon
 		return nil, fmt.Errorf("failed to decode register response body: %w", err)
 	}
 	e.ExtensionID = httpRes.Header.Get(extensionIdentiferHeader)
-	Log.Debugf("ExtensionID : %s", e.ExtensionID)
+	e.logger.Debugf("ExtensionID : %s", e.ExtensionID)
 	return &res, nil
 }
 

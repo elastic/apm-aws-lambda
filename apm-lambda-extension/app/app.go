@@ -20,11 +20,15 @@ package app
 import (
 	"elastic/apm-lambda-extension/apmproxy"
 	"elastic/apm-lambda-extension/extension"
+	"elastic/apm-lambda-extension/logger"
 	"elastic/apm-lambda-extension/logsapi"
 	"fmt"
 	"os"
 	"strconv"
 	"time"
+
+	"go.elastic.co/ecszap"
+	"go.uber.org/zap"
 )
 
 // App is the main application.
@@ -33,6 +37,7 @@ type App struct {
 	extensionClient *extension.Client
 	logsClient      *logsapi.Client
 	apmClient       *apmproxy.Client
+	logger          *zap.SugaredLogger
 }
 
 // New returns an App or an error if the
@@ -45,15 +50,23 @@ func New(opts ...configOption) (*App, error) {
 	}
 
 	app := &App{
-		extensionName:   c.extensionName,
-		extensionClient: extension.NewClient(c.awsLambdaRuntimeAPI),
+		extensionName: c.extensionName,
 	}
+
+	var err error
+
+	if app.logger, err = buildLogger(c.logLevel); err != nil {
+		return nil, err
+	}
+
+	app.extensionClient = extension.NewClient(c.awsLambdaRuntimeAPI, app.logger)
 
 	if !c.disableLogsAPI {
 		lc, err := logsapi.NewClient(
 			logsapi.WithLogsAPIBaseURL(fmt.Sprintf("http://%s", c.awsLambdaRuntimeAPI)),
 			logsapi.WithListenerAddress("sandbox:0"),
 			logsapi.WithLogBuffer(100),
+			logsapi.WithLogger(app.logger),
 		)
 		if err != nil {
 			return nil, err
@@ -93,7 +106,7 @@ func New(opts ...configOption) (*App, error) {
 		apmOpts = append(apmOpts, apmproxy.WithAgentDataBufferSize(size))
 	}
 
-	apmOpts = append(apmOpts, apmproxy.WithURL(os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")))
+	apmOpts = append(apmOpts, apmproxy.WithURL(os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")), apmproxy.WithLogger(app.logger))
 
 	ac, err := apmproxy.NewClient(apmOpts...)
 
@@ -117,4 +130,20 @@ func getIntFromEnvIfAvailable(name string) (int, error) {
 		return -1, err
 	}
 	return value, nil
+}
+
+func buildLogger(level string) (*zap.SugaredLogger, error) {
+	if level == "" {
+		level = "info"
+	}
+
+	l, err := logger.ParseLogLevel(level)
+	if err != nil {
+		return nil, err
+	}
+
+	return logger.New(
+		logger.WithEncoderConfig(ecszap.NewDefaultEncoderConfig().ToZapCoreEncoderConfig()),
+		logger.WithLevel(l),
+	)
 }

@@ -27,6 +27,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestClient(t *testing.T) {
@@ -40,12 +41,20 @@ func TestClient(t *testing.T) {
 		"missing base url": {
 			opts: []logsapi.ClientOption{
 				logsapi.WithLogsAPIBaseURL(""),
+				logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
+			},
+			expectedErr: true,
+		},
+		"missing logger": {
+			opts: []logsapi.ClientOption{
+				logsapi.WithLogsAPIBaseURL("http://example.com"),
 			},
 			expectedErr: true,
 		},
 		"valid": {
 			opts: []logsapi.ClientOption{
 				logsapi.WithLogsAPIBaseURL("http://example.com"),
+				logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
 		},
 	}
@@ -71,12 +80,14 @@ func TestSubscribe(t *testing.T) {
 			responseHeader: http.StatusOK,
 			opts: []logsapi.ClientOption{
 				logsapi.WithListenerAddress("localhost:0"),
+				logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
 		},
 		"invalid response": {
 			responseHeader: http.StatusForbidden,
 			opts: []logsapi.ClientOption{
 				logsapi.WithListenerAddress("localhost:0"),
+				logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
 			expectedErr: true,
 		},
@@ -115,6 +126,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 		"valid response": {
 			opts: []logsapi.ClientOption{
 				logsapi.WithListenerAddress(addr),
+				logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
 		},
 	}
