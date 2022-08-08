@@ -19,7 +19,6 @@ package logsapi_test
 
 import (
 	"bytes"
-	"elastic/apm-lambda-extension/logger"
 	"elastic/apm-lambda-extension/logsapi"
 	"encoding/json"
 	"net/http"
@@ -28,12 +27,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestClient(t *testing.T) {
-	l, err := logger.New()
-	require.NoError(t, err)
-
 	testCases := map[string]struct {
 		opts        []logsapi.ClientOption
 		expectedErr bool
@@ -44,7 +41,7 @@ func TestClient(t *testing.T) {
 		"missing base url": {
 			opts: []logsapi.ClientOption{
 				logsapi.WithLogsAPIBaseURL(""),
-				logsapi.WithLogger(l),
+				logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
 			expectedErr: true,
 		},
@@ -57,7 +54,7 @@ func TestClient(t *testing.T) {
 		"valid": {
 			opts: []logsapi.ClientOption{
 				logsapi.WithLogsAPIBaseURL("http://example.com"),
-				logsapi.WithLogger(l),
+				logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
 		},
 	}
@@ -74,9 +71,6 @@ func TestClient(t *testing.T) {
 }
 
 func TestSubscribe(t *testing.T) {
-	l, err := logger.New()
-	require.NoError(t, err)
-
 	testCases := map[string]struct {
 		opts           []logsapi.ClientOption
 		responseHeader int
@@ -86,14 +80,14 @@ func TestSubscribe(t *testing.T) {
 			responseHeader: http.StatusOK,
 			opts: []logsapi.ClientOption{
 				logsapi.WithListenerAddress("localhost:0"),
-				logsapi.WithLogger(l),
+				logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
 		},
 		"invalid response": {
 			responseHeader: http.StatusForbidden,
 			opts: []logsapi.ClientOption{
 				logsapi.WithListenerAddress("localhost:0"),
-				logsapi.WithLogger(l),
+				logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
 			expectedErr: true,
 		},
@@ -124,9 +118,6 @@ func TestSubscribe(t *testing.T) {
 }
 
 func TestSubscribeAWSRequest(t *testing.T) {
-	l, err := logger.New()
-	require.NoError(t, err)
-
 	addr := "localhost:8080"
 
 	testCases := map[string]struct {
@@ -135,7 +126,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 		"valid response": {
 			opts: []logsapi.ClientOption{
 				logsapi.WithListenerAddress(addr),
-				logsapi.WithLogger(l),
+				logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
 		},
 	}

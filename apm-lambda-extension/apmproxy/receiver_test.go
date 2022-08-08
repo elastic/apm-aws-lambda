@@ -20,7 +20,6 @@ package apmproxy_test
 import (
 	"bytes"
 	"elastic/apm-lambda-extension/apmproxy"
-	"elastic/apm-lambda-extension/logger"
 	"io"
 	"net"
 	"net/http"
@@ -31,6 +30,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestInfoProxy(t *testing.T) {
@@ -49,9 +49,6 @@ func TestInfoProxy(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	l, err := logger.New()
-	require.NoError(t, err)
-
 	// Create extension config and start the server
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
@@ -59,7 +56,7 @@ func TestInfoProxy(t *testing.T) {
 		apmproxy.WithAPIKey("bar"),
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
-		apmproxy.WithLogger(l),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
 
@@ -97,9 +94,6 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	l, err := logger.New()
-	require.NoError(t, err)
-
 	// Create extension config and start the server
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
@@ -107,7 +101,7 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 		apmproxy.WithAPIKey("bar"),
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
-		apmproxy.WithLogger(l),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
 
@@ -138,9 +132,6 @@ func Test_handleInfoRequest(t *testing.T) {
 {"transaction": { "id": "00xxxxFFaaaa1234", "trace_id": "0123456789abcdef0123456789abcdef", "name": "amqp receive", "parent_id": "abcdefabcdef01234567", "type": "messaging", "duration": 3, "span_count": { "started": 1 }, "context": {"message": {"queue": { "name": "new_users"}, "age":{ "ms": 1577958057123}, "headers": {"user_id": "1ax3", "involved_services": ["user", "auth"]}, "body": "user created", "routing_key": "user-created-transaction"}},"session":{"id":"sunday","sequence":123}}}
 `
 
-	l, err := logger.New()
-	require.NoError(t, err)
-
 	// Create extension config
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
@@ -148,7 +139,7 @@ func Test_handleInfoRequest(t *testing.T) {
 		apmproxy.WithAPIKey("bar"),
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
-		apmproxy.WithLogger(l),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
 
@@ -183,15 +174,12 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	l, err := logger.New()
-	require.NoError(t, err)
-
 	// Create extension config and start the server
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
-		apmproxy.WithLogger(l),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
 	apmClient.AgentDoneSignal = make(chan struct{}, 1)
@@ -231,15 +219,12 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	l, err := logger.New()
-	require.NoError(t, err)
-
 	// Create extension config and start the server
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
-		apmproxy.WithLogger(l),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
 	apmClient.AgentDoneSignal = make(chan struct{}, 1)
@@ -278,15 +263,12 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	}))
 	defer apmServer.Close()
 
-	l, err := logger.New()
-	require.NoError(t, err)
-
 	// Create extension config and start the server
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
-		apmproxy.WithLogger(l),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
 	apmClient.AgentDoneSignal = make(chan struct{}, 1)

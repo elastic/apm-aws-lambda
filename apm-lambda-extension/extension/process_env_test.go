@@ -19,20 +19,18 @@ package extension
 
 import (
 	"context"
-	"elastic/apm-lambda-extension/logger"
 	"encoding/base64"
 	"fmt"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestProcessEnv(t *testing.T) {
-	l, err := logger.New()
-	require.NoError(t, err)
+	l := zaptest.NewLogger(t).Sugar()
 
 	sm := new(mockSecretManager)
 	t.Setenv("ELASTIC_APM_LAMBDA_APM_SERVER", "bar.example.com/")
@@ -156,8 +154,7 @@ func TestGetSecretCalled(t *testing.T) {
 	t.Setenv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID", "apikey")
 
 	sm := new(mockSecretManager)
-	l, err := logger.New()
-	require.NoError(t, err)
+	l := zaptest.NewLogger(t).Sugar()
 
 	config := ProcessEnv(sm, l)
 	assert.Equal(t, "secrettoken", config.ApmServerSecretToken)

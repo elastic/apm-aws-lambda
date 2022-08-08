@@ -19,16 +19,13 @@ package apmproxy_test
 
 import (
 	"elastic/apm-lambda-extension/apmproxy"
-	"elastic/apm-lambda-extension/logger"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestClient(t *testing.T) {
-	l, err := logger.New()
-	require.NoError(t, err)
-
 	testCases := map[string]struct {
 		opts        []apmproxy.Option
 		expectedErr bool
@@ -39,7 +36,7 @@ func TestClient(t *testing.T) {
 		"missing base url": {
 			opts: []apmproxy.Option{
 				apmproxy.WithURL(""),
-				apmproxy.WithLogger(l),
+				apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
 			expectedErr: true,
 		},
@@ -52,7 +49,7 @@ func TestClient(t *testing.T) {
 		"valid": {
 			opts: []apmproxy.Option{
 				apmproxy.WithURL("https://example.com"),
-				apmproxy.WithLogger(l),
+				apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
 		},
 	}
