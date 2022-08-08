@@ -34,10 +34,14 @@ import (
 
 	e2eTesting "elastic/apm-lambda-extension/e2e-testing"
 	"elastic/apm-lambda-extension/extension"
+	"elastic/apm-lambda-extension/logger"
 	"elastic/apm-lambda-extension/logsapi"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type MockEventType string
@@ -84,7 +88,7 @@ type ApmInfo struct {
 	Version      string    `json:"version"`
 }
 
-func newMockApmServer(t *testing.T) (*MockServerInternals, *httptest.Server) {
+func newMockApmServer(t *testing.T, l *zap.SugaredLogger) (*MockServerInternals, *httptest.Server) {
 	var apmServerInternals MockServerInternals
 	apmServerInternals.WaitForUnlockSignal = true
 	apmServerInternals.UnlockSignalChannel = make(chan struct{})
@@ -94,15 +98,15 @@ func newMockApmServer(t *testing.T) (*MockServerInternals, *httptest.Server) {
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 		}
-		extension.Log.Debugf("Event type received by mock APM server : %s", string(decompressedBytes))
+		l.Debugf("Event type received by mock APM server : %s", string(decompressedBytes))
 		switch APMServerBehavior(decompressedBytes) {
 		case TimelyResponse:
-			extension.Log.Debug("Timely response signal received")
+			l.Debug("Timely response signal received")
 		case SlowResponse:
-			extension.Log.Debug("Slow response signal received")
+			l.Debug("Slow response signal received")
 			time.Sleep(2 * time.Second)
 		case Hangs:
-			extension.Log.Debug("Hang signal received")
+			l.Debug("Hang signal received")
 			apmServerMutex.Lock()
 			if apmServerInternals.WaitForUnlockSignal {
 				<-apmServerInternals.UnlockSignalChannel
@@ -116,7 +120,7 @@ func newMockApmServer(t *testing.T) (*MockServerInternals, *httptest.Server) {
 		if r.RequestURI == "/intake/v2/events" {
 			w.WriteHeader(http.StatusAccepted)
 			apmServerInternals.Data += string(decompressedBytes)
-			extension.Log.Debug("APM Payload processed")
+			l.Debug("APM Payload processed")
 		} else if r.RequestURI == "/" {
 			w.WriteHeader(http.StatusOK)
 			infoPayload, err := json.Marshal(ApmInfo{
@@ -142,7 +146,7 @@ func newMockApmServer(t *testing.T) (*MockServerInternals, *httptest.Server) {
 	return &apmServerInternals, apmServer
 }
 
-func newMockLambdaServer(t *testing.T, eventsChannel chan MockEvent) *MockServerInternals {
+func newMockLambdaServer(t *testing.T, eventsChannel chan MockEvent, l *zap.SugaredLogger) *MockServerInternals {
 	var lambdaServerInternals MockServerInternals
 	lambdaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.RequestURI {
@@ -154,7 +158,7 @@ func newMockLambdaServer(t *testing.T, eventsChannel chan MockEvent) *MockServer
 				FunctionVersion: "$LATEST",
 				Handler:         "main_test.mock_lambda",
 			}); err != nil {
-				extension.Log.Fatalf("Could not encode registration response : %v", err)
+				l.Fatalf("Could not encode registration response : %v", err)
 				return
 			}
 		case "/2020-01-01/extension/event/next":
@@ -162,16 +166,16 @@ func newMockLambdaServer(t *testing.T, eventsChannel chan MockEvent) *MockServer
 			currId := uuid.New().String()
 			select {
 			case nextEvent := <-eventsChannel:
-				sendNextEventInfo(w, currId, nextEvent)
-				go processMockEvent(currId, nextEvent, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals)
+				sendNextEventInfo(w, currId, nextEvent, l)
+				go processMockEvent(currId, nextEvent, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals, l)
 			default:
 				finalShutDown := MockEvent{
 					Type:              Shutdown,
 					ExecutionDuration: 0,
 					Timeout:           0,
 				}
-				sendNextEventInfo(w, currId, finalShutDown)
-				go processMockEvent(currId, finalShutDown, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals)
+				sendNextEventInfo(w, currId, finalShutDown, l)
+				go processMockEvent(currId, finalShutDown, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals, l)
 			}
 		// Logs API subscription request
 		case "/2020-08-15/logs":
@@ -186,18 +190,13 @@ func newMockLambdaServer(t *testing.T, eventsChannel chan MockEvent) *MockServer
 	// Find unused port for the extension to listen to
 	extensionPort, err := e2eTesting.GetFreePort()
 	if err != nil {
-		extension.Log.Errorf("Could not find free port for the extension to listen on : %v", err)
+		l.Errorf("Could not find free port for the extension to listen on : %v", err)
 		extensionPort = 8200
 	}
 	t.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort))
 
 	t.Cleanup(func() { lambdaServer.Close() })
 	return &lambdaServerInternals
-}
-
-// TODO : Move logger out of extension package and stop using it as a package-level variable
-func initLogLevel(t *testing.T, logLevel string) {
-	t.Setenv("ELASTIC_APM_LOG_LEVEL", logLevel)
 }
 
 func newTestStructs(t *testing.T) chan MockEvent {
@@ -208,8 +207,8 @@ func newTestStructs(t *testing.T) chan MockEvent {
 	return eventsChannel
 }
 
-func processMockEvent(currId string, event MockEvent, extensionPort string, internals *MockServerInternals) {
-	sendLogEvent(currId, logsapi.Start)
+func processMockEvent(currId string, event MockEvent, extensionPort string, internals *MockServerInternals, l *zap.SugaredLogger) {
+	sendLogEvent(currId, logsapi.Start, l)
 	client := http.Client{}
 	sendRuntimeDone := true
 	sendMetrics := true
@@ -220,18 +219,18 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		res, _ := client.Do(req)
-		extension.Log.Debugf("Response seen by the agent : %d", res.StatusCode)
+		l.Debugf("Response seen by the agent : %d", res.StatusCode)
 	case InvokeStandardMetadata:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		metadata := `{"metadata":{"service":{"name":"1234_service-12a3","version":"5.1.3","environment":"staging","agent":{"name":"elastic-node","version":"3.14.0"},"framework":{"name":"Express","version":"1.2.3"},"language":{"name":"ecmascript","version":"8"},"runtime":{"name":"node","version":"8.0.0"},"node":{"configured_name":"node-123"}},"user":{"username":"bar","id":"123user","email":"bar@user.com"},"labels":{"tag0":null,"tag1":"one","tag2":2},"process":{"pid":1234,"ppid":6789,"title":"node","argv":["node","server.js"]},"system":{"architecture":"x64","hostname":"prod1.example.com","platform":"darwin","container":{"id":"container-id"},"kubernetes":{"namespace":"namespace1","node":{"name":"node-name"},"pod":{"name":"pod-name","uid":"pod-uid"}}},"cloud":{"provider":"cloud_provider","region":"cloud_region","availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"account":{"id":"account_id","name":"account_name"},"project":{"id":"project_id","name":"project_name"},"service":{"name":"lambda"}}}}`
 		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(metadata)))
 		res, _ := client.Do(req)
-		extension.Log.Debugf("Response seen by the agent : %d", res.StatusCode)
+		l.Debugf("Response seen by the agent : %d", res.StatusCode)
 	case InvokeStandardFlush:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		if _, err := client.Do(reqData); err != nil {
-			extension.Log.Error(err.Error())
+			l.Error(err.Error())
 		}
 	case InvokeLateFlush:
 		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
@@ -239,7 +238,7 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 		internals.WaitGroup.Add(1)
 		go func() {
 			if _, err := client.Do(reqData); err != nil {
-				extension.Log.Error(err.Error())
+				l.Error(err.Error())
 			}
 			internals.WaitGroup.Done()
 		}()
@@ -250,10 +249,10 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 		reqData0, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		reqData1, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		if _, err := client.Do(reqData0); err != nil {
-			extension.Log.Error(err.Error())
+			l.Error(err.Error())
 		}
 		if _, err := client.Do(reqData1); err != nil {
-			extension.Log.Error(err.Error())
+			l.Error(err.Error())
 		}
 		time.Sleep(650 * time.Microsecond)
 	case InvokeMultipleTransactionsOverload:
@@ -264,7 +263,7 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 				time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
 				reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 				if _, err := client.Do(reqData); err != nil {
-					extension.Log.Error(err.Error())
+					l.Error(err.Error())
 				}
 				wg.Done()
 			}()
@@ -275,7 +274,7 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		res, err := client.Do(req)
 		if err != nil {
-			extension.Log.Errorf("No response following info request : %v", err)
+			l.Errorf("No response following info request : %v", err)
 			break
 		}
 		var rawBytes []byte
@@ -283,18 +282,18 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 			rawBytes, _ = io.ReadAll(res.Body)
 		}
 		internals.Data += string(rawBytes)
-		extension.Log.Debugf("Response seen by the agent : %d", res.StatusCode)
+		l.Debugf("Response seen by the agent : %d", res.StatusCode)
 	case Shutdown:
 	}
 	if sendRuntimeDone {
-		sendLogEvent(currId, logsapi.RuntimeDone)
+		sendLogEvent(currId, logsapi.RuntimeDone, l)
 	}
 	if sendMetrics {
-		sendLogEvent(currId, logsapi.Report)
+		sendLogEvent(currId, logsapi.Report, l)
 	}
 }
 
-func sendNextEventInfo(w http.ResponseWriter, id string, event MockEvent) {
+func sendNextEventInfo(w http.ResponseWriter, id string, event MockEvent, l *zap.SugaredLogger) {
 	nextEventInfo := extension.NextEventResponse{
 		EventType:          "INVOKE",
 		DeadlineMs:         time.Now().UnixNano()/int64(time.Millisecond) + int64(event.Timeout*1000),
@@ -307,11 +306,11 @@ func sendNextEventInfo(w http.ResponseWriter, id string, event MockEvent) {
 	}
 
 	if err := json.NewEncoder(w).Encode(nextEventInfo); err != nil {
-		extension.Log.Errorf("Could not encode event : %v", err)
+		l.Errorf("Could not encode event : %v", err)
 	}
 }
 
-func sendLogEvent(requestId string, logEventType logsapi.SubEventType) {
+func sendLogEvent(requestId string, logEventType logsapi.SubEventType, l *zap.SugaredLogger) {
 	record := logsapi.LogEventRecord{
 		RequestID: requestId,
 	}
@@ -334,7 +333,7 @@ func sendLogEvent(requestId string, logEventType logsapi.SubEventType) {
 	// Convert record to JSON (string)
 	bufRecord := new(bytes.Buffer)
 	if err := json.NewEncoder(bufRecord).Encode(record); err != nil {
-		extension.Log.Errorf("Could not encode record : %v", err)
+		l.Errorf("Could not encode record : %v", err)
 		return
 	}
 	logEvent.StringRecord = bufRecord.String()
@@ -342,7 +341,7 @@ func sendLogEvent(requestId string, logEventType logsapi.SubEventType) {
 	// Convert full log event to JSON
 	bufLogEvent := new(bytes.Buffer)
 	if err := json.NewEncoder(bufLogEvent).Encode([]logsapi.LogEvent{logEvent}); err != nil {
-		extension.Log.Errorf("Could not encode record : %v", err)
+		l.Errorf("Could not encode record : %v", err)
 		return
 	}
 	// TODO refactor these tests
@@ -364,10 +363,13 @@ func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
 // TestStandardEventsChain checks a nominal sequence of events (fast APM server, only one standard event)
 func TestStandardEventsChain(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, _ := newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
@@ -380,10 +382,13 @@ func TestStandardEventsChain(t *testing.T) {
 // TestFlush checks if the flushed param does not cause a panic or an unexpected behavior
 func TestFlush(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, _ := newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
@@ -397,10 +402,13 @@ func TestFlush(t *testing.T) {
 // The test is built so that the AgentDone signal is received after RuntimeDone, which causes the next event to be interrupted.
 func TestLateFlush(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, _ := newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeLateFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
@@ -414,10 +422,13 @@ func TestLateFlush(t *testing.T) {
 // TestWaitGroup checks if there is no race condition between the main waitgroups (issue #128)
 func TestWaitGroup(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, _ := newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeWaitgroupsRace, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 500},
@@ -430,10 +441,13 @@ func TestWaitGroup(t *testing.T) {
 // TestAPMServerDown tests that main does not panic nor runs indefinitely when the APM server is inactive.
 func TestAPMServerDown(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, apmServer := newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, apmServer := newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	apmServer.Close()
 	eventsChain := []MockEvent{
@@ -447,10 +461,13 @@ func TestAPMServerDown(t *testing.T) {
 // TestAPMServerHangs tests that main does not panic nor runs indefinitely when the APM server does not respond.
 func TestAPMServerHangs(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, _ := newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
@@ -466,10 +483,13 @@ func TestAPMServerHangs(t *testing.T) {
 // Hence, the APM server is waked up just in time to process the TimelyResponse data frame.
 func TestAPMServerRecovery(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, _ := newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	t.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1")
 
@@ -492,10 +512,13 @@ func TestAPMServerRecovery(t *testing.T) {
 // This can be checked by asserting that apmTransportStatus is pending after the execution of main.
 func TestGracePeriodHangs(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, _ := newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
@@ -511,10 +534,13 @@ func TestGracePeriodHangs(t *testing.T) {
 // during execution.
 func TestAPMServerCrashesDuringExecution(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, _ := newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Crashes, ExecutionDuration: 1, Timeout: 5},
@@ -528,10 +554,13 @@ func TestAPMServerCrashesDuringExecution(t *testing.T) {
 // if no space left in channel, no panic, no infinite hanging.
 func TestFullChannel(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, _ := newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.1, Timeout: 5},
@@ -545,10 +574,13 @@ func TestFullChannel(t *testing.T) {
 // (send strategy : background)
 func TestFullChannelSlowAPMServer(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	t.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
 
@@ -564,10 +596,13 @@ func TestFullChannelSlowAPMServer(t *testing.T) {
 // TestInfoRequest checks if the extension is able to retrieve APM server info (/ endpoint) (fast APM server, only one standard event)
 func TestInfoRequest(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	newMockApmServer(t)
-	lambdaServerInternals := newMockLambdaServer(t, eventsChannel)
+	newMockApmServer(t, l)
+	lambdaServerInternals := newMockLambdaServer(t, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardInfo, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
@@ -580,10 +615,13 @@ func TestInfoRequest(t *testing.T) {
 // TestInfoRequest checks if the extension times out when unable to retrieve APM server info (/ endpoint)
 func TestInfoRequestHangs(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, _ := newMockApmServer(t)
-	lambdaServerInternals := newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	lambdaServerInternals := newMockLambdaServer(t, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardInfo, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
@@ -598,10 +636,13 @@ func TestInfoRequestHangs(t *testing.T) {
 // n+1, even if the metadata container was not populated
 func TestMetricsWithoutMetadata(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, _ := newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
@@ -625,10 +666,13 @@ func TestMetricsWithoutMetadata(t *testing.T) {
 // n+1, even if the metadata container was not populated
 func TestMetricsWithMetadata(t *testing.T) {
 	t.Skip("SKIP")
-	initLogLevel(t, "trace")
+
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
 	eventsChannel := newTestStructs(t)
-	apmServerInternals, _ := newMockApmServer(t)
-	newMockLambdaServer(t, eventsChannel)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	newMockLambdaServer(t, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardMetadata, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},

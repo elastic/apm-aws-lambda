@@ -19,12 +19,13 @@ package logsapi
 
 import (
 	"context"
-	"elastic/apm-lambda-extension/extension"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // ClientOption is a config option for a Client.
@@ -37,6 +38,7 @@ type Client struct {
 	logsChannel    chan LogEvent
 	listenerAddr   string
 	server         *http.Server
+	logger         *zap.SugaredLogger
 }
 
 // NewClient returns a new Client with the given URL.
@@ -51,12 +53,16 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleLogEventsRequest(c.logsChannel))
+	mux.HandleFunc("/", handleLogEventsRequest(c.logger, c.logsChannel))
 
 	c.server.Handler = mux
 
 	if c.logsAPIBaseURL == "" {
 		return nil, errors.New("logs api base url cannot be empty")
+	}
+
+	if c.logger == nil {
+		return nil, errors.New("logger cannot be nil")
 	}
 
 	return &c, nil
@@ -72,7 +78,7 @@ func (lc *Client) StartService(eventTypes []EventType, extensionID string) error
 	_, port, err := net.SplitHostPort(addr)
 	if err != nil {
 		if err := lc.Shutdown(); err != nil {
-			extension.Log.Warnf("failed to shutdown the server: %v", err)
+			lc.logger.Warnf("failed to shutdown the server: %v", err)
 		}
 		return fmt.Errorf("failed to retrieve port from address %s: %w", addr, err)
 	}
@@ -80,7 +86,7 @@ func (lc *Client) StartService(eventTypes []EventType, extensionID string) error
 	host, _, err := net.SplitHostPort(lc.listenerAddr)
 	if err != nil {
 		if err := lc.Shutdown(); err != nil {
-			extension.Log.Warnf("failed to shutdown the server: %v", err)
+			lc.logger.Warnf("failed to shutdown the server: %v", err)
 		}
 		return fmt.Errorf("failed to retrieve host from address %s: %w", lc.listenerAddr, err)
 	}
@@ -89,7 +95,7 @@ func (lc *Client) StartService(eventTypes []EventType, extensionID string) error
 
 	if err := lc.subscribe(eventTypes, extensionID, uri); err != nil {
 		if err := lc.Shutdown(); err != nil {
-			extension.Log.Warnf("failed to shutdown the server: %v", err)
+			lc.logger.Warnf("failed to shutdown the server: %v", err)
 		}
 		return err
 	}

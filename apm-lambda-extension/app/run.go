@@ -38,8 +38,7 @@ func (app *App) Run(ctx context.Context) error {
 	}
 	manager := secretsmanager.NewFromConfig(cfg)
 	// pulls ELASTIC_ env variable into globals for easy access
-	config := extension.ProcessEnv(manager)
-	extension.Log.Level.SetLevel(config.LogLevel)
+	config := extension.ProcessEnv(manager, app.logger)
 
 	// TODO move to functional options
 	app.apmClient.ServerAPIKey = config.ApmServerApiKey
@@ -48,18 +47,18 @@ func (app *App) Run(ctx context.Context) error {
 	// register extension with AWS Extension API
 	res, err := app.extensionClient.Register(ctx, app.extensionName)
 	if err != nil {
-		extension.Log.Errorf("Error: %s", err)
+		app.logger.Errorf("Error: %s", err)
 
 		status, errRuntime := app.extensionClient.InitError(ctx, err.Error())
 		if errRuntime != nil {
 			return errRuntime
 		}
 
-		extension.Log.Infof("Init error signal sent to runtime : %s", status)
-		extension.Log.Infof("Exiting")
+		app.logger.Infof("Init error signal sent to runtime : %s", status)
+		app.logger.Infof("Exiting")
 		return err
 	}
-	extension.Log.Debugf("Register response: %v", extension.PrettyPrint(res))
+	app.logger.Debugf("Register response: %v", extension.PrettyPrint(res))
 
 	// start http server to receive data from agent
 	err = app.apmClient.StartReceiver()
@@ -68,13 +67,13 @@ func (app *App) Run(ctx context.Context) error {
 	}
 	defer func() {
 		if err := app.apmClient.Shutdown(); err != nil {
-			extension.Log.Warnf("Error while shutting down the apm receiver: %v", err)
+			app.logger.Warnf("Error while shutting down the apm receiver: %v", err)
 		}
 	}()
 
 	if app.logsClient != nil {
 		if err := app.logsClient.StartService([]logsapi.EventType{logsapi.Platform}, app.extensionClient.ExtensionID); err != nil {
-			extension.Log.Warnf("Error while subscribing to the Logs API: %v", err)
+			app.logger.Warnf("Error while subscribing to the Logs API: %v", err)
 
 			// disable logs API if the service failed to start
 			app.logsClient = nil
@@ -82,7 +81,7 @@ func (app *App) Run(ctx context.Context) error {
 			// Remember to shutdown the log service if available.
 			defer func() {
 				if err := app.logsClient.Shutdown(); err != nil {
-					extension.Log.Warnf("failed to shutdown the log service: %v", err)
+					app.logger.Warnf("failed to shutdown the log service: %v", err)
 				}
 			}()
 		}
@@ -97,7 +96,7 @@ func (app *App) Run(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			extension.Log.Info("Received a signal, exiting...")
+			app.logger.Info("Received a signal, exiting...")
 
 			return nil
 		default:
@@ -110,10 +109,10 @@ func (app *App) Run(ctx context.Context) error {
 			}
 
 			if event.EventType == extension.Shutdown {
-				extension.Log.Info("Received shutdown event, exiting...")
+				app.logger.Info("Received shutdown event, exiting...")
 				return nil
 			}
-			extension.Log.Debug("Waiting for background data send to end")
+			app.logger.Debug("Waiting for background data send to end")
 			backgroundDataSendWg.Wait()
 			if config.SendStrategy == extension.SyncFlush {
 				// Flush APM data now that the function invocation has completed
@@ -137,25 +136,25 @@ func (app *App) processEvent(
 
 	// call Next method of extension API.  This long polling HTTP method
 	// will block until there's an invocation of the function
-	extension.Log.Infof("Waiting for next event...")
+	app.logger.Infof("Waiting for next event...")
 	event, err := app.extensionClient.NextEvent(ctx)
 	if err != nil {
-		extension.Log.Errorf("Error: %s", err)
+		app.logger.Errorf("Error: %s", err)
 
 		status, errRuntime := app.extensionClient.ExitError(ctx, err.Error())
 		if errRuntime != nil {
 			return nil, errRuntime
 		}
 
-		extension.Log.Infof("Exit signal sent to runtime : %s", status)
-		extension.Log.Infof("Exiting")
+		app.logger.Infof("Exit signal sent to runtime : %s", status)
+		app.logger.Infof("Exiting")
 		return nil, err
 	}
 
 	// Used to compute Lambda Timeout
 	event.Timestamp = time.Now()
-	extension.Log.Debug("Received event.")
-	extension.Log.Debugf("%v", extension.PrettyPrint(event))
+	app.logger.Debug("Received event.")
+	app.logger.Debugf("%v", extension.PrettyPrint(event))
 
 	if event.EventType == extension.Shutdown {
 		return event, nil
@@ -168,7 +167,7 @@ func (app *App) processEvent(
 	go func() {
 		defer backgroundDataSendWg.Done()
 		if err := app.apmClient.ForwardApmData(invocationCtx, metadataContainer); err != nil {
-			extension.Log.Error(err)
+			app.logger.Error(err)
 		}
 	}()
 
@@ -178,13 +177,13 @@ func (app *App) processEvent(
 	if app.logsClient != nil {
 		go func() {
 			if err := app.logsClient.ProcessLogs(invocationCtx, event.RequestID, app.apmClient, metadataContainer, runtimeDone, prevEvent); err != nil {
-				extension.Log.Errorf("Error while processing Lambda Logs ; %v", err)
+				app.logger.Errorf("Error while processing Lambda Logs ; %v", err)
 			} else {
 				close(runtimeDone)
 			}
 		}()
 	} else {
-		extension.Log.Warn("Logs collection not started due to earlier subscription failure")
+		app.logger.Warn("Logs collection not started due to earlier subscription failure")
 		close(runtimeDone)
 	}
 
@@ -204,11 +203,11 @@ func (app *App) processEvent(
 	// This time interval is large enough to attempt a last flush attempt (if SendStrategy == syncFlush) before the environment gets shut down.
 	select {
 	case <-app.apmClient.AgentDoneSignal:
-		extension.Log.Debug("Received agent done signal")
+		app.logger.Debug("Received agent done signal")
 	case <-runtimeDone:
-		extension.Log.Debug("Received runtimeDone signal")
+		app.logger.Debug("Received runtimeDone signal")
 	case <-timer.C:
-		extension.Log.Info("Time expired waiting for agent signal or runtimeDone event")
+		app.logger.Info("Time expired waiting for agent signal or runtimeDone event")
 	}
 
 	return event, nil

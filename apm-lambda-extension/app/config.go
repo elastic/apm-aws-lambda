@@ -21,6 +21,7 @@ type appConfig struct {
 	awsLambdaRuntimeAPI string
 	extensionName       string
 	disableLogsAPI      bool
+	logLevel            string
 }
 
 type configOption func(*appConfig)
@@ -45,5 +46,12 @@ func WithExtensionName(name string) configOption {
 func WithoutLogsAPI() configOption {
 	return func(c *appConfig) {
 		c.disableLogsAPI = true
+	}
+}
+
+// WithLogLevel sets the log level.
+func WithLogLevel(level string) configOption {
+	return func(c *appConfig) {
+		c.logLevel = level
 	}
 }

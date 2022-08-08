@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestClient(t *testing.T) {
@@ -35,17 +36,26 @@ func TestClient(t *testing.T) {
 		"missing base url": {
 			opts: []apmproxy.Option{
 				apmproxy.WithURL(""),
+				apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+			},
+			expectedErr: true,
+		},
+		"missing logger": {
+			opts: []apmproxy.Option{
+				apmproxy.WithURL("https://example.com"),
 			},
 			expectedErr: true,
 		},
 		"valid": {
 			opts: []apmproxy.Option{
 				apmproxy.WithURL("https://example.com"),
+				apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
 		},
 	}
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
+
 			_, err := apmproxy.NewClient(tc.opts...)
 			if tc.expectedErr {
 				require.Error(t, err)
