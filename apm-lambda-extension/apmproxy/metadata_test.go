@@ -82,6 +82,9 @@ func Test_processMetadata(t *testing.T) {
 				_, err := w.Write(benchBody)
 				require.NoError(t, err)
 
+				// Return the buffer contents without closing the gzip.Writer,
+				// which will lead to io.ErrUnexpectedEOF.
+
 				return b.Bytes()
 			},
 			expectError:  io.ErrUnexpectedEOF,
@@ -117,6 +120,9 @@ func Test_processMetadata(t *testing.T) {
 
 				_, err := w.Write(benchBody)
 				require.NoError(t, err)
+
+				// Return the buffer contents without closing the zlib.Writer,
+				// which will lead to io.ErrUnexpectedEOF.
 
 				return b.Bytes()
 			},
