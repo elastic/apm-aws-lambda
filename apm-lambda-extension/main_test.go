@@ -15,7 +15,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-//nolint:unused
 package main
 
 import (
@@ -32,6 +31,7 @@ import (
 	"testing"
 	"time"
 
+	"elastic/apm-lambda-extension/app"
 	e2eTesting "elastic/apm-lambda-extension/e2e-testing"
 	"elastic/apm-lambda-extension/extension"
 	"elastic/apm-lambda-extension/logger"
@@ -146,7 +146,7 @@ func newMockApmServer(t *testing.T, l *zap.SugaredLogger) (*MockServerInternals,
 	return &apmServerInternals, apmServer
 }
 
-func newMockLambdaServer(t *testing.T, eventsChannel chan MockEvent, l *zap.SugaredLogger) *MockServerInternals {
+func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan MockEvent, l *zap.SugaredLogger) *MockServerInternals {
 	var lambdaServerInternals MockServerInternals
 	lambdaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.RequestURI {
@@ -167,7 +167,7 @@ func newMockLambdaServer(t *testing.T, eventsChannel chan MockEvent, l *zap.Suga
 			select {
 			case nextEvent := <-eventsChannel:
 				sendNextEventInfo(w, currId, nextEvent, l)
-				go processMockEvent(currId, nextEvent, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals, l)
+				go processMockEvent(currId, nextEvent, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), logsapiAddr, &lambdaServerInternals, l)
 			default:
 				finalShutDown := MockEvent{
 					Type:              Shutdown,
@@ -175,7 +175,7 @@ func newMockLambdaServer(t *testing.T, eventsChannel chan MockEvent, l *zap.Suga
 					Timeout:           0,
 				}
 				sendNextEventInfo(w, currId, finalShutDown, l)
-				go processMockEvent(currId, finalShutDown, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals, l)
+				go processMockEvent(currId, finalShutDown, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), logsapiAddr, &lambdaServerInternals, l)
 			}
 		// Logs API subscription request
 		case "/2020-08-15/logs":
@@ -207,8 +207,8 @@ func newTestStructs(t *testing.T) chan MockEvent {
 	return eventsChannel
 }
 
-func processMockEvent(currId string, event MockEvent, extensionPort string, internals *MockServerInternals, l *zap.SugaredLogger) {
-	sendLogEvent(currId, logsapi.Start, l)
+func processMockEvent(currId string, event MockEvent, extensionPort string, logsapiAddr string, internals *MockServerInternals, l *zap.SugaredLogger) {
+	sendLogEvent(logsapiAddr, currId, logsapi.Start, l)
 	client := http.Client{}
 	sendRuntimeDone := true
 	sendMetrics := true
@@ -286,10 +286,10 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, inte
 	case Shutdown:
 	}
 	if sendRuntimeDone {
-		sendLogEvent(currId, logsapi.RuntimeDone, l)
+		sendLogEvent(logsapiAddr, currId, logsapi.RuntimeDone, l)
 	}
 	if sendMetrics {
-		sendLogEvent(currId, logsapi.Report, l)
+		sendLogEvent(logsapiAddr, currId, logsapi.Report, l)
 	}
 }
 
@@ -310,7 +310,7 @@ func sendNextEventInfo(w http.ResponseWriter, id string, event MockEvent, l *zap
 	}
 }
 
-func sendLogEvent(requestId string, logEventType logsapi.SubEventType, l *zap.SugaredLogger) {
+func sendLogEvent(logsapiAddr string, requestId string, logEventType logsapi.SubEventType, l *zap.SugaredLogger) {
 	record := logsapi.LogEventRecord{
 		RequestID: requestId,
 	}
@@ -344,14 +344,18 @@ func sendLogEvent(requestId string, logEventType logsapi.SubEventType, l *zap.Su
 		l.Errorf("Could not encode record : %v", err)
 		return
 	}
-	// TODO refactor these tests
-	/*host, port, _ := net.SplitHostPort(logsapi.TestListenerAddr.String())
-	req, _ := http.NewRequest("POST", "http://"+host+":"+port, bufLogEvent)
+
+	req, err := http.NewRequest(http.MethodPost, "http://"+logsapiAddr, bufLogEvent)
+	if err != nil {
+		l.Errorf("Could not create logs api request: %v", err)
+		return
+	}
+
 	client := http.Client{}
 	if _, err := client.Do(req); err != nil {
-		extension.Log.Errorf("Could not send log event : %v", err)
+		l.Errorf("Could not send log event : %v", err)
 		return
-	}*/
+	}
 }
 
 func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
@@ -362,134 +366,151 @@ func eventQueueGenerator(inputQueue []MockEvent, eventsChannel chan MockEvent) {
 
 // TestStandardEventsChain checks a nominal sequence of events (fast APM server, only one standard event)
 func TestStandardEventsChain(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.Contains(t, apmServerInternals.Data, TimelyResponse)
+	select {
+	case <-runApp(t, logsapiAddr):
+		assert.Contains(t, apmServerInternals.Data, TimelyResponse)
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 }
 
 // TestFlush checks if the flushed param does not cause a panic or an unexpected behavior
 func TestFlush(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.Contains(t, apmServerInternals.Data, TimelyResponse)
+	select {
+	case <-runApp(t, logsapiAddr):
+		assert.Contains(t, apmServerInternals.Data, TimelyResponse)
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 }
 
 // TestLateFlush checks if there is no race condition between RuntimeDone and AgentDone
 // The test is built so that the AgentDone signal is received after RuntimeDone, which causes the next event to be interrupted.
 func TestLateFlush(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeLateFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.Contains(t, apmServerInternals.Data, TimelyResponse+TimelyResponse)
+	select {
+	case <-runApp(t, logsapiAddr):
+		assert.Contains(t, apmServerInternals.Data, TimelyResponse+TimelyResponse)
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 }
 
 // TestWaitGroup checks if there is no race condition between the main waitgroups (issue #128)
 func TestWaitGroup(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeWaitgroupsRace, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 500},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.Contains(t, apmServerInternals.Data, TimelyResponse)
+	select {
+	case <-runApp(t, logsapiAddr):
+		assert.Contains(t, apmServerInternals.Data, TimelyResponse)
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 }
 
 // TestAPMServerDown tests that main does not panic nor runs indefinitely when the APM server is inactive.
 func TestAPMServerDown(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, apmServer := newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	apmServer.Close()
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.NotContains(t, apmServerInternals.Data, TimelyResponse)
+	select {
+	case <-runApp(t, logsapiAddr):
+		assert.NotContains(t, apmServerInternals.Data, TimelyResponse)
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 }
 
 // TestAPMServerHangs tests that main does not panic nor runs indefinitely when the APM server does not respond.
 func TestAPMServerHangs(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.NotContains(t, apmServerInternals.Data, Hangs)
-	apmServerInternals.UnlockSignalChannel <- struct{}{}
+	select {
+	case <-runApp(t, logsapiAddr):
+		assert.NotContains(t, apmServerInternals.Data, Hangs)
+		apmServerInternals.UnlockSignalChannel <- struct{}{}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 }
 
 // TestAPMServerRecovery tests a scenario where the APM server recovers after hanging.
 // The default forwarder timeout is 3 seconds, so we wait 5 seconds until we unlock that hanging state.
 // Hence, the APM server is waked up just in time to process the TimelyResponse data frame.
 func TestAPMServerRecovery(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	t.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1")
 
@@ -502,85 +523,97 @@ func TestAPMServerRecovery(t *testing.T) {
 		time.Sleep(2500 * time.Millisecond) // Cannot multiply time.Second by a float
 		apmServerInternals.UnlockSignalChannel <- struct{}{}
 	}()
-	assert.NotPanics(t, main)
-	assert.Contains(t, apmServerInternals.Data, Hangs)
-	assert.Contains(t, apmServerInternals.Data, TimelyResponse)
-	t.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "")
+	select {
+	case <-runApp(t, logsapiAddr):
+		assert.Contains(t, apmServerInternals.Data, Hangs)
+		assert.Contains(t, apmServerInternals.Data, TimelyResponse)
+	case <-time.After(10 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
+
 }
 
 // TestGracePeriodHangs verifies that the WaitforGracePeriod goroutine ends when main() ends.
 // This can be checked by asserting that apmTransportStatus is pending after the execution of main.
 func TestGracePeriodHangs(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
+	select {
+	case <-runApp(t, logsapiAddr):
+		time.Sleep(100 * time.Millisecond)
+		apmServerInternals.UnlockSignalChannel <- struct{}{}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 
-	time.Sleep(100 * time.Millisecond)
-	apmServerInternals.UnlockSignalChannel <- struct{}{}
 }
 
 // TestAPMServerCrashesDuringExecution tests that main does not panic nor runs indefinitely when the APM server crashes
 // during execution.
 func TestAPMServerCrashesDuringExecution(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Crashes, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.NotContains(t, apmServerInternals.Data, Crashes)
+	select {
+	case <-runApp(t, logsapiAddr):
+		assert.NotContains(t, apmServerInternals.Data, Crashes)
+	case <-time.After(10 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 }
 
 // TestFullChannel checks that an overload of APM data chunks is handled correctly, events dropped beyond the 100th one
 // if no space left in channel, no panic, no infinite hanging.
 func TestFullChannel(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.Contains(t, apmServerInternals.Data, TimelyResponse)
+	select {
+	case <-runApp(t, logsapiAddr):
+		assert.Contains(t, apmServerInternals.Data, TimelyResponse)
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 }
 
 // TestFullChannelSlowAPMServer tests what happens when the APM Data channel is full and the APM server is slow
 // (send strategy : background)
 func TestFullChannelSlowAPMServer(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	t.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
 
@@ -588,105 +621,152 @@ func TestFullChannelSlowAPMServer(t *testing.T) {
 		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: SlowResponse, ExecutionDuration: 0.01, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	// The test should not hang
-	t.Setenv("ELASTIC_APM_SEND_STRATEGY", "syncflush")
+	select {
+	case <-runApp(t, logsapiAddr):
+		// The test should not hang
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 }
 
 // TestInfoRequest checks if the extension is able to retrieve APM server info (/ endpoint) (fast APM server, only one standard event)
 func TestInfoRequest(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	newMockApmServer(t, l)
-	lambdaServerInternals := newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	lambdaServerInternals := newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardInfo, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.Contains(t, lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20")
+	select {
+	case <-runApp(t, logsapiAddr):
+		assert.Contains(t, lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20")
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 }
 
 // TestInfoRequest checks if the extension times out when unable to retrieve APM server info (/ endpoint)
 func TestInfoRequestHangs(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t, l)
-	lambdaServerInternals := newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	lambdaServerInternals := newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardInfo, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
-	assert.NotContains(t, lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20")
-	apmServerInternals.UnlockSignalChannel <- struct{}{}
+	select {
+	case <-runApp(t, logsapiAddr):
+		time.Sleep(2 * time.Second)
+		assert.NotContains(t, lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20")
+		apmServerInternals.UnlockSignalChannel <- struct{}{}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 }
 
 // TestMetricsWithoutMetadata checks if the extension sends metrics corresponding to invocation n during invocation
 // n+1, even if the metadata container was not populated
 func TestMetricsWithoutMetadata(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
 
-	assert.Contains(t, apmServerInternals.Data, `faas.billed_duration":{"value":60`)
-	assert.Contains(t, apmServerInternals.Data, `faas.duration":{"value":59.9`)
-	assert.Contains(t, apmServerInternals.Data, `faas.coldstart_duration":{"value":500`)
-	assert.Contains(t, apmServerInternals.Data, `faas.timeout":{"value":5000}`)
-	assert.Contains(t, apmServerInternals.Data, `system.memory.actual.free":{"value":7.1303168e+07`)
-	assert.Contains(t, apmServerInternals.Data, `system.memory.total":{"value":1.34217728e+08`)
-	assert.Contains(t, apmServerInternals.Data, `coldstart":true`)
-	assert.Contains(t, apmServerInternals.Data, `execution":`)
-	assert.Contains(t, apmServerInternals.Data, `id":"arn:aws:lambda:eu-central-1:627286350134:function:main_unit_test"`)
+	select {
+	case <-runApp(t, logsapiAddr):
+		assert.Contains(t, apmServerInternals.Data, `faas.billed_duration":{"value":60`)
+		assert.Contains(t, apmServerInternals.Data, `faas.duration":{"value":59.9`)
+		assert.Contains(t, apmServerInternals.Data, `faas.coldstart_duration":{"value":500`)
+		assert.Contains(t, apmServerInternals.Data, `faas.timeout":{"value":5000}`)
+		assert.Contains(t, apmServerInternals.Data, `system.memory.actual.free":{"value":7.1303168e+07`)
+		assert.Contains(t, apmServerInternals.Data, `system.memory.total":{"value":1.34217728e+08`)
+		assert.Contains(t, apmServerInternals.Data, `coldstart":true`)
+		assert.Contains(t, apmServerInternals.Data, `execution":`)
+		assert.Contains(t, apmServerInternals.Data, `id":"arn:aws:lambda:eu-central-1:627286350134:function:main_unit_test"`)
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
 }
 
 // TestMetricsWithMetadata checks if the extension sends metrics corresponding to invocation n during invocation
 // n+1, even if the metadata container was not populated
 func TestMetricsWithMetadata(t *testing.T) {
-	t.Skip("SKIP")
-
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
 	eventsChannel := newTestStructs(t)
 	apmServerInternals, _ := newMockApmServer(t, l)
-	newMockLambdaServer(t, eventsChannel, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardMetadata, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 		{Type: InvokeStandardMetadata, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
-	assert.NotPanics(t, main)
 
-	assert.Contains(t, apmServerInternals.Data, `{"metadata":{"service":{"name":"1234_service-12a3","version":"5.1.3","environment":"staging","agent":{"name":"elastic-node","version":"3.14.0"},"framework":{"name":"Express","version":"1.2.3"},"language":{"name":"ecmascript","version":"8"},"runtime":{"name":"node","version":"8.0.0"},"node":{"configured_name":"node-123"}},"user":{"username":"bar","id":"123user","email":"bar@user.com"},"labels":{"tag0":null,"tag1":"one","tag2":2},"process":{"pid":1234,"ppid":6789,"title":"node","argv":["node","server.js"]},"system":{"architecture":"x64","hostname":"prod1.example.com","platform":"darwin","container":{"id":"container-id"},"kubernetes":{"namespace":"namespace1","node":{"name":"node-name"},"pod":{"name":"pod-name","uid":"pod-uid"}}},"cloud":{"provider":"cloud_provider","region":"cloud_region","availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"account":{"id":"account_id","name":"account_name"},"project":{"id":"project_id","name":"project_name"},"service":{"name":"lambda"}}}}`)
-	assert.Contains(t, apmServerInternals.Data, `faas.billed_duration":{"value":60`)
-	assert.Contains(t, apmServerInternals.Data, `faas.duration":{"value":59.9`)
-	assert.Contains(t, apmServerInternals.Data, `faas.coldstart_duration":{"value":500`)
-	assert.Contains(t, apmServerInternals.Data, `faas.timeout":{"value":5000}`)
-	assert.Contains(t, apmServerInternals.Data, `coldstart":true`)
-	assert.Contains(t, apmServerInternals.Data, `execution"`)
-	assert.Contains(t, apmServerInternals.Data, `id":"arn:aws:lambda:eu-central-1:627286350134:function:main_unit_test"`)
+	select {
+	case <-runApp(t, logsapiAddr):
+		assert.Contains(t, apmServerInternals.Data, `{"metadata":{"service":{"name":"1234_service-12a3","version":"5.1.3","environment":"staging","agent":{"name":"elastic-node","version":"3.14.0"},"framework":{"name":"Express","version":"1.2.3"},"language":{"name":"ecmascript","version":"8"},"runtime":{"name":"node","version":"8.0.0"},"node":{"configured_name":"node-123"}},"user":{"username":"bar","id":"123user","email":"bar@user.com"},"labels":{"tag0":null,"tag1":"one","tag2":2},"process":{"pid":1234,"ppid":6789,"title":"node","argv":["node","server.js"]},"system":{"architecture":"x64","hostname":"prod1.example.com","platform":"darwin","container":{"id":"container-id"},"kubernetes":{"namespace":"namespace1","node":{"name":"node-name"},"pod":{"name":"pod-name","uid":"pod-uid"}}},"cloud":{"provider":"cloud_provider","region":"cloud_region","availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"account":{"id":"account_id","name":"account_name"},"project":{"id":"project_id","name":"project_name"},"service":{"name":"lambda"}}}}`)
+		assert.Contains(t, apmServerInternals.Data, `faas.billed_duration":{"value":60`)
+		assert.Contains(t, apmServerInternals.Data, `faas.duration":{"value":59.9`)
+		assert.Contains(t, apmServerInternals.Data, `faas.coldstart_duration":{"value":500`)
+		assert.Contains(t, apmServerInternals.Data, `faas.timeout":{"value":5000}`)
+		assert.Contains(t, apmServerInternals.Data, `coldstart":true`)
+		assert.Contains(t, apmServerInternals.Data, `execution"`)
+		assert.Contains(t, apmServerInternals.Data, `id":"arn:aws:lambda:eu-central-1:627286350134:function:main_unit_test"`)
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for app to finish")
+	}
+}
+
+func runApp(t *testing.T, logsapiAddr string) <-chan struct{} {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	app, err := app.New(
+		app.WithExtensionName("apm-lambda-extension"),
+		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
+		app.WithLogLevel("debug"),
+		app.WithLogsapiAddress(logsapiAddr),
+	)
+	require.NoError(t, err)
+
+	go func() {
+		require.NoError(t, app.Run(ctx))
+		cancel()
+	}()
+
+	return ctx.Done()
+}
+
+func randomAddr() string {
+	// we cannot return a port that is already in use or it
+	// would return an error when creating the server.
+	// The solution is to spawn a test server to get a random
+	// port and immediately close it so that we can use the port.
+	s := httptest.NewServer(nil)
+	addr := s.Listener.Addr().String()
+	s.Close()
+
+	return addr
 }

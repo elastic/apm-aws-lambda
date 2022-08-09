@@ -62,9 +62,14 @@ func New(opts ...configOption) (*App, error) {
 	app.extensionClient = extension.NewClient(c.awsLambdaRuntimeAPI, app.logger)
 
 	if !c.disableLogsAPI {
+		addr := "sandbox:0"
+		if c.logsapiAddr != "" {
+			addr = c.logsapiAddr
+		}
+
 		lc, err := logsapi.NewClient(
 			logsapi.WithLogsAPIBaseURL(fmt.Sprintf("http://%s", c.awsLambdaRuntimeAPI)),
-			logsapi.WithListenerAddress("sandbox:0"),
+			logsapi.WithListenerAddress(addr),
 			logsapi.WithLogBuffer(100),
 			logsapi.WithLogger(app.logger),
 		)
