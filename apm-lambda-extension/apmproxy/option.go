@@ -25,12 +25,6 @@ import (
 
 type Option func(*Client)
 
-func WithTimeout(timeout time.Duration) Option {
-	return func(c *Client) {
-		c.client.Timeout = timeout
-	}
-}
-
 func WithAPIKey(key string) Option {
 	return func(c *Client) {
 		c.ServerAPIKey = key
@@ -51,7 +45,7 @@ func WithURL(url string) Option {
 
 func WithDataForwarderTimeout(timeout time.Duration) Option {
 	return func(c *Client) {
-		c.dataForwarderTimeout = timeout
+		c.client.Timeout = timeout
 	}
 }
 

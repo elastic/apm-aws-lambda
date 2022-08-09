@@ -83,7 +83,7 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 	reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
 
 	customTransport := http.DefaultTransport.(*http.Transport).Clone()
-	customTransport.ResponseHeaderTimeout = c.dataForwarderTimeout
+	customTransport.ResponseHeaderTimeout = c.client.Timeout
 	reverseProxy.Transport = customTransport
 
 	reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
