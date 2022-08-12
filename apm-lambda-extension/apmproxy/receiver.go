@@ -32,6 +32,7 @@ import (
 type AgentData struct {
 	Data            []byte
 	ContentEncoding string
+	Flushed         bool
 }
 
 // StartHttpServer starts the server listening for APM agent data.
@@ -121,17 +122,20 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		if len(rawBytes) > 0 {
-			agentData := AgentData{
-				Data:            rawBytes,
-				ContentEncoding: r.Header.Get("Content-Encoding"),
-			}
+		flushed := r.URL.Query().Get("flushed") == "true"
 
-			c.EnqueueAPMData(agentData)
+		agentData := AgentData{
+			Data:            rawBytes,
+			ContentEncoding: r.Header.Get("Content-Encoding"),
+			Flushed:         flushed,
 		}
 
-		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {
-			close(c.done)
+		enqueued := c.EnqueueAPMData(agentData)
+
+		if enqueued && flushed {
+			c.flushMutex.Lock()
+			c.flushCount++
+			c.flushMutex.Unlock()
 		}
 
 		w.WriteHeader(http.StatusAccepted)

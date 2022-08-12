@@ -201,13 +201,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	select {
-	case <-apmClient.Done():
-		<-apmClient.DataChannel
-	case <-time.After(1 * time.Second):
-		t.Log("Timed out waiting for server to send FuncDone signal")
-		t.Fail()
-	}
+	require.Eventually(t, apmClient.HasPendingFlush, 1*time.Second, 50*time.Millisecond)
 }
 
 func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
@@ -288,10 +282,5 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	select {
-	case <-apmClient.Done():
-	case <-time.After(1 * time.Second):
-		t.Log("Timed out waiting for server to send FuncDone signal")
-		t.Fail()
-	}
+	require.Eventually(t, apmClient.HasPendingFlush, 1*time.Second, 50*time.Millisecond)
 }

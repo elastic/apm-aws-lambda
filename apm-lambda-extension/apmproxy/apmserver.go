@@ -43,6 +43,12 @@ func (c *Client) ForwardApmData(ctx context.Context, metadataContainer *Metadata
 			c.logger.Debug("Invocation context cancelled, not processing any more agent data")
 			return nil
 		case agentData := <-c.DataChannel:
+			if agentData.Flushed {
+				c.flushMutex.Lock()
+				c.flushCount--
+				c.flushMutex.Unlock()
+				continue
+			}
 			if metadataContainer.Metadata == nil {
 				metadata, err := ProcessMetadata(agentData)
 				if err != nil {
@@ -67,6 +73,12 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 	for {
 		select {
 		case agentData := <-c.DataChannel:
+			if agentData.Flushed {
+				c.flushMutex.Lock()
+				c.flushCount--
+				c.flushMutex.Unlock()
+				continue
+			}
 			c.logger.Debug("Flush in progress - Processing agent data")
 			if err := c.PostToApmServer(ctx, agentData); err != nil {
 				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
@@ -210,26 +222,25 @@ func (c *Client) ComputeGracePeriod() time.Duration {
 
 // EnqueueAPMData adds a AgentData struct to the agent data channel, effectively queueing for a send
 // to the APM server.
-func (c *Client) EnqueueAPMData(agentData AgentData) {
+func (c *Client) EnqueueAPMData(agentData AgentData) bool {
 	select {
 	case c.DataChannel <- agentData:
 		c.logger.Debug("Adding agent data to buffer to be sent to apm server")
+		return true
 	default:
 		c.logger.Warn("Channel full: dropping a subset of agent data")
+		return false
 	}
 }
 
 // ShouldFlush returns true if the client should flush APM data after processing the event.
 func (c *Client) ShouldFlush() bool {
-	select {
-	case <-c.done:
-		return true
-	default:
-		return c.sendStrategy == SyncFlush
-	}
+	return c.sendStrategy == SyncFlush || c.HasPendingFlush()
 }
 
-// Done returns a channel that's closed when work done on behalf of the agent is completed.
-func (c *Client) Done() <-chan struct{} {
-	return c.done
+// HasPendingFlush returns true if the client has received a signal to flush the buffered APM data.
+func (c *Client) HasPendingFlush() bool {
+	c.flushMutex.Lock()
+	defer c.flushMutex.Unlock()
+	return c.flushCount != 0
 }

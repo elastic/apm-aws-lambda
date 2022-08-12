@@ -62,8 +62,9 @@ type Client struct {
 	dataForwarderTimeout time.Duration
 	receiver             *http.Server
 	sendStrategy         SendStrategy
-	done                 chan struct{}
 	logger               *zap.SugaredLogger
+	flushCount           int
+	flushMutex           sync.Mutex
 }
 
 func NewClient(opts ...Option) (*Client, error) {
@@ -85,7 +86,6 @@ func NewClient(opts ...Option) (*Client, error) {
 			MaxHeaderBytes: 1 << 20,
 		},
 		sendStrategy: SyncFlush,
-		done: make(chan struct{}),
 	}
 
 	for _, opt := range opts {
