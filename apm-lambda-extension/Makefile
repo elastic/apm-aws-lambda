@@ -8,6 +8,11 @@ AGENT_VERSION = $(shell echo $${BRANCH_NAME} | cut -f 2 -d 'v')
 # Add support for SOURCE_DATE_EPOCH and reproducble buils
 # See https://reproducible-builds.org/specs/source-date-epoch/
 SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
+DATE_FMT = +%Y%m%d%H%M.%S
+# Fallback mechanism to support other systems:
+# 1. 'date -d': Busybox and GNU coreutils.
+# 2. 'date -r': BSD date. It does not support '-d'.
+BUILD_DATE = $(shell date -u -d "@${SOURCE_DATE_EPOCH}" "${DATE_FMT}" 2>/dev/null || date -u -r "${SOURCE_DATE_EPOCH}" "${DATE_FMT}")
 
 ifndef GOARCH
 	GOARCH=amd64
@@ -62,7 +67,7 @@ endif
 zip:
 	cd bin \
 	&& rm -f extension.zip \
-	&& find extensions NOTICE.txt dependencies.asciidoc | xargs touch -d @$(SOURCE_DATE_EPOCH) \
+	&& find extensions NOTICE.txt dependencies.asciidoc | xargs touch -t ${BUILD_DATE} \
 	&& zip -X -r extension.zip extensions NOTICE.txt dependencies.asciidoc \
 	&& cp extension.zip ${GOARCH}.zip
 test:
