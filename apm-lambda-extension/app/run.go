@@ -208,11 +208,9 @@ func (app *App) processEvent(
 	// 3) [Backup 2] If all else fails, the extension relies of the timeout of the Lambda function to interrupt itself 100 ms before the specified deadline.
 	// This time interval is large enough to attempt a last flush attempt (if SendStrategy == syncFlush) before the environment gets shut down.
 
-	if app.apmClient.HasPendingFlush() {
-		return event, nil
-	}
-
 	select {
+	case <-app.apmClient.WaitForFlush(invocationCtx):
+		app.logger.Debug("APM client has pending flush signals")
 	case <-runtimeDone:
 		app.logger.Debug("Received runtimeDone signal")
 	case <-timer.C:

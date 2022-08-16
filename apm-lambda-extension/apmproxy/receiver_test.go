@@ -19,6 +19,7 @@ package apmproxy_test
 
 import (
 	"bytes"
+	"context"
 	"elastic/apm-lambda-extension/apmproxy"
 	"io"
 	"net"
@@ -201,7 +202,11 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	require.Eventually(t, apmClient.HasPendingFlush, 1*time.Second, 50*time.Millisecond)
+	select {
+	case <-apmClient.WaitForFlush(context.Background()):
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for server to send flush signal")
+	}
 }
 
 func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
@@ -282,5 +287,9 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	require.Eventually(t, apmClient.HasPendingFlush, 1*time.Second, 50*time.Millisecond)
+	select {
+	case <-apmClient.WaitForFlush(context.Background()):
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for server to send flush signal")
+	}
 }

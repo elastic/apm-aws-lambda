@@ -235,11 +235,32 @@ func (c *Client) EnqueueAPMData(agentData AgentData) bool {
 
 // ShouldFlush returns true if the client should flush APM data after processing the event.
 func (c *Client) ShouldFlush() bool {
-	return c.sendStrategy == SyncFlush || c.HasPendingFlush()
+	return c.sendStrategy == SyncFlush || c.hasPendingFlush()
 }
 
-// HasPendingFlush returns true if the client has received a signal to flush the buffered APM data.
-func (c *Client) HasPendingFlush() bool {
+// WaitForFlush returns a channel that is closed if the client has received a signal to flush
+// the buffered APM data.
+func (c *Client) WaitForFlush(ctx context.Context) <-chan struct{} {
+	ch := make(chan struct{})
+	go func() {
+		t := time.NewTimer(10 * time.Millisecond)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+			case <-t.C:
+				if c.hasPendingFlush() {
+					close(ch)
+					return
+				}
+			}
+		}
+	}()
+
+	return ch
+}
+
+func (c *Client) hasPendingFlush() bool {
 	c.flushMutex.Lock()
 	defer c.flushMutex.Unlock()
 	return c.flushCount != 0
