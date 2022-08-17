@@ -134,7 +134,23 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 
 		if enqueued && flushed {
 			c.flushMutex.Lock()
+
+			// increment flush request count
 			c.flushCount++
+
+			select {
+			case <-c.flushCh:
+				// the channel is closed.
+				// the extension received at least a flush request already but the
+				// data have not been flushed yet.
+				// We can reuse the closed channel.
+			default:
+				// no pending flush requests
+				// close the channel to signal a flush request has
+				// been received.
+				close(c.flushCh)
+			}
+
 			c.flushMutex.Unlock()
 		}
 

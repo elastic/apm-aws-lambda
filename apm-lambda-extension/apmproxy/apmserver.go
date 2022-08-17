@@ -44,10 +44,11 @@ func (c *Client) ForwardApmData(ctx context.Context, metadataContainer *Metadata
 			return nil
 		case agentData := <-c.DataChannel:
 			if agentData.Flushed {
-				c.flushMutex.Lock()
-				c.flushCount--
-				c.flushMutex.Unlock()
-				continue
+				c.updateFlushCount()
+
+				if len(agentData.Data) == 0 {
+					continue
+				}
 			}
 			if metadataContainer.Metadata == nil {
 				metadata, err := ProcessMetadata(agentData)
@@ -74,10 +75,11 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 		select {
 		case agentData := <-c.DataChannel:
 			if agentData.Flushed {
-				c.flushMutex.Lock()
-				c.flushCount--
-				c.flushMutex.Unlock()
-				continue
+				c.updateFlushCount()
+
+				if len(agentData.Data) == 0 {
+					continue
+				}
 			}
 			c.logger.Debug("Flush in progress - Processing agent data")
 			if err := c.PostToApmServer(ctx, agentData); err != nil {
@@ -87,6 +89,21 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 			c.logger.Debug("Flush ended - No agent data on buffer")
 			return
 		}
+	}
+}
+
+func (c *Client) updateFlushCount() {
+	c.flushMutex.Lock()
+	defer c.flushMutex.Unlock()
+
+	// A flush request is beng forwarded.
+	// Decrement the counter
+	c.flushCount--
+
+	// Reset the flush channel if there are no
+	// more flush requests.
+	if c.flushCount == 0 {
+		c.flushCh = make(chan struct{})
 	}
 }
 
@@ -240,24 +257,10 @@ func (c *Client) ShouldFlush() bool {
 
 // WaitForFlush returns a channel that is closed if the client has received a signal to flush
 // the buffered APM data.
-func (c *Client) WaitForFlush(ctx context.Context) <-chan struct{} {
-	ch := make(chan struct{})
-	go func() {
-		t := time.NewTimer(10 * time.Millisecond)
-		defer t.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-			case <-t.C:
-				if c.hasPendingFlush() {
-					close(ch)
-					return
-				}
-			}
-		}
-	}()
-
-	return ch
+func (c *Client) WaitForFlush() <-chan struct{} {
+	c.flushMutex.Lock()
+	defer c.flushMutex.Unlock()
+	return c.flushCh
 }
 
 func (c *Client) hasPendingFlush() bool {

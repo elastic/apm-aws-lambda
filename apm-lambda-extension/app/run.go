@@ -209,7 +209,7 @@ func (app *App) processEvent(
 	// This time interval is large enough to attempt a last flush attempt (if SendStrategy == syncFlush) before the environment gets shut down.
 
 	select {
-	case <-app.apmClient.WaitForFlush(invocationCtx):
+	case <-app.apmClient.WaitForFlush():
 		app.logger.Debug("APM client has pending flush signals")
 	case <-runtimeDone:
 		app.logger.Debug("Received runtimeDone signal")

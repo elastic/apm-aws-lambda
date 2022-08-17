@@ -19,7 +19,6 @@ package apmproxy_test
 
 import (
 	"bytes"
-	"context"
 	"elastic/apm-lambda-extension/apmproxy"
 	"io"
 	"net"
@@ -203,7 +202,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	}()
 
 	select {
-	case <-apmClient.WaitForFlush(context.Background()):
+	case <-apmClient.WaitForFlush():
 	case <-time.After(1 * time.Second):
 		t.Fatal("Timed out waiting for server to send flush signal")
 	}
@@ -288,7 +287,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	}()
 
 	select {
-	case <-apmClient.WaitForFlush(context.Background()):
+	case <-apmClient.WaitForFlush():
 	case <-time.After(1 * time.Second):
 		t.Fatal("Timed out waiting for server to send flush signal")
 	}

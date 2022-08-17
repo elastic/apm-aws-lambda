@@ -64,6 +64,7 @@ type Client struct {
 	sendStrategy         SendStrategy
 	logger               *zap.SugaredLogger
 	flushCount           int
+	flushCh              chan struct{}
 	flushMutex           sync.Mutex
 }
 
@@ -86,6 +87,7 @@ func NewClient(opts ...Option) (*Client, error) {
 			MaxHeaderBytes: 1 << 20,
 		},
 		sendStrategy: SyncFlush,
+		flushCh:      make(chan struct{}),
 	}
 
 	for _, opt := range opts {
