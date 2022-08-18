@@ -30,6 +30,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestInfoProxy(t *testing.T) {
@@ -55,6 +56,7 @@ func TestInfoProxy(t *testing.T) {
 		apmproxy.WithAPIKey("bar"),
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
 
@@ -99,6 +101,7 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 		apmproxy.WithAPIKey("bar"),
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
 
@@ -136,6 +139,7 @@ func Test_handleInfoRequest(t *testing.T) {
 		apmproxy.WithAPIKey("bar"),
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
 
@@ -175,6 +179,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
 	apmClient.AgentDoneSignal = make(chan struct{}, 1)
@@ -219,6 +224,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
 	apmClient.AgentDoneSignal = make(chan struct{}, 1)
@@ -262,6 +268,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
 	apmClient.AgentDoneSignal = make(chan struct{}, 1)

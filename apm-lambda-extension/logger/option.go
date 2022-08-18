@@ -15,36 +15,29 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package logsapi
+package logger
 
-import "go.uber.org/zap"
+import (
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
 
-// WithListenerAddress sets the listener address of the
-// server listening for logs event.
-func WithListenerAddress(s string) ClientOption {
-	return func(c *Client) {
-		c.listenerAddr = s
+type option func(*zap.Config)
+
+func WithLevel(level zapcore.Level) option {
+	return func(c *zap.Config) {
+		c.Level.SetLevel(level)
 	}
 }
 
-// WithLogsAPIBaseURL sets the logs api base url.
-func WithLogsAPIBaseURL(s string) ClientOption {
-	return func(c *Client) {
-		c.logsAPIBaseURL = s
+func WithEncoderConfig(encoderConfig zapcore.EncoderConfig) option {
+	return func(c *zap.Config) {
+		c.EncoderConfig = encoderConfig
 	}
 }
 
-// WithLogBuffer sets the size of the buffer
-// storing queued logs for processing.
-func WithLogBuffer(size int) ClientOption {
-	return func(c *Client) {
-		c.logsChannel = make(chan LogEvent, size)
-	}
-}
-
-// WithLogger sets the logger.
-func WithLogger(logger *zap.SugaredLogger) ClientOption {
-	return func(c *Client) {
-		c.logger = logger
+func WithOutputPaths(path string) option {
+	return func(c *zap.Config) {
+		c.OutputPaths = append(c.OutputPaths, path)
 	}
 }

@@ -17,15 +17,13 @@
 
 package apmproxy
 
-import "time"
+import (
+	"time"
+
+	"go.uber.org/zap"
+)
 
 type Option func(*Client)
-
-func WithTimeout(timeout time.Duration) Option {
-	return func(c *Client) {
-		c.client.Timeout = timeout
-	}
-}
 
 func WithAPIKey(key string) Option {
 	return func(c *Client) {
@@ -47,7 +45,7 @@ func WithURL(url string) Option {
 
 func WithDataForwarderTimeout(timeout time.Duration) Option {
 	return func(c *Client) {
-		c.dataForwarderTimeout = timeout
+		c.client.Timeout = timeout
 	}
 }
 
@@ -63,5 +61,18 @@ func WithReceiverTimeout(timeout time.Duration) Option {
 func WithReceiverAddress(addr string) Option {
 	return func(c *Client) {
 		c.receiver.Addr = addr
+	}
+}
+
+// WithAgentDataBufferSize sets the agent data buffer size.
+func WithAgentDataBufferSize(size int) Option {
+	return func(c *Client) {
+		c.DataChannel = make(chan AgentData, size)
+	}
+}
+
+func WithLogger(logger *zap.SugaredLogger) Option {
+	return func(c *Client) {
+		c.logger = logger
 	}
 }

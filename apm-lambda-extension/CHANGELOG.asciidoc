@@ -28,6 +28,7 @@ https://github.com/elastic/apm-aws-lambda/compare/v1.0.2...main[View commits]
 - Added support for Secret Manager {lambda-pull}208[208]
 - Added support for Lambda platform metrics {lambda-pull}202[202]
 - Migrated to AWS SDK for Go v2 {lambda-pull}232[232]
+- Make buffer size for agent data configurable {lambda-pull}262[262]
 
 [float]
 ==== Bug fixes

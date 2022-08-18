@@ -25,12 +25,15 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 const (
 	defaultDataReceiverTimeout  time.Duration = 15 * time.Second
 	defaultDataForwarderTimeout time.Duration = 3 * time.Second
 	defaultReceiverAddr                       = ":8200"
+	defaultAgentBufferSize      int           = 100
 )
 
 // Client is the client used to communicate with the apm server.
@@ -45,8 +48,8 @@ type Client struct {
 	ServerAPIKey         string
 	ServerSecretToken    string
 	serverURL            string
-	dataForwarderTimeout time.Duration
 	receiver             *http.Server
+	logger               *zap.SugaredLogger
 }
 
 func NewClient(opts ...Option) (*Client, error) {
@@ -54,11 +57,10 @@ func NewClient(opts ...Option) (*Client, error) {
 		bufferPool: sync.Pool{New: func() interface{} {
 			return &bytes.Buffer{}
 		}},
-		DataChannel: make(chan AgentData, 100),
+		DataChannel: make(chan AgentData, defaultAgentBufferSize),
 		client: &http.Client{
 			Transport: http.DefaultTransport.(*http.Transport).Clone(),
 		},
-		dataForwarderTimeout: defaultDataForwarderTimeout,
 		ReconnectionCount:    -1,
 		Status:               Healthy,
 		receiver: &http.Server{
@@ -69,12 +71,18 @@ func NewClient(opts ...Option) (*Client, error) {
 		},
 	}
 
+	c.client.Timeout = defaultDataForwarderTimeout
+
 	for _, opt := range opts {
 		opt(&c)
 	}
 
 	if c.serverURL == "" {
 		return nil, errors.New("APM Server URL cannot be empty")
+	}
+
+	if c.logger == nil {
+		return nil, errors.New("logger cannot be empty")
 	}
 
 	// normalize server URL

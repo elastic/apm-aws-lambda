@@ -34,7 +34,7 @@ type MetadataContainer struct {
 func ProcessMetadata(data AgentData) ([]byte, error) {
 	uncompressedData, err := GetUncompressedBytes(data.Data, data.ContentEncoding)
 	if err != nil {
-		return nil, fmt.Errorf("Error uncompressing agent data for metadata extraction: %w", err)
+		return nil, fmt.Errorf("error uncompressing agent data for metadata extraction: %w", err)
 	}
 
 	before, _, _ := bytes.Cut(uncompressedData, []byte("\n"))
@@ -47,22 +47,24 @@ func GetUncompressedBytes(rawBytes []byte, encodingType string) ([]byte, error) 
 		reader := bytes.NewReader(rawBytes)
 		zlibreader, err := zlib.NewReader(reader)
 		if err != nil {
-			return nil, fmt.Errorf("could not create zlib.NewReader: %v", err)
+			return nil, fmt.Errorf("could not create zlib.NewReader: %w", err)
 		}
+		defer zlibreader.Close()
 		bodyBytes, err := io.ReadAll(zlibreader)
 		if err != nil {
-			return nil, fmt.Errorf("could not read from zlib reader using io.ReadAll: %v", err)
+			return nil, fmt.Errorf("could not read from zlib reader using io.ReadAll: %w", err)
 		}
 		return bodyBytes, nil
 	case "gzip":
 		reader := bytes.NewReader(rawBytes)
-		zlibreader, err := gzip.NewReader(reader)
+		gzipreader, err := gzip.NewReader(reader)
 		if err != nil {
-			return nil, fmt.Errorf("could not create gzip.NewReader: %v", err)
+			return nil, fmt.Errorf("could not create gzip.NewReader: %w", err)
 		}
-		bodyBytes, err := io.ReadAll(zlibreader)
+		defer gzipreader.Close()
+		bodyBytes, err := io.ReadAll(gzipreader)
 		if err != nil {
-			return nil, fmt.Errorf("could not read from gzip reader using io.ReadAll: %v", err)
+			return nil, fmt.Errorf("could not read from gzip reader using io.ReadAll: %w", err)
 		}
 		return bodyBytes, nil
 	default:

@@ -19,7 +19,6 @@ package apmproxy
 
 import (
 	"context"
-	"elastic/apm-lambda-extension/extension"
 	"errors"
 	"fmt"
 	"io"
@@ -55,11 +54,11 @@ func (c *Client) StartReceiver() error {
 	}
 
 	go func() {
-		extension.Log.Infof("Extension listening for apm data on %s", c.receiver.Addr)
+		c.logger.Infof("Extension listening for apm data on %s", c.receiver.Addr)
 		if err = c.receiver.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			extension.Log.Errorf("received error from http.Serve(): %v", err)
+			c.logger.Errorf("received error from http.Serve(): %v", err)
 		} else {
-			extension.Log.Debug("server closed")
+			c.logger.Debug("server closed")
 		}
 	}()
 	return nil
@@ -84,16 +83,16 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 	reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
 
 	customTransport := http.DefaultTransport.(*http.Transport).Clone()
-	customTransport.ResponseHeaderTimeout = c.dataForwarderTimeout
+	customTransport.ResponseHeaderTimeout = c.client.Timeout
 	reverseProxy.Transport = customTransport
 
 	reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		c.SetApmServerTransportState(r.Context(), Failing)
-		extension.Log.Errorf("Error querying version from the APM server: %v", err)
+		c.logger.Errorf("Error querying version from the APM server: %v", err)
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		extension.Log.Debug("Handling APM server Info Request")
+		c.logger.Debug("Handling APM server Info Request")
 
 		// Process request (the Golang doc suggests removing any pre-existing X-Forwarded-For header coming
 		// from the client or an untrusted proxy to prevent IP spoofing : https://pkg.go.dev/net/http/httputil#ReverseProxy
@@ -113,11 +112,11 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 // URL: http://server/intake/v2/events
 func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		extension.Log.Debug("Handling APM Data Intake")
+		c.logger.Debug("Handling APM Data Intake")
 		rawBytes, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {
-			extension.Log.Errorf("Could not read agent intake request body: %v", err)
+			c.logger.Errorf("Could not read agent intake request body: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -137,7 +136,7 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 
 		w.WriteHeader(http.StatusAccepted)
 		if _, err = w.Write([]byte("ok")); err != nil {
-			extension.Log.Errorf("Failed to send intake response to APM agent : %v", err)
+			c.logger.Errorf("Failed to send intake response to APM agent : %v", err)
 		}
 	}
 }

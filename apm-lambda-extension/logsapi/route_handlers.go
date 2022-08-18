@@ -22,21 +22,21 @@ import (
 	"net/http"
 	"time"
 
-	"elastic/apm-lambda-extension/extension"
+	"go.uber.org/zap"
 )
 
-func handleLogEventsRequest(logsChannel chan LogEvent) func(w http.ResponseWriter, r *http.Request) {
+func handleLogEventsRequest(logger *zap.SugaredLogger, logsChannel chan LogEvent) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var logEvents []LogEvent
 		if err := json.NewDecoder(r.Body).Decode(&logEvents); err != nil {
-			extension.Log.Errorf("Error unmarshalling log events: %+v", err)
+			logger.Errorf("Error unmarshalling log events: %+v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		for idx := range logEvents {
 			if logEvents[idx].Type == "" {
-				extension.Log.Errorf("Error reading log event: %+v", logEvents[idx])
+				logger.Errorf("Error reading log event: %+v", logEvents[idx])
 				w.WriteHeader(http.StatusInternalServerError)
 				continue
 			}

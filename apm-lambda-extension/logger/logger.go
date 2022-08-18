@@ -15,32 +15,31 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package extension
+package logger
 
 import (
 	"fmt"
+	"strings"
+
 	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"strings"
 )
 
-type Level uint32
+// New returns a logger.
+func New(opts ...option) (*zap.SugaredLogger, error) {
+	conf := zap.NewProductionConfig()
 
-type LevelLogger struct {
-	*zap.SugaredLogger
-	zap.Config
-}
+	for _, opt := range opts {
+		opt(&conf)
+	}
 
-var Log LevelLogger
+	logger, err := conf.Build(ecszap.WrapCoreOption(), zap.AddCaller())
+	if err != nil {
+		return nil, err
+	}
 
-func init() {
-	// Set ECS logging config
-	Log.Config = zap.NewProductionConfig()
-	Log.Config.EncoderConfig = ecszap.NewDefaultEncoderConfig().ToZapCoreEncoderConfig()
-	// Create ECS logger
-	logger, _ := Log.Config.Build(ecszap.WrapCoreOption(), zap.AddCaller())
-	Log.SugaredLogger = logger.Sugar()
+	return logger.Sugar(), nil
 }
 
 // ParseLogLevel parses s as a logrus log level. If the level is off, the return flag is set to true.
@@ -64,13 +63,4 @@ func ParseLogLevel(s string) (zapcore.Level, error) {
 		return zapcore.FatalLevel + 1, nil
 	}
 	return zapcore.InfoLevel, fmt.Errorf("invalid log level string %s", s)
-}
-
-func SetLogOutputPaths(paths []string) {
-	Log.Config.OutputPaths = paths
-	logger, err := Log.Config.Build(ecszap.WrapCoreOption(), zap.AddCaller())
-	if err != nil {
-		Log.Errorf("Could not set log path : %v", err)
-	}
-	Log.SugaredLogger = logger.Sugar()
 }

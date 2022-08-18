@@ -25,8 +25,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-
-	"elastic/apm-lambda-extension/extension"
 )
 
 // SubscribeRequest is the request body that is sent to Logs API on subscribe
@@ -72,10 +70,10 @@ func (lc *Client) startHTTPServer() (string, error) {
 	addr := listener.Addr().String()
 
 	go func() {
-		extension.Log.Infof("Extension listening for Lambda Logs API events on %s", addr)
+		lc.logger.Infof("Extension listening for Lambda Logs API events on %s", addr)
 
 		if err := lc.server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			extension.Log.Errorf("Error upon Logs API server start : %v", err)
+			lc.logger.Errorf("Error upon Logs API server start : %v", err)
 		}
 	}()
 
