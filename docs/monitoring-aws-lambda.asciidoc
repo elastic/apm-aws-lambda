@@ -44,7 +44,7 @@ The <<aws-lambda-config-data-forwarder-timeout>> config option with the related 
 
 When your function experiences a cold start, the Elastic APM AWS Lambda extension needs to be initialized and, thus, slightly increases the cold start duration (in the range of tens of milliseconds) of your function. 
 
-APM agents enrich your application's code with measurement code that collects APM data. This measurement code introduces a small performance overhead to your application, which is usually in a negligible range. This matter of fact is no different with lambda functions. The concrete performance overhead introduced by APM agents highly depends on the configuration of the agent and on the characteristics of your function's code. The following agent-specific documentation pages provide insights and instructions on tuning the performance the APM agents:
+APM agents enrich your application's code with measurement code that collects APM data. This measurement code introduces a small performance overhead to your application, which is usually in a negligible range. The same is true with Lambda functions. The concrete performance overhead introduced by APM agents highly depends on the configuration of the agent and on the characteristics of your function's code. The following agent-specific documentation pages provide insights and instructions on tuning the performance the APM agents:
 
 * {apm-node-ref}/performance-tuning.html[Performance Tuning - Node.js]
 * {apm-py-ref}/tuning-and-overhead.html[Performance Tuning - Python]
