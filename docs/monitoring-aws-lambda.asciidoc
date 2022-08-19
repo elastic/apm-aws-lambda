@@ -30,7 +30,7 @@ By using an AWS Lambda extension, Elastic APM agents can send data to a local La
 
 [[aws-lambda-overhead]]
 == Performance impact and overhead
-As described in the section on <<aws-lambda-arch>>, using Elastic APM with AWS Lambda requires to include the Elastic APM AWS Lambda extension and a corresponding Elastic APM agent to the Lambda runtime.
+As described in <<aws-lambda-arch>>, using Elastic APM with AWS Lambda requires adding both the Elastic APM AWS Lambda extension and a corresponding Elastic APM agent to the Lambda runtime.
 These components may introduce a small overhead on the size of your function's deployment package as well as the execution duration of your function's invocations. 
 
 === Impact on the deployment package size
