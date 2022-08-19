@@ -38,7 +38,7 @@ These compotents contribute a little to the uncompressed deployment package size
 
 === Performance impact
 The <<aws-lambda-arch>> comes with the adavantage that APM data dispatching is decoupled from your function's request processing. 
-The Elastic APM AWS Lambda extension flushes APM data to the Elastic backend _after_ your function reponds to the client's request. Thus, it does not affect the latency of the client's request. 
+The Elastic APM AWS Lambda extension flushes APM data to the Elastic backend _after_ your function responds to the client's request. Thus, it does not affect the latency of the client's request. 
 However, the extension's flushing of APM data contributes to the overall execution time of the function invocation. 
 The <<aws-lambda-config-data-forwarder-timeout>> config option with the related _exponential backoff algorithm_ limits and allows to control the impact the extension may have on the function's overall execution time. 
 
