@@ -63,9 +63,9 @@ type Client struct {
 	receiver             *http.Server
 	sendStrategy         SendStrategy
 	logger               *zap.SugaredLogger
-	flushCount           int
-	flushCh              chan struct{}
-	flushMutex           sync.Mutex
+
+	flushMutex sync.Mutex
+	flushCh    chan struct{}
 }
 
 func NewClient(opts ...Option) (*Client, error) {

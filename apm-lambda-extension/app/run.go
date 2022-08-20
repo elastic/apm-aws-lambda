@@ -111,6 +111,7 @@ func (app *App) Run(ctx context.Context) error {
 			// Use a wait group to ensure the background go routine sending to the APM server
 			// completes before signaling that the extension is ready for the next invocation.
 			var backgroundDataSendWg sync.WaitGroup
+			app.apmClient.ResetFlush()
 			event, err := app.processEvent(ctx, &backgroundDataSendWg, prevEvent, &metadataContainer)
 			if err != nil {
 				return err

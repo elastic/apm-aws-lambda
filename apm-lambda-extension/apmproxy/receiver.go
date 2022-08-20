@@ -32,7 +32,6 @@ import (
 type AgentData struct {
 	Data            []byte
 	ContentEncoding string
-	Flushed         bool
 }
 
 // StartHttpServer starts the server listening for APM agent data.
@@ -127,16 +126,12 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 		agentData := AgentData{
 			Data:            rawBytes,
 			ContentEncoding: r.Header.Get("Content-Encoding"),
-			Flushed:         flushed,
 		}
 
 		enqueued := c.EnqueueAPMData(agentData)
 
 		if enqueued && flushed {
 			c.flushMutex.Lock()
-
-			// increment flush request count
-			c.flushCount++
 
 			select {
 			case <-c.flushCh:

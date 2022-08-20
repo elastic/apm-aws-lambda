@@ -43,12 +43,8 @@ func (c *Client) ForwardApmData(ctx context.Context, metadataContainer *Metadata
 			c.logger.Debug("Invocation context cancelled, not processing any more agent data")
 			return nil
 		case agentData := <-c.DataChannel:
-			if agentData.Flushed {
-				c.updateFlushCount()
-
-				if len(agentData.Data) == 0 {
-					continue
-				}
+			if len(agentData.Data) == 0 {
+				continue
 			}
 			if metadataContainer.Metadata == nil {
 				metadata, err := ProcessMetadata(agentData)
@@ -74,12 +70,8 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 	for {
 		select {
 		case agentData := <-c.DataChannel:
-			if agentData.Flushed {
-				c.updateFlushCount()
-
-				if len(agentData.Data) == 0 {
-					continue
-				}
+			if len(agentData.Data) == 0 {
+				continue
 			}
 			c.logger.Debug("Flush in progress - Processing agent data")
 			if err := c.PostToApmServer(ctx, agentData); err != nil {
@@ -89,21 +81,6 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 			c.logger.Debug("Flush ended - No agent data on buffer")
 			return
 		}
-	}
-}
-
-func (c *Client) updateFlushCount() {
-	c.flushMutex.Lock()
-	defer c.flushMutex.Unlock()
-
-	// A flush request is beng forwarded.
-	// Decrement the counter
-	c.flushCount--
-
-	// Reset the flush channel if there are no
-	// more flush requests.
-	if c.flushCount == 0 {
-		c.flushCh = make(chan struct{})
 	}
 }
 
@@ -255,8 +232,17 @@ func (c *Client) ShouldFlush() bool {
 	return c.sendStrategy == SyncFlush
 }
 
-// WaitForFlush returns a channel that is closed if the client has received a signal to flush
-// the buffered APM data.
+// ResetFlush resets the client's "agent flushed" state, such that
+// subsequent calls to WaitForFlush will block until another request
+// is received from the agent indicating it has flushed.
+func (c *Client) ResetFlush() {
+	c.flushMutex.Lock()
+	defer c.flushMutex.Unlock()
+	c.flushCh = make(chan struct{})
+}
+
+// WaitForFlush returns a channel that is closed when the agent has signalled that
+// the Lambda invocation has completed, and there is no more APM data coming.
 func (c *Client) WaitForFlush() <-chan struct{} {
 	c.flushMutex.Lock()
 	defer c.flushMutex.Unlock()
