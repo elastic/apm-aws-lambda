@@ -29,7 +29,19 @@ import (
 	"go.uber.org/zap"
 )
 
+// SendStrategy represents the type of sending strategy the extension uses
+type SendStrategy string
+
 const (
+	// Background send strategy allows the extension to send remaining buffered
+	// agent data on the next function invocation
+	Background SendStrategy = "background"
+
+	// SyncFlush send strategy indicates that the extension will synchronously
+	// flush remaining buffered agent data when it receives a signal that the
+	// function is complete
+	SyncFlush SendStrategy = "syncflush"
+
 	defaultDataReceiverTimeout  time.Duration = 15 * time.Second
 	defaultDataForwarderTimeout time.Duration = 3 * time.Second
 	defaultReceiverAddr                       = ":8200"
@@ -40,7 +52,6 @@ const (
 type Client struct {
 	mu                   sync.Mutex
 	bufferPool           sync.Pool
-	AgentDoneSignal      chan struct{}
 	DataChannel          chan AgentData
 	client               *http.Client
 	Status               Status
@@ -49,7 +60,11 @@ type Client struct {
 	ServerSecretToken    string
 	serverURL            string
 	receiver             *http.Server
+	sendStrategy         SendStrategy
 	logger               *zap.SugaredLogger
+
+	flushMutex sync.Mutex
+	flushCh    chan struct{}
 }
 
 func NewClient(opts ...Option) (*Client, error) {
@@ -69,6 +84,8 @@ func NewClient(opts ...Option) (*Client, error) {
 			WriteTimeout:   defaultDataReceiverTimeout,
 			MaxHeaderBytes: 1 << 20,
 		},
+		sendStrategy: SyncFlush,
+		flushCh:      make(chan struct{}),
 	}
 
 	c.client.Timeout = defaultDataForwarderTimeout

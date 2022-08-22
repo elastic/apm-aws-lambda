@@ -8,6 +8,11 @@ AGENT_VERSION = $(shell echo $${BRANCH_NAME} | cut -f 2 -d 'v')
 # Add support for SOURCE_DATE_EPOCH and reproducble buils
 # See https://reproducible-builds.org/specs/source-date-epoch/
 SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
+DATE_FMT = +%Y%m%d%H%M.%S
+# Fallback mechanism to support other systems:
+# 1. 'date -d': Busybox and GNU coreutils.
+# 2. 'date -r': BSD date. It does not support '-d'.
+BUILD_DATE = $(shell date -u -d "@${SOURCE_DATE_EPOCH}" "${DATE_FMT}" 2>/dev/null || date -u -r "${SOURCE_DATE_EPOCH}" "${DATE_FMT}")
 
 ifndef GOARCH
 	GOARCH=amd64
@@ -25,8 +30,7 @@ export AWS_FOLDER GOARCH ARCHITECTURE DOCKER_IMAGE_NAME DOCKER_REGISTRY
 .PHONY: all
 all: build
 
-.PHONY: gen-notice
-gen-notice:
+NOTICE.txt: go.mod
 	@bash ./scripts/notice.sh
 
 check-licenses:
@@ -44,7 +48,7 @@ lint:
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 version
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 run
 
-build: check-licenses gen-notice
+build: check-licenses NOTICE.txt
 	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
 	cp NOTICE.txt bin/NOTICE.txt
 	cp dependencies.asciidoc bin/dependencies.asciidoc
@@ -59,17 +63,21 @@ endif
 	GOARCH=${GOARCH} make build
 	GOARCH=${GOARCH} make zip
 	$(MAKE) publish
-zip:
+
+zip: build
 	cd bin \
 	&& rm -f extension.zip \
-	&& find extensions NOTICE.txt dependencies.asciidoc | xargs touch -d @$(SOURCE_DATE_EPOCH) \
+	&& find extensions NOTICE.txt dependencies.asciidoc | xargs touch -t ${BUILD_DATE} \
 	&& zip -X -r extension.zip extensions NOTICE.txt dependencies.asciidoc \
 	&& cp extension.zip ${GOARCH}.zip
+
 test:
 	go test extension/*.go -v
+
 env:
 	env
-dist: validate-branch-name build test zip
+
+dist: validate-branch-name test zip
 	@cp ./bin/$(GOARCH).zip bin/$(BRANCH_NAME)-linux-$(GOARCH).zip
 
 build-docker: validate-version

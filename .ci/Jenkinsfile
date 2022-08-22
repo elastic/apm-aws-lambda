@@ -53,10 +53,10 @@ pipeline {
           }
         }
         withGithubNotify(context: "NOTICE.txt") {
-          dir("${BASE_DIR}"){
-            withGoEnv(){
+          withGoEnv(){
+            dir("${BASE_DIR}/apm-lambda-extension"){
               sh(label: 'notice', script: '''
-                bash ./apm-lambda-extension/scripts/notice.sh
+                make NOTICE.txt
                 git diff --exit-code --quiet && exit 0 || echo "regenerate NOTICE.txt" && exit 1
               ''')
             }
@@ -83,7 +83,7 @@ pipeline {
                 unstash 'source'
                 withGoEnv(){
                   dir("${BASE_DIR}/apm-lambda-extension"){
-                    cmd(label: 'Go build', script: 'go build')
+                    cmd(label: 'make build', script: 'make build')
                   }
                 }
               }

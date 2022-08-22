@@ -218,3 +218,25 @@ func (c *Client) EnqueueAPMData(agentData AgentData) {
 		c.logger.Warn("Channel full: dropping a subset of agent data")
 	}
 }
+
+// ShouldFlush returns true if the client should flush APM data after processing the event.
+func (c *Client) ShouldFlush() bool {
+	return c.sendStrategy == SyncFlush
+}
+
+// ResetFlush resets the client's "agent flushed" state, such that
+// subsequent calls to WaitForFlush will block until another request
+// is received from the agent indicating it has flushed.
+func (c *Client) ResetFlush() {
+	c.flushMutex.Lock()
+	defer c.flushMutex.Unlock()
+	c.flushCh = make(chan struct{})
+}
+
+// WaitForFlush returns a channel that is closed when the agent has signalled that
+// the Lambda invocation has completed, and there is no more APM data coming.
+func (c *Client) WaitForFlush() <-chan struct{} {
+	c.flushMutex.Lock()
+	defer c.flushMutex.Unlock()
+	return c.flushCh
+}
