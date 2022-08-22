@@ -50,18 +50,18 @@ const (
 
 // Client is the client used to communicate with the apm server.
 type Client struct {
-	mu                   sync.Mutex
-	bufferPool           sync.Pool
-	DataChannel          chan AgentData
-	client               *http.Client
-	Status               Status
-	ReconnectionCount    int
-	ServerAPIKey         string
-	ServerSecretToken    string
-	serverURL            string
-	receiver             *http.Server
-	sendStrategy         SendStrategy
-	logger               *zap.SugaredLogger
+	mu                sync.Mutex
+	bufferPool        sync.Pool
+	DataChannel       chan AgentData
+	client            *http.Client
+	Status            Status
+	ReconnectionCount int
+	ServerAPIKey      string
+	ServerSecretToken string
+	serverURL         string
+	receiver          *http.Server
+	sendStrategy      SendStrategy
+	logger            *zap.SugaredLogger
 
 	flushMutex sync.Mutex
 	flushCh    chan struct{}
@@ -76,8 +76,8 @@ func NewClient(opts ...Option) (*Client, error) {
 		client: &http.Client{
 			Transport: http.DefaultTransport.(*http.Transport).Clone(),
 		},
-		ReconnectionCount:    -1,
-		Status:               Healthy,
+		ReconnectionCount: -1,
+		Status:            Started,
 		receiver: &http.Server{
 			Addr:           defaultReceiverAddr,
 			ReadTimeout:    defaultDataReceiverTimeout,

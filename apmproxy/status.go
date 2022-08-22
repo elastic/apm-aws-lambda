@@ -22,7 +22,16 @@ package apmproxy
 type Status string
 
 const (
-	Failing Status = "Failing"
-	Pending Status = "Pending"
+	// The apmproxy started but no information can be
+	// inferred on the status of the transport.
+	// Either because the apmproxy just started and no
+	// request was forwarded or because it recovered
+	// from a failure.
+	Started Status = "Started"
+
+	// Last request completed successfully.
 	Healthy Status = "Healthy"
+
+	// Last request failed.
+	Failing Status = "Failing"
 )

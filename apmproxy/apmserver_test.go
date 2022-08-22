@@ -170,7 +170,7 @@ func TestSetHealthyTransport(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
 	assert.True(t, apmClient.Status == apmproxy.Healthy)
 	assert.Equal(t, apmClient.ReconnectionCount, -1)
 }
@@ -184,7 +184,7 @@ func TestSetFailingTransport(t *testing.T) {
 	)
 	require.NoError(t, err)
 	apmClient.ReconnectionCount = 0
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Failing)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Failing)
 	assert.True(t, apmClient.Status == apmproxy.Failing)
 	assert.Equal(t, apmClient.ReconnectionCount, 1)
 }
@@ -195,12 +195,12 @@ func TestSetPendingTransport(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Failing)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Failing)
 	require.Eventually(t, func() bool {
-		return apmClient.Status != apmproxy.Failing
-	}, 5*time.Second, 50*time.Millisecond)
-	assert.True(t, apmClient.Status == apmproxy.Pending)
+		return !apmClient.IsUnhealthy()
+	}, 7*time.Second, 50*time.Millisecond)
+	assert.True(t, apmClient.Status == apmproxy.Started)
 	assert.Equal(t, apmClient.ReconnectionCount, 0)
 }
 
@@ -210,8 +210,8 @@ func TestSetPendingTransportExplicitly(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Pending)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Started)
 	assert.True(t, apmClient.Status == apmproxy.Healthy)
 	assert.Equal(t, apmClient.ReconnectionCount, -1)
 }
@@ -222,8 +222,8 @@ func TestSetInvalidTransport(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
-	apmClient.SetApmServerTransportState(context.Background(), "Invalid")
+	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
+	apmClient.UpdateStatus(context.Background(), "Invalid")
 	assert.True(t, apmClient.Status == apmproxy.Healthy)
 	assert.Equal(t, apmClient.ReconnectionCount, -1)
 }
@@ -266,7 +266,7 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
 
 	// Close the APM server early so that POST requests fail and that backoff is enabled
 	apmServer.Close()
@@ -321,12 +321,12 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Failing)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Failing)
 	require.Eventually(t, func() bool {
-		return apmClient.Status != apmproxy.Failing
-	}, 5*time.Second, 50*time.Millisecond)
-	assert.Equal(t, apmClient.Status, apmproxy.Pending)
+		return !apmClient.IsUnhealthy()
+	}, 7*time.Second, 50*time.Millisecond)
+	assert.Equal(t, apmClient.Status, apmproxy.Started)
 
 	assert.Error(t, apmClient.PostToApmServer(context.Background(), agentData))
 	assert.Equal(t, apmClient.Status, apmproxy.Failing)
@@ -375,12 +375,12 @@ func TestAPMServerRecovery(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Failing)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Failing)
 	require.Eventually(t, func() bool {
-		return apmClient.Status != apmproxy.Failing
-	}, 5*time.Second, 50*time.Millisecond)
-	assert.Equal(t, apmClient.Status, apmproxy.Pending)
+		return !apmClient.IsUnhealthy()
+	}, 7*time.Second, 50*time.Millisecond)
+	assert.Equal(t, apmClient.Status, apmproxy.Started)
 
 	assert.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
 	assert.Equal(t, apmClient.Status, apmproxy.Healthy)
@@ -420,12 +420,12 @@ func TestAPMServerAuthFails(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Failing)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Failing)
 	require.Eventually(t, func() bool {
-		return apmClient.Status != apmproxy.Failing
-	}, 5*time.Second, 50*time.Millisecond)
-	assert.Equal(t, apmClient.Status, apmproxy.Pending)
+		return !apmClient.IsUnhealthy()
+	}, 7*time.Second, 50*time.Millisecond)
+	assert.Equal(t, apmClient.Status, apmproxy.Started)
 	assert.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
 	assert.NotEqual(t, apmClient.Status, apmproxy.Healthy)
 }
@@ -469,12 +469,12 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Healthy)
-	apmClient.SetApmServerTransportState(context.Background(), apmproxy.Failing)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
+	apmClient.UpdateStatus(context.Background(), apmproxy.Failing)
 	require.Eventually(t, func() bool {
-		return apmClient.Status != apmproxy.Failing
-	}, 5*time.Second, 50*time.Millisecond)
-	assert.Equal(t, apmClient.Status, apmproxy.Pending)
+		return !apmClient.IsUnhealthy()
+	}, 7*time.Second, 50*time.Millisecond)
+	assert.Equal(t, apmClient.Status, apmproxy.Started)
 	assert.Error(t, apmClient.PostToApmServer(context.Background(), agentData))
 	assert.Equal(t, apmClient.Status, apmproxy.Failing)
 }

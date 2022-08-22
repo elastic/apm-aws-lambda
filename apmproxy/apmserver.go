@@ -34,7 +34,7 @@ import (
 // Stop checking for, and sending agent data when the function invocation
 // has completed, signaled via a channel.
 func (c *Client) ForwardApmData(ctx context.Context, metadataContainer *MetadataContainer) error {
-	if c.Status == Failing {
+	if c.IsUnhealthy() {
 		return nil
 	}
 	for {
@@ -59,7 +59,7 @@ func (c *Client) ForwardApmData(ctx context.Context, metadataContainer *Metadata
 
 // FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
 func (c *Client) FlushAPMData(ctx context.Context) {
-	if c.Status == Failing {
+	if c.IsUnhealthy() {
 		c.logger.Debug("Flush skipped - Transport failing")
 		return
 	}
@@ -86,7 +86,7 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 func (c *Client) PostToApmServer(ctx context.Context, agentData AgentData) error {
 	// todo: can this be a streaming or streaming style call that keeps the
 	//       connection open across invocations?
-	if c.Status == Failing {
+	if c.IsUnhealthy() {
 		return errors.New("transport status is unhealthy")
 	}
 
@@ -131,7 +131,7 @@ func (c *Client) PostToApmServer(ctx context.Context, agentData AgentData) error
 	c.logger.Debug("Sending data chunk to APM server")
 	resp, err := c.client.Do(req)
 	if err != nil {
-		c.SetApmServerTransportState(ctx, Failing)
+		c.UpdateStatus(ctx, Failing)
 		return fmt.Errorf("failed to post to APM server: %v", err)
 	}
 
@@ -139,7 +139,7 @@ func (c *Client) PostToApmServer(ctx context.Context, agentData AgentData) error
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		c.SetApmServerTransportState(ctx, Failing)
+		c.UpdateStatus(ctx, Failing)
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
@@ -149,21 +149,28 @@ func (c *Client) PostToApmServer(ctx context.Context, agentData AgentData) error
 		return nil
 	}
 
-	c.SetApmServerTransportState(ctx, Healthy)
+	c.UpdateStatus(ctx, Healthy)
 	c.logger.Debug("Transport status set to healthy")
 	c.logger.Debugf("APM server response body: %v", string(body))
 	c.logger.Debugf("APM server response status code: %v", resp.StatusCode)
 	return nil
 }
 
-// SetApmServerTransportState takes a state of the APM server transport and updates
+// IsUnhealthy returns true if the apmproxy is not healthy.
+func (c *Client) IsUnhealthy() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.Status == Failing
+}
+
+// UpdateStatus takes a state of the APM server transport and updates
 // the current state of the transport. For a change to a failing state, the grace period
 // is calculated and a go routine is started that waits for that period to complete
 // before changing the status to "pending". This would allow a subsequent send attempt
 // to the APM server.
 //
 // This function is public for use in tests.
-func (c *Client) SetApmServerTransportState(ctx context.Context, status Status) {
+func (c *Client) UpdateStatus(ctx context.Context, status Status) {
 	switch status {
 	case Healthy:
 		c.mu.Lock()
@@ -178,6 +185,8 @@ func (c *Client) SetApmServerTransportState(ctx context.Context, status Status) 
 		c.ReconnectionCount++
 		gracePeriodTimer := time.NewTimer(c.ComputeGracePeriod())
 		c.logger.Debugf("Grace period entered, reconnection count : %d", c.ReconnectionCount)
+		c.mu.Unlock()
+
 		go func() {
 			select {
 			case <-gracePeriodTimer.C:
@@ -185,7 +194,8 @@ func (c *Client) SetApmServerTransportState(ctx context.Context, status Status) 
 			case <-ctx.Done():
 				c.logger.Debug("Grace period over - context done")
 			}
-			c.Status = Pending
+			c.mu.Lock()
+			c.Status = Started
 			c.logger.Debugf("APM server Transport status set to %s", c.Status)
 			c.mu.Unlock()
 		}()
