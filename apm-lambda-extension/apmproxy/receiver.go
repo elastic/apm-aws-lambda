@@ -121,16 +121,18 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		flushed := r.URL.Query().Get("flushed") == "true"
+		agentFlushed := r.URL.Query().Get("flushed") == "true"
 
 		agentData := AgentData{
 			Data:            rawBytes,
 			ContentEncoding: r.Header.Get("Content-Encoding"),
 		}
 
-		enqueued := c.EnqueueAPMData(agentData)
+		if len(agentData.Data) != 0 {
+			c.EnqueueAPMData(agentData)
+		}
 
-		if enqueued && flushed {
+		if agentFlushed {
 			c.flushMutex.Lock()
 
 			select {

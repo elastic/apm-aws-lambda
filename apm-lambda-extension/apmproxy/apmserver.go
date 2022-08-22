@@ -43,9 +43,6 @@ func (c *Client) ForwardApmData(ctx context.Context, metadataContainer *Metadata
 			c.logger.Debug("Invocation context cancelled, not processing any more agent data")
 			return nil
 		case agentData := <-c.DataChannel:
-			if len(agentData.Data) == 0 {
-				continue
-			}
 			if metadataContainer.Metadata == nil {
 				metadata, err := ProcessMetadata(agentData)
 				if err != nil {
@@ -70,9 +67,6 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 	for {
 		select {
 		case agentData := <-c.DataChannel:
-			if len(agentData.Data) == 0 {
-				continue
-			}
 			c.logger.Debug("Flush in progress - Processing agent data")
 			if err := c.PostToApmServer(ctx, agentData); err != nil {
 				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
@@ -216,14 +210,12 @@ func (c *Client) ComputeGracePeriod() time.Duration {
 
 // EnqueueAPMData adds a AgentData struct to the agent data channel, effectively queueing for a send
 // to the APM server.
-func (c *Client) EnqueueAPMData(agentData AgentData) bool {
+func (c *Client) EnqueueAPMData(agentData AgentData) {
 	select {
 	case c.DataChannel <- agentData:
 		c.logger.Debug("Adding agent data to buffer to be sent to apm server")
-		return true
 	default:
 		c.logger.Warn("Channel full: dropping a subset of agent data")
-		return false
 	}
 }
 
