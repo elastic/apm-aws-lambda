@@ -210,33 +210,50 @@ func newTestStructs(t *testing.T) chan MockEvent {
 func processMockEvent(currId string, event MockEvent, extensionPort string, logsapiAddr string, internals *MockServerInternals, l *zap.SugaredLogger) {
 	sendLogEvent(logsapiAddr, currId, logsapi.Start, l)
 	client := http.Client{}
+
+	// Use a custom transport with a low timeout
+	tr := http.DefaultTransport.(*http.Transport)
+	tr.ResponseHeaderTimeout = 200 * time.Millisecond
+	client.Transport = tr
+
 	sendRuntimeDone := true
 	sendMetrics := true
+
+	// Used in LateFlush events to make sure that
+	// the request is sent after the RuntimeDone.
+	ch := make(chan struct{})
+	defer close(ch)
+
+	// float values were silently ignored (casted to int)
+	// Multiply before casting to support more values.
+	delay := time.Duration(event.ExecutionDuration * float64(time.Second))
+
 	switch event.Type {
 	case InvokeHang:
-		time.Sleep(time.Duration(event.Timeout) * time.Second)
+		time.Sleep(time.Duration(event.Timeout * float64(time.Second)))
 	case InvokeStandard:
-		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
+		time.Sleep(delay)
 		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		res, _ := client.Do(req)
 		l.Debugf("Response seen by the agent : %d", res.StatusCode)
 	case InvokeStandardMetadata:
-		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
+		time.Sleep(delay)
 		metadata := `{"metadata":{"service":{"name":"1234_service-12a3","version":"5.1.3","environment":"staging","agent":{"name":"elastic-node","version":"3.14.0"},"framework":{"name":"Express","version":"1.2.3"},"language":{"name":"ecmascript","version":"8"},"runtime":{"name":"node","version":"8.0.0"},"node":{"configured_name":"node-123"}},"user":{"username":"bar","id":"123user","email":"bar@user.com"},"labels":{"tag0":null,"tag1":"one","tag2":2},"process":{"pid":1234,"ppid":6789,"title":"node","argv":["node","server.js"]},"system":{"architecture":"x64","hostname":"prod1.example.com","platform":"darwin","container":{"id":"container-id"},"kubernetes":{"namespace":"namespace1","node":{"name":"node-name"},"pod":{"name":"pod-name","uid":"pod-uid"}}},"cloud":{"provider":"cloud_provider","region":"cloud_region","availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"account":{"id":"account_id","name":"account_name"},"project":{"id":"project_id","name":"project_name"},"service":{"name":"lambda"}}}}`
 		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(metadata)))
 		res, _ := client.Do(req)
 		l.Debugf("Response seen by the agent : %d", res.StatusCode)
 	case InvokeStandardFlush:
-		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
+		time.Sleep(delay)
 		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		if _, err := client.Do(reqData); err != nil {
 			l.Error(err.Error())
 		}
 	case InvokeLateFlush:
-		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
+		time.Sleep(delay)
 		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		internals.WaitGroup.Add(1)
 		go func() {
+			<-ch
 			if _, err := client.Do(reqData); err != nil {
 				l.Error(err.Error())
 			}
@@ -245,7 +262,7 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, logs
 		// For this specific scenario, we do not want to see metrics in the APM Server logs (in order to easily check if the logs contain to "TimelyResponse" back to back).
 		sendMetrics = false
 	case InvokeWaitgroupsRace:
-		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
+		time.Sleep(delay)
 		reqData0, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		reqData1, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		if _, err := client.Do(reqData0); err != nil {
@@ -257,10 +274,10 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, logs
 		time.Sleep(650 * time.Microsecond)
 	case InvokeMultipleTransactionsOverload:
 		wg := sync.WaitGroup{}
-		for i := 0; i < 200; i++ {
+		for i := 0; i < 10; i++ {
 			wg.Add(1)
 			go func() {
-				time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
+				time.Sleep(delay)
 				reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 				if _, err := client.Do(reqData); err != nil {
 					l.Error(err.Error())
@@ -270,7 +287,7 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, logs
 		}
 		wg.Wait()
 	case InvokeStandardInfo:
-		time.Sleep(time.Duration(event.ExecutionDuration) * time.Second)
+		time.Sleep(delay)
 		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		res, err := client.Do(req)
 		if err != nil {
@@ -420,8 +437,8 @@ func TestLateFlush(t *testing.T) {
 	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
-		{Type: InvokeLateFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
-		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+		{Type: InvokeLateFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 0, Timeout: 5},
+		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 0, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	select {
@@ -592,6 +609,9 @@ func TestFullChannel(t *testing.T) {
 	logsapiAddr := randomAddr()
 	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
+	// Use a smaller buffer size to make it easier to reproduce
+	t.Setenv("ELASTIC_APM_LAMBDA_AGENT_DATA_BUFFER_SIZE", "1")
+
 	eventsChain := []MockEvent{
 		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: TimelyResponse, ExecutionDuration: 0.1, Timeout: 5},
 	}
@@ -616,6 +636,8 @@ func TestFullChannelSlowAPMServer(t *testing.T) {
 	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	t.Setenv("ELASTIC_APM_SEND_STRATEGY", "background")
+	// Use a smaller buffer size to make it easier to reproduce
+	t.Setenv("ELASTIC_APM_LAMBDA_AGENT_DATA_BUFFER_SIZE", "1")
 
 	eventsChain := []MockEvent{
 		{Type: InvokeMultipleTransactionsOverload, APMServerBehavior: SlowResponse, ExecutionDuration: 0.01, Timeout: 5},
