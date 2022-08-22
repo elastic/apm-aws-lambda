@@ -59,7 +59,6 @@ type Client struct {
 	ServerAPIKey         string
 	ServerSecretToken    string
 	serverURL            string
-	dataForwarderTimeout time.Duration
 	receiver             *http.Server
 	sendStrategy         SendStrategy
 	logger               *zap.SugaredLogger
@@ -77,7 +76,6 @@ func NewClient(opts ...Option) (*Client, error) {
 		client: &http.Client{
 			Transport: http.DefaultTransport.(*http.Transport).Clone(),
 		},
-		dataForwarderTimeout: defaultDataForwarderTimeout,
 		ReconnectionCount:    -1,
 		Status:               Healthy,
 		receiver: &http.Server{
@@ -89,6 +87,8 @@ func NewClient(opts ...Option) (*Client, error) {
 		sendStrategy: SyncFlush,
 		flushCh:      make(chan struct{}),
 	}
+
+	c.client.Timeout = defaultDataForwarderTimeout
 
 	for _, opt := range opts {
 		opt(&c)
