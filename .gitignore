@@ -23,3 +23,5 @@
 # AWS regions file
 .regions
 .aws/
+
+bin/
