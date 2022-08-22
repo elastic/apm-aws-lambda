@@ -19,7 +19,7 @@ package logsapi_test
 
 import (
 	"bytes"
-	"elastic/apm-lambda-extension/logsapi"
+	"github.com/elastic/apm-aws-lambda/logsapi"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"

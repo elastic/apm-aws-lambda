@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"elastic/apm-lambda-extension/app"
+	"github.com/elastic/apm-aws-lambda/app"
 )
 
 func main() {

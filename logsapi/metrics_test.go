@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
-	"elastic/apm-lambda-extension/apmproxy"
-	"elastic/apm-lambda-extension/extension"
+	"github.com/elastic/apm-aws-lambda/apmproxy"
+	"github.com/elastic/apm-aws-lambda/extension"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

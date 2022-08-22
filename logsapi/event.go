@@ -19,8 +19,8 @@ package logsapi
 
 import (
 	"context"
-	"elastic/apm-lambda-extension/apmproxy"
-	"elastic/apm-lambda-extension/extension"
+	"github.com/elastic/apm-aws-lambda/extension"
+	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"time"
 )
 

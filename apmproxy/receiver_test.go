@@ -19,7 +19,7 @@ package apmproxy_test
 
 import (
 	"bytes"
-	"elastic/apm-lambda-extension/apmproxy"
+	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"io"
 	"net"
 	"net/http"

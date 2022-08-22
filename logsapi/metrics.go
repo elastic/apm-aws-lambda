@@ -20,9 +20,8 @@ package logsapi
 import (
 	"math"
 
-	"elastic/apm-lambda-extension/apmproxy"
-	"elastic/apm-lambda-extension/extension"
-
+	"github.com/elastic/apm-aws-lambda/apmproxy"
+	"github.com/elastic/apm-aws-lambda/extension"
 	"go.elastic.co/apm/v2/model"
 	"go.elastic.co/fastjson"
 )
