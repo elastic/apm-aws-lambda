@@ -22,6 +22,7 @@ type appConfig struct {
 	extensionName       string
 	disableLogsAPI      bool
 	logLevel            string
+	logsapiAddr         string
 }
 
 type configOption func(*appConfig)
@@ -53,5 +54,13 @@ func WithoutLogsAPI() configOption {
 func WithLogLevel(level string) configOption {
 	return func(c *appConfig) {
 		c.logLevel = level
+	}
+}
+
+// WithLogsapiAddress sets the listener address of the
+// server listening for logs event.
+func WithLogsapiAddress(s string) configOption {
+	return func(c *appConfig) {
+		c.logsapiAddr = s
 	}
 }
