@@ -137,6 +137,8 @@ func (app *App) processEvent(
 	prevEvent *extension.NextEventResponse,
 	metadataContainer *apmproxy.MetadataContainer,
 ) (*extension.NextEventResponse, error) {
+	// Reset flush state for future events.
+	defer app.apmClient.ResetFlush()
 
 	// Invocation context
 	invocationCtx, invocationCancel := context.WithCancel(ctx)
@@ -211,9 +213,6 @@ func (app *App) processEvent(
 	select {
 	case <-app.apmClient.WaitForFlush():
 		app.logger.Debug("APM client has pending flush signals")
-
-		// Reset flush state for future events.
-		app.apmClient.ResetFlush()
 	case <-runtimeDone:
 		app.logger.Debug("Received runtimeDone signal")
 	case <-timer.C:
