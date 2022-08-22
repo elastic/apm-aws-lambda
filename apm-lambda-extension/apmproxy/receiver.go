@@ -121,17 +121,34 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		if len(rawBytes) > 0 {
-			agentData := AgentData{
-				Data:            rawBytes,
-				ContentEncoding: r.Header.Get("Content-Encoding"),
-			}
+		agentFlushed := r.URL.Query().Get("flushed") == "true"
 
+		agentData := AgentData{
+			Data:            rawBytes,
+			ContentEncoding: r.Header.Get("Content-Encoding"),
+		}
+
+		if len(agentData.Data) != 0 {
 			c.EnqueueAPMData(agentData)
 		}
 
-		if len(r.URL.Query()["flushed"]) > 0 && r.URL.Query()["flushed"][0] == "true" {
-			c.AgentDoneSignal <- struct{}{}
+		if agentFlushed {
+			c.flushMutex.Lock()
+
+			select {
+			case <-c.flushCh:
+				// the channel is closed.
+				// the extension received at least a flush request already but the
+				// data have not been flushed yet.
+				// We can reuse the closed channel.
+			default:
+				// no pending flush requests
+				// close the channel to signal a flush request has
+				// been received.
+				close(c.flushCh)
+			}
+
+			c.flushMutex.Unlock()
 		}
 
 		w.WriteHeader(http.StatusAccepted)

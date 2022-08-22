@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.elastic.co/ecszap"
@@ -97,6 +98,10 @@ func New(opts ...configOption) (*App, error) {
 		apmOpts = append(apmOpts, apmproxy.WithReceiverAddress(fmt.Sprintf(":%s", port)))
 	}
 
+	if strategy, ok := parseStrategy(os.Getenv("ELASTIC_APM_SEND_STRATEGY")); ok {
+		apmOpts = append(apmOpts, apmproxy.WithSendStrategy(strategy))
+	}
+
 	if bufferSize := os.Getenv("ELASTIC_APM_LAMBDA_AGENT_DATA_BUFFER_SIZE"); bufferSize != "" {
 		size, err := strconv.Atoi(bufferSize)
 		if err != nil {
@@ -130,6 +135,17 @@ func getIntFromEnvIfAvailable(name string) (int, error) {
 		return -1, err
 	}
 	return value, nil
+}
+
+func parseStrategy(value string) (apmproxy.SendStrategy, bool) {
+	switch strings.ToLower(value) {
+	case "background":
+		return apmproxy.Background, true
+	case "syncflush":
+		return apmproxy.SyncFlush, true
+	}
+
+	return "", false
 }
 
 func buildLogger(level string) (*zap.SugaredLogger, error) {

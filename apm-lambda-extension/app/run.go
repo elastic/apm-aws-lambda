@@ -87,6 +87,14 @@ func (app *App) Run(ctx context.Context) error {
 		}
 	}
 
+	// Flush all data before shutting down.
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		app.apmClient.FlushAPMData(ctx)
+	}()
+
 	// The previous event id is used to validate the received Lambda metrics
 	var prevEvent *extension.NextEventResponse
 	// This data structure contains metadata tied to the current Lambda instance. If empty, it is populated once for each
@@ -114,7 +122,7 @@ func (app *App) Run(ctx context.Context) error {
 			}
 			app.logger.Debug("Waiting for background data send to end")
 			backgroundDataSendWg.Wait()
-			if config.SendStrategy == extension.SyncFlush {
+			if app.apmClient.ShouldFlush() {
 				// Flush APM data now that the function invocation has completed
 				app.apmClient.FlushAPMData(ctx)
 			}
@@ -129,6 +137,8 @@ func (app *App) processEvent(
 	prevEvent *extension.NextEventResponse,
 	metadataContainer *apmproxy.MetadataContainer,
 ) (*extension.NextEventResponse, error) {
+	// Reset flush state for future events.
+	defer app.apmClient.ResetFlush()
 
 	// Invocation context
 	invocationCtx, invocationCancel := context.WithCancel(ctx)
@@ -161,8 +171,6 @@ func (app *App) processEvent(
 	}
 
 	// APM Data Processing
-	app.apmClient.AgentDoneSignal = make(chan struct{})
-	defer close(app.apmClient.AgentDoneSignal)
 	backgroundDataSendWg.Add(1)
 	go func() {
 		defer backgroundDataSendWg.Done()
@@ -201,9 +209,10 @@ func (app *App) processEvent(
 	// 2) [Backup 1] RuntimeDone is triggered upon reception of a Lambda log entry certifying the end of the execution of the current function
 	// 3) [Backup 2] If all else fails, the extension relies of the timeout of the Lambda function to interrupt itself 100 ms before the specified deadline.
 	// This time interval is large enough to attempt a last flush attempt (if SendStrategy == syncFlush) before the environment gets shut down.
+
 	select {
-	case <-app.apmClient.AgentDoneSignal:
-		app.logger.Debug("Received agent done signal")
+	case <-app.apmClient.WaitForFlush():
+		app.logger.Debug("APM client has pending flush signals")
 	case <-runtimeDone:
 		app.logger.Debug("Received runtimeDone signal")
 	case <-timer.C:
