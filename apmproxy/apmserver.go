@@ -143,6 +143,12 @@ func (c *Client) PostToApmServer(ctx context.Context, agentData AgentData) error
 		return fmt.Errorf("failed to read the response body after posting to the APM server")
 	}
 
+	if resp.StatusCode == http.StatusTooManyRequests {
+		c.logger.Warnf("Transport has been rate limited: response status code: %d", resp.StatusCode)
+		c.UpdateStatus(ctx, RateLimited)
+		return nil
+	}
+
 	if resp.StatusCode == http.StatusUnauthorized {
 		c.logger.Warnf("Authentication with the APM server failed: response status code: %d", resp.StatusCode)
 		c.logger.Debugf("APM server response body: %v", string(body))
@@ -177,6 +183,13 @@ func (c *Client) UpdateStatus(ctx context.Context, status Status) {
 		c.Status = status
 		c.logger.Debugf("APM server Transport status set to %s", c.Status)
 		c.ReconnectionCount = -1
+		c.mu.Unlock()
+	case RateLimited:
+		// No need to start backoff, this is a temporary status. It usually
+		// means we went over the limit of events/s.
+		c.mu.Lock()
+		c.Status = status
+		c.logger.Debugf("APM server Transport status set to %s", c.Status)
 		c.mu.Unlock()
 	case Failing:
 		c.mu.Lock()

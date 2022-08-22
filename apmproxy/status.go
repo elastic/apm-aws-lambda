@@ -34,4 +34,8 @@ const (
 
 	// Last request failed.
 	Failing Status = "Failing"
+
+	// The APM Server returned status 429 and the extension
+	// was ratelimited.
+	RateLimited Status = "RateLimited"
 )
