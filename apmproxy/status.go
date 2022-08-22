@@ -38,4 +38,8 @@ const (
 	// The APM Server returned status 429 and the extension
 	// was ratelimited.
 	RateLimited Status = "RateLimited"
+
+	// A failure on the client was observed. This does not
+	// trigger any backoff mechanism.
+	ClientFailing Status = "ClientFailing"
 )

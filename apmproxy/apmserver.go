@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -29,6 +30,16 @@ import (
 	"net/http"
 	"time"
 )
+
+type jsonResult struct {
+	Accepted int         `json:"accepted"`
+	Errors   []jsonError `json:"errors,omitempty"`
+}
+
+type jsonError struct {
+	Message  string `json:"message"`
+	Document string `json:"document,omitempty"`
+}
 
 // ForwardApmData receives agent data as it comes in and posts it to the APM server.
 // Stop checking for, and sending agent data when the function invocation
@@ -134,31 +145,59 @@ func (c *Client) PostToApmServer(ctx context.Context, agentData AgentData) error
 		c.UpdateStatus(ctx, Failing)
 		return fmt.Errorf("failed to post to APM server: %v", err)
 	}
-
-	//Read the response body
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		c.UpdateStatus(ctx, Failing)
-		return fmt.Errorf("failed to read the response body after posting to the APM server")
+
+	// On success, the server will respond with a 202 Accepted status code and no body.
+	if resp.StatusCode == http.StatusAccepted {
+		c.UpdateStatus(ctx, Healthy)
+		return nil
 	}
 
+	// RateLimited
 	if resp.StatusCode == http.StatusTooManyRequests {
 		c.logger.Warnf("Transport has been rate limited: response status code: %d", resp.StatusCode)
 		c.UpdateStatus(ctx, RateLimited)
 		return nil
 	}
 
-	if resp.StatusCode == http.StatusUnauthorized {
+	jErr := jsonResult{}
+	if err := json.NewDecoder(resp.Body).Decode(&jErr); err != nil {
+		// non critical error.
+		// Log a warning and continue.
+		c.logger.Warnf("failed to decode response body: %v", err)
+	}
+
+	// Auth errors
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
 		c.logger.Warnf("Authentication with the APM server failed: response status code: %d", resp.StatusCode)
-		c.logger.Debugf("APM server response body: %v", string(body))
+		for _, err := range jErr.Errors {
+			c.logger.Warnf("failed to authenticate: document %s: message: %s", err.Document, err.Message)
+		}
+		c.UpdateStatus(ctx, ClientFailing)
 		return nil
 	}
 
-	c.UpdateStatus(ctx, Healthy)
-	c.logger.Debug("Transport status set to healthy")
-	c.logger.Debugf("APM server response body: %v", string(body))
-	c.logger.Debugf("APM server response status code: %v", resp.StatusCode)
+	// ClientErrors
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+		c.logger.Warnf("client error: response status code: %d", resp.StatusCode)
+		for _, err := range jErr.Errors {
+			c.logger.Warnf("client error: document %s: message: %s", err.Document, err.Message)
+		}
+		c.UpdateStatus(ctx, ClientFailing)
+		return nil
+	}
+
+	// critical errors
+	if resp.StatusCode == http.StatusInternalServerError || resp.StatusCode == http.StatusServiceUnavailable {
+		c.logger.Warnf("failed to post data to APM server: response status code: %d", resp.StatusCode)
+		for _, err := range jErr.Errors {
+			c.logger.Warnf("critical error: document %s: message: %s", err.Document, err.Message)
+		}
+		c.UpdateStatus(ctx, Failing)
+		return nil
+	}
+
+	c.logger.Warnf("unhandled status code: %d", resp.StatusCode)
 	return nil
 }
 
@@ -184,7 +223,7 @@ func (c *Client) UpdateStatus(ctx context.Context, status Status) {
 		c.logger.Debugf("APM server Transport status set to %s", c.Status)
 		c.ReconnectionCount = -1
 		c.mu.Unlock()
-	case RateLimited:
+	case RateLimited, ClientFailing:
 		// No need to start backoff, this is a temporary status. It usually
 		// means we went over the limit of events/s.
 		c.mu.Lock()
