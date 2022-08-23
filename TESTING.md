@@ -10,9 +10,7 @@ To run an unreleased version of this extension, you will need to ensure that you
 To build the extension in the `bin/extensions` folder, run the following commands.
 
 ```bash
-$ cd apm-lambda-extension
-$ GOOS=linux GOARCH=amd64 go build -o bin/extensions/apm-lambda-extension main.go
-$ chmod +x bin/extensions/apm-lambda-extension
+$ make build
 ```
 
 ### Layer Setup Process
@@ -24,8 +22,7 @@ The extensions .zip file should contain a root directory called `extensions/`, w
 To create the zip file, run the following commands from the root of your project folder.
 
 ```bash
-$ cd apm-lambda-extension/bin
-$ zip -r extension.zip extensions/
+$ make zip
 ```
 
 To publish the zip file as a layer, run the following command using the AWS cli (presumes you have v2 of the aws-cli installed).
@@ -37,7 +34,9 @@ Publish a new layer using the `extension.zip`. The output of the following comma
 aws lambda publish-layer-version \
  --layer-name "apm-lambda-extension" \
  --region <use your region> \
- --zip-file  "fileb://extension.zip"
+ --description "AWS Lambda Extension Layer for Elastic APM" \
+ --license "Apache-2.0" \
+ --zip-file  "fileb://./bin/extension.zip"
 ```
 
 The output from the above command will include a `LayerVersionArn` field, which contains the unique string identifier for your layer.  The will look something like the following.
