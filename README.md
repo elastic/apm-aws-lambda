@@ -4,11 +4,6 @@
 
 This repository contains code and tools for working with the Elastic APM AWS Lambda extension.
 
-Elastic APM Agents can be used with AWS Lambda to monitor the execution of your AWS Lambda functions.
-Currently the Node.js, Python and Java Agents are supported.
-
-The extension listens for data once per function invocation and forwards data to an APM Server.
-
 ## Documentation
 
 Ready to use Elastic APM to monitor your Lambda functions? See [Monitoring AWS Lambda Functions](https://www.elastic.co/guide/en/apm/guide/current/monitoring-aws-lambda.html) to get started.
