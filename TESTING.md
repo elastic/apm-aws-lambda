@@ -1,7 +1,7 @@
 # APM AWS Lambda extension Testing
 
 ## Testing unreleased versions
-If you need to test an unreleased version you can compile the package and it's dependencies and make them available as AWS Lambda Layer.
+If you need to test an unreleased version you can compile the package and its dependencies and make them available as AWS Lambda Layer.
 
 ### Compile package and dependencies
 
