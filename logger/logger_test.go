@@ -18,7 +18,7 @@
 package logger_test
 
 import (
-	"elastic/apm-lambda-extension/logger"
+	"github.com/elastic/apm-aws-lambda/logger"
 	"os"
 	"testing"
 

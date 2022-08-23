@@ -19,9 +19,9 @@ package app
 
 import (
 	"context"
-	"elastic/apm-lambda-extension/apmproxy"
-	"elastic/apm-lambda-extension/extension"
-	"elastic/apm-lambda-extension/logsapi"
+	"github.com/elastic/apm-aws-lambda/apmproxy"
+	"github.com/elastic/apm-aws-lambda/extension"
+	"github.com/elastic/apm-aws-lambda/logsapi"
 	"fmt"
 	"sync"
 	"time"

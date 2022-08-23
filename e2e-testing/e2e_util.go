@@ -29,7 +29,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"elastic/apm-lambda-extension/apmproxy"
+	"github.com/elastic/apm-aws-lambda/apmproxy"
 
 	"go.uber.org/zap"
 )

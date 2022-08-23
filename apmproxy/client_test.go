@@ -18,7 +18,7 @@
 package apmproxy_test
 
 import (
-	"elastic/apm-lambda-extension/apmproxy"
+	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"testing"
 
 	"github.com/stretchr/testify/require"

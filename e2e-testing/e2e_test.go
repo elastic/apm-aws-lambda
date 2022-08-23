@@ -18,7 +18,7 @@
 package e2eTesting
 
 import (
-	"elastic/apm-lambda-extension/logger"
+	"github.com/elastic/apm-aws-lambda/logger"
 	"flag"
 	"fmt"
 	"io"

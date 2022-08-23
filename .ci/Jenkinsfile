@@ -45,7 +45,7 @@ pipeline {
       steps {
         withGithubNotify(context: "Lint") {
           withGoEnv(){
-            dir("${BASE_DIR}/apm-lambda-extension"){
+            dir("${BASE_DIR}"){
               sh(label: 'lint-prep', script: 'go mod tidy && git diff --exit-code')
               sh(label: 'lint-run', script: 'make lint')
               sh(label: 'Go vet', script: 'go vet')
@@ -54,7 +54,7 @@ pipeline {
         }
         withGithubNotify(context: "NOTICE.txt") {
           withGoEnv(){
-            dir("${BASE_DIR}/apm-lambda-extension"){
+            dir("${BASE_DIR}"){
               sh(label: 'notice', script: '''
                 make NOTICE.txt
                 git diff --exit-code --quiet && exit 0 || echo "regenerate NOTICE.txt" && exit 1
@@ -82,7 +82,7 @@ pipeline {
                 deleteDir()
                 unstash 'source'
                 withGoEnv(){
-                  dir("${BASE_DIR}/apm-lambda-extension"){
+                  dir("${BASE_DIR}"){
                     cmd(label: 'make build', script: 'make build')
                   }
                 }
@@ -93,7 +93,7 @@ pipeline {
             steps {
               withGithubNotify(context: "Test-${GO_VERSION}-${PLATFORM}") {
                 withGoEnv(){
-                  dir("${BASE_DIR}/apm-lambda-extension"){
+                  dir("${BASE_DIR}"){
                     goTestJUnit(options: '-v ./...', output: 'junit-report.xml')
                   }
                 }
@@ -135,7 +135,7 @@ pipeline {
                     deleteDir()
                     unstash 'source'
                     withGoEnv(){
-                      dir("${BASE_DIR}/apm-lambda-extension"){
+                      dir("${BASE_DIR}"){
                         cmd(label: 'make dist', script: 'make dist')
                       }
                     }
@@ -146,7 +146,7 @@ pipeline {
                 steps {
                   withGithubNotify(context: "Push-Docker-${PLATFORM}") {
                     withGoEnv(){
-                      dir("${BASE_DIR}/apm-lambda-extension"){
+                      dir("${BASE_DIR}"){
                         dockerLogin(secret: "${DOCKER_SECRET}", registry: "${DOCKER_REGISTRY}")
                         cmd(label: 'make push-docker', script: 'make push-docker')
                       }
@@ -159,7 +159,7 @@ pipeline {
                   withGithubNotify(context: "Publish-Layer-${PLATFORM}") {
                     withGoEnv(){
                       withAWSEnv(secret: 'secret/observability-team/ci/service-account/apm-aws-lambda', forceInstallation: true, version: '2.4.10') {
-                        dir("${BASE_DIR}/apm-lambda-extension"){
+                        dir("${BASE_DIR}"){
                           cmd(label: 'make publish-in-all-aws-regions', script: 'make publish-in-all-aws-regions')
                           cmd(label: 'make create-arn-file', script: 'make create-arn-file')
                           stash(includes: "*${SUFFIX_ARN_FILE}", name: "arn-${isArm() ? 'arm' : 'amd'}")
@@ -171,9 +171,9 @@ pipeline {
                 }
                 post {
                   always {
-                    archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/.regions")
-                    archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/*${SUFFIX_ARN_FILE}")
-                    archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/apm-lambda-extension/.aws")
+                    archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/.regions")
+                    archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/*${SUFFIX_ARN_FILE}")
+                    archiveArtifacts(allowEmptyArchive: true, artifacts: "${BASE_DIR}/.aws")
                   }
                 }
               }
@@ -183,7 +183,7 @@ pipeline {
         stage('Release Notes') {
           steps {
             withGhEnv(forceInstallation: true, version: '2.4.0') {
-              dir("${BASE_DIR}/apm-lambda-extension"){
+              dir("${BASE_DIR}"){
                 unstash "arn-arm"
                 unstash "arn-amd"
                 unstash "dist-arm"

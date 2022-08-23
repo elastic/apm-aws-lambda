@@ -20,7 +20,7 @@ package apmproxy_test
 import (
 	"compress/gzip"
 	"context"
-	"elastic/apm-lambda-extension/apmproxy"
+	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"io"
 	"net/http"
 	"net/http/httptest"

@@ -1,28 +1,13 @@
-[![Build Status](https://apm-ci.elastic.co/buildStatus/icon?job=library%2Fapm-aws-lambda-mbp%2Fmain)](https://apm-ci.elastic.co/job/library/job/apm-aws-lambda-mbp/job/main/)
-
-# Elastic APM AWS Lambda extension
-
-Elastic APM Agents can be used with AWS Lambda to monitor the execution of your AWS Lambda functions.
-Currently the Node.js, Python and Java Agents are supported. 
-
-The extension listens for data once per function invocation and forwards data to an APM Server.
-
-## Getting Started
-Ready to use Elastic APM to monitor your Lambda functions? 
-See [Monitoring AWS Lambda Functions](https://www.elastic.co/guide/en/apm/guide/current/monitoring-aws-lambda.html) to get started and learn more about available configuration options. 
-
-## Contributing
-
-See [contributing](CONTRIBUTING.md) for details about reporting bugs, requesting features, or code contributions.
+# APM AWS Lambda extension Testing
 
 ## Testing unreleased versions
-If you need to test an unreleased version you can compile the package and it's dependencies and make them available as AWS Lambda Layer. 
+If you need to test an unreleased version you can compile the package and its dependencies and make them available as AWS Lambda Layer.
 
 ### Compile package and dependencies
 
 To run an unreleased version of this extension, you will need to ensure that your build architecture matches that of the Lambda execution environment by compiling with `GOOS=linux` and `GOARCH=amd64` if you are not running in a Linux environment.
 
-To build the extension into the `bin/extensions` folder, run the following commands. 
+To build the extension in the `bin/extensions` folder, run the following commands.
 
 ```bash
 $ cd apm-lambda-extension
@@ -55,7 +40,7 @@ aws lambda publish-layer-version \
  --zip-file  "fileb://extension.zip"
 ```
 
-The out from the above command will include a `LayverVersionArn` field, which contains the unique string identifier for your layer.  The will look something like the following. 
+The output from the above command will include a `LayerVersionArn` field, which contains the unique string identifier for your layer.  The will look something like the following.
 
     `"LayerVersionArn": "arn:aws:lambda:<region>:123456789012:layer:<layerName>:1"`
 
@@ -70,7 +55,3 @@ The `Makefile` also provides a `build-and-publish` command which will perform th
     AWS_ACCESS_KEY_ID=A...X \
     AWS_SECRET_ACCESS_KEY=h...E \
     make build-and-publish
-
-## Release Procedure
-
-See [release](RELEASE.md) for details.

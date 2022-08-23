@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
-	"elastic/apm-lambda-extension/apmproxy"
+	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"io"
 	"testing"
 

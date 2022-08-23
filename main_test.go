@@ -31,11 +31,11 @@ import (
 	"testing"
 	"time"
 
-	"elastic/apm-lambda-extension/app"
-	e2eTesting "elastic/apm-lambda-extension/e2e-testing"
-	"elastic/apm-lambda-extension/extension"
-	"elastic/apm-lambda-extension/logger"
-	"elastic/apm-lambda-extension/logsapi"
+	"github.com/elastic/apm-aws-lambda/app"
+	e2eTesting "github.com/elastic/apm-aws-lambda/e2e-testing"
+	"github.com/elastic/apm-aws-lambda/extension"
+	"github.com/elastic/apm-aws-lambda/logger"
+	"github.com/elastic/apm-aws-lambda/logsapi"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"

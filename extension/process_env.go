@@ -19,7 +19,7 @@ package extension
 
 import (
 	"context"
-	"elastic/apm-lambda-extension/logger"
+	"github.com/elastic/apm-aws-lambda/logger"
 	"encoding/base64"
 	"fmt"
 	"os"

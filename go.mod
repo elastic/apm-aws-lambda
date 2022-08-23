@@ -1,4 +1,4 @@
-module elastic/apm-lambda-extension
+module github.com/elastic/apm-aws-lambda
 
 go 1.19
 

@@ -18,10 +18,10 @@
 package app
 
 import (
-	"elastic/apm-lambda-extension/apmproxy"
-	"elastic/apm-lambda-extension/extension"
-	"elastic/apm-lambda-extension/logger"
-	"elastic/apm-lambda-extension/logsapi"
+	"github.com/elastic/apm-aws-lambda/apmproxy"
+	"github.com/elastic/apm-aws-lambda/extension"
+	"github.com/elastic/apm-aws-lambda/logger"
+	"github.com/elastic/apm-aws-lambda/logsapi"
 	"fmt"
 	"os"
 	"strconv"
