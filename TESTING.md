@@ -7,7 +7,7 @@ If you need to test an unreleased version you can compile the package and it's d
 
 To run an unreleased version of this extension, you will need to ensure that your build architecture matches that of the Lambda execution environment by compiling with `GOOS=linux` and `GOARCH=amd64` if you are not running in a Linux environment.
 
-To build the extension into the `bin/extensions` folder, run the following commands.
+To build the extension in the `bin/extensions` folder, run the following commands.
 
 ```bash
 $ cd apm-lambda-extension
@@ -40,7 +40,7 @@ aws lambda publish-layer-version \
  --zip-file  "fileb://extension.zip"
 ```
 
-The out from the above command will include a `LayverVersionArn` field, which contains the unique string identifier for your layer.  The will look something like the following.
+The output from the above command will include a `LayerVersionArn` field, which contains the unique string identifier for your layer.  The will look something like the following.
 
     `"LayerVersionArn": "arn:aws:lambda:<region>:123456789012:layer:<layerName>:1"`
 
