@@ -29,6 +29,8 @@ https://github.com/elastic/apm-aws-lambda/compare/v1.0.2...main[View commits]
 - Added support for Lambda platform metrics {lambda-pull}202[202]
 - Migrated to AWS SDK for Go v2 {lambda-pull}232[232]
 - Make buffer size for agent data configurable {lambda-pull}262[262]
+- Add support for reproducible builds {lambda-pull}237[237]
+- Improve extension client error messages {lambda-pull}259[259]
 
 [float]
 ==== Bug fixes
@@ -38,6 +40,8 @@ https://github.com/elastic/apm-aws-lambda/compare/v1.0.2...main[View commits]
 - Avoid sending corrupted compressed data to APM Server {lambda-pull}257[257]
 - Avoid creating http transports on each info request {lambda-pull}260[260]
 - Randomise the initial grace period to avoid collisions {lambda-pull}240[240]
+- Handle metadata errors correctly {lambda-pull}254[254]
+- Always flush data to APM server before shutting down and avoid concurrent access to data channel {lambda-pull}258[258]
 
 [float]
 [[lambda-1.0.2]]
