@@ -28,6 +28,30 @@ image:images/architecture-white.png[image showing data flow from lambda function
 
 By using an AWS Lambda extension, Elastic APM agents can send data to a local Lambda extension process, and that process will forward data on to APM Server asynchronously. The Lambda extension ensures that any potential latency between the Lambda function and the APM Server instance will not cause latency in the request flow of the Lambda function itself.
 
+[[aws-lambda-overhead]]
+== Performance impact and overhead
+As described in <<aws-lambda-arch>>, using Elastic APM with AWS Lambda requires adding both the Elastic APM AWS Lambda extension and a corresponding Elastic APM agent to the Lambda runtime.
+These components may introduce a small overhead on the size of your function's deployment package as well as the execution duration of your function's invocations. 
+
+=== Impact on the deployment package size
+These components contribute a little to the uncompressed deployment package size of your Lambda function. Overall, the impact of using Elastic APM on the uncompressed deployment package size of your Lambda function is less than 30MB.
+
+=== Performance impact
+An advantage of the Elastic APM AWS Lambda extension architecture is that APM data dispatching is decoupled from your function's request processing.
+The Elastic APM AWS Lambda extension flushes APM data to the Elastic backend _after_ your function responds to the client's request. Thus, it does not affect the latency of the client's request. 
+However, the extension's flushing of APM data contributes to the overall execution time of the function invocation. 
+The <<aws-lambda-config-data-forwarder-timeout>> config option with the related _exponential backoff algorithm_ limits and allows to control the impact the extension may have on the function's overall execution time. 
+
+When your function experiences a cold start, the Elastic APM AWS Lambda extension needs to be initialized and, thus, slightly increases the cold start duration (in the range of tens of milliseconds) of your function. 
+
+APM agents enrich your application's code with measurement code that collects APM data. This measurement code introduces a small performance overhead to your application, which is usually in a negligible range. The same is true with Lambda functions. The concrete performance overhead introduced by APM agents highly depends on the configuration of the agent and on the characteristics of your function's code. The following agent-specific documentation pages provide insights and instructions on tuning the performance the APM agents:
+
+* {apm-node-ref}/performance-tuning.html[Performance Tuning - Node.js]
+* {apm-py-ref}/tuning-and-overhead.html[Performance Tuning - Python]
+* {apm-java-ref}/tuning-and-overhead.html[Performance Tuning - Java]
+
+Similar to the Elastic APM AWS Lambda extension, APM agents are initialized at cold start time. As a consequence, the APM agent's overhead will be higher for cold starts as compared to their overhead on _warm_ invocations. This effect is especially relevant for the Java APM agent on AWS Lambda. Learn more about corresponding tuning options in the {apm-java-ref}/aws-lambda.html#aws-lambda-caveats[Java Agent's AWS Lambda documentation].
+
 [[aws-lambda-config-options]]
 == Configuration options
 
@@ -67,6 +91,7 @@ The {apm-lambda-ext}'s timeout value, in seconds, for receiving data from the AP
 === `ELASTIC_APM_DATA_RECEIVER_SERVER_PORT`
 The port on which the {apm-lambda-ext} listens to receive data from the APM agent. The _default_ is `8200`.
 
+[[aws-lambda-config-data-forwarder-timeout]]
 === `ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS`
 The timeout value, in seconds, for the {apm-lambda-ext}'s HTTP client sending data to the APM Server. The _default_ is `3`. If the extension's attempt to send APM data during this time interval is not successful, the extension queues back the data. Further attempts at sending the data are governed by an exponential backoff algorithm: data will be sent after a increasingly large grace period of 0, then circa 1, 4, 9, 16, 25 and 36 seconds, provided that the Lambda function execution is ongoing.
 
