@@ -88,6 +88,8 @@ type ApmInfo struct {
 	Version      string    `json:"version"`
 }
 
+const timeout = 20 * time.Second
+
 func newMockApmServer(t *testing.T, l *zap.SugaredLogger) (*MockServerInternals, *httptest.Server) {
 	var apmServerInternals MockServerInternals
 	apmServerInternals.WaitForUnlockSignal = true
@@ -398,7 +400,7 @@ func TestStandardEventsChain(t *testing.T) {
 	select {
 	case <-runApp(t, logsapiAddr):
 		assert.Contains(t, apmServerInternals.Data, TimelyResponse)
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 }
@@ -420,7 +422,7 @@ func TestFlush(t *testing.T) {
 	select {
 	case <-runApp(t, logsapiAddr):
 		assert.Contains(t, apmServerInternals.Data, TimelyResponse)
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 }
@@ -444,7 +446,7 @@ func TestLateFlush(t *testing.T) {
 	select {
 	case <-runApp(t, logsapiAddr):
 		assert.Contains(t, apmServerInternals.Data, TimelyResponse+TimelyResponse)
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 }
@@ -466,7 +468,7 @@ func TestWaitGroup(t *testing.T) {
 	select {
 	case <-runApp(t, logsapiAddr):
 		assert.Contains(t, apmServerInternals.Data, TimelyResponse)
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 }
@@ -489,7 +491,7 @@ func TestAPMServerDown(t *testing.T) {
 	select {
 	case <-runApp(t, logsapiAddr):
 		assert.NotContains(t, apmServerInternals.Data, TimelyResponse)
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 }
@@ -512,7 +514,7 @@ func TestAPMServerHangs(t *testing.T) {
 	case <-runApp(t, logsapiAddr):
 		assert.NotContains(t, apmServerInternals.Data, Hangs)
 		apmServerInternals.UnlockSignalChannel <- struct{}{}
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 }
@@ -569,7 +571,7 @@ func TestGracePeriodHangs(t *testing.T) {
 	case <-runApp(t, logsapiAddr):
 		time.Sleep(100 * time.Millisecond)
 		apmServerInternals.UnlockSignalChannel <- struct{}{}
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 
@@ -619,7 +621,7 @@ func TestFullChannel(t *testing.T) {
 	select {
 	case <-runApp(t, logsapiAddr):
 		assert.Contains(t, apmServerInternals.Data, TimelyResponse)
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 }
@@ -646,7 +648,7 @@ func TestFullChannelSlowAPMServer(t *testing.T) {
 	select {
 	case <-runApp(t, logsapiAddr):
 		// The test should not hang
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 }
@@ -668,7 +670,7 @@ func TestInfoRequest(t *testing.T) {
 	select {
 	case <-runApp(t, logsapiAddr):
 		assert.Contains(t, lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20")
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 }
@@ -692,7 +694,7 @@ func TestInfoRequestHangs(t *testing.T) {
 		time.Sleep(2 * time.Second)
 		assert.NotContains(t, lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20")
 		apmServerInternals.UnlockSignalChannel <- struct{}{}
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 }
@@ -725,7 +727,7 @@ func TestMetricsWithoutMetadata(t *testing.T) {
 		assert.Contains(t, apmServerInternals.Data, `coldstart":true`)
 		assert.Contains(t, apmServerInternals.Data, `execution":`)
 		assert.Contains(t, apmServerInternals.Data, `id":"arn:aws:lambda:eu-central-1:627286350134:function:main_unit_test"`)
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 }
@@ -757,7 +759,7 @@ func TestMetricsWithMetadata(t *testing.T) {
 		assert.Contains(t, apmServerInternals.Data, `coldstart":true`)
 		assert.Contains(t, apmServerInternals.Data, `execution"`)
 		assert.Contains(t, apmServerInternals.Data, `id":"arn:aws:lambda:eu-central-1:627286350134:function:main_unit_test"`)
-	case <-time.After(5 * time.Second):
+	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
 }
