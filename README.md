@@ -12,7 +12,7 @@ Backport any changes made in the `docs` directory to the branches that you'd lik
 
 ## Getting Help
 
-If you find a bug, please [report an issue](https://github.com/elastic/apm-agent-go/issues).
+If you find a bug, please [report an issue](https://github.com/elastic/apm-aws-lambda/issues).
 For any other assistance, please open or add to a topic on the [APM discuss forum](https://discuss.elastic.co/c/apm).
 
 ## Contributing
