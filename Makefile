@@ -85,7 +85,7 @@ build-docker: validate-version
   --build-arg EXTENSION_FILE=bin/extensions/apm-lambda-extension .
 
 push-docker: build-docker
-	@../.ci/push_docker.sh $(DOCKER_REGISTRY) "$(DOCKER_IMAGE_NAME)-$(ARCHITECTURE)" $(AGENT_VERSION)
+	@./.ci/push_docker.sh $(DOCKER_REGISTRY) "$(DOCKER_IMAGE_NAME)-$(ARCHITECTURE)" $(AGENT_VERSION)
 
 # List all the AWS regions
 get-all-aws-regions:
@@ -136,7 +136,7 @@ get-version: validate-aws-default-region
 
 # Generate the file with the ARN entries
 create-arn-file: validate-suffix-arn-file
-	@../.ci/create-arn-table.sh
+	@./.ci/create-arn-table.sh
 
 release-notes: validate-branch-name validate-suffix-arn-file
 	@gh release list
