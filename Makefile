@@ -49,7 +49,7 @@ lint:
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 run
 
 build: check-licenses NOTICE.txt
-	GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
+	CGO_ENABLED=0 GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
 	cp NOTICE.txt bin/NOTICE.txt
 	cp dependencies.asciidoc bin/dependencies.asciidoc
 

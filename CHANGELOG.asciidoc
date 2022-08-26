@@ -28,6 +28,7 @@ https://github.com/elastic/apm-aws-lambda/compare/v1.1.0...main[View commits]
 
 [float]
 ===== Features
+- Disable CGO to prevent libc/ABI compatibility issues {lambda-pull}292[292]
 
 [float]
 ===== Bug fixes
