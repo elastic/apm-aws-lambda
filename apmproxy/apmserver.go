@@ -32,7 +32,6 @@ import (
 )
 
 type jsonResult struct {
-	Accepted int         `json:"accepted"`
 	Errors   []jsonError `json:"errors,omitempty"`
 }
 
