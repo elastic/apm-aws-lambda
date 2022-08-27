@@ -172,7 +172,7 @@ func (c *Client) PostToApmServer(ctx context.Context, agentData AgentData) error
 		for _, err := range jErr.Errors {
 			c.logger.Warnf("failed to authenticate: document %s: message: %s", err.Document, err.Message)
 		}
-		c.UpdateStatus(ctx, ClientFailing)
+		c.UpdateStatus(ctx, Failing)
 		return nil
 	}
 
