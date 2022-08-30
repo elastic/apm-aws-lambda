@@ -137,9 +137,9 @@ func parseDurationTimeout(l *zap.SugaredLogger, flag string, deprecatedFlag stri
 		return d, true, nil
 	}
 
-	l.Warnf("%s is deprecated, please consider moving to %s", deprecatedFlag, flag)
-
 	if strValueSeconds, ok := os.LookupEnv(deprecatedFlag); ok {
+		l.Warnf("%s is deprecated, please consider moving to %s", deprecatedFlag, flag)
+
 		seconds, err := strconv.Atoi(strValueSeconds)
 		if err != nil {
 			return 0, false, fmt.Errorf("failed to parse %s: %w", deprecatedFlag, err)
