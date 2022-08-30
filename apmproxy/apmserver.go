@@ -32,7 +32,7 @@ import (
 )
 
 type jsonResult struct {
-	Errors   []jsonError `json:"errors,omitempty"`
+	Errors []jsonError `json:"errors,omitempty"`
 }
 
 type jsonError struct {
@@ -202,8 +202,8 @@ func (c *Client) PostToApmServer(ctx context.Context, agentData AgentData) error
 
 // IsUnhealthy returns true if the apmproxy is not healthy.
 func (c *Client) IsUnhealthy() bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return c.Status == Failing
 }
 
@@ -215,6 +215,16 @@ func (c *Client) IsUnhealthy() bool {
 //
 // This function is public for use in tests.
 func (c *Client) UpdateStatus(ctx context.Context, status Status) {
+	// Reduce lock contention as UpdateStatus is called on every
+	// successful request
+	c.mu.RLock()
+	if status == c.Status {
+		c.logger.Debugf("APM server Transport status not changed: %s", status)
+		c.mu.RUnlock()
+		return
+	}
+	c.mu.RUnlock()
+
 	switch status {
 	case Healthy:
 		c.mu.Lock()

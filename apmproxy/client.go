@@ -50,7 +50,7 @@ const (
 
 // Client is the client used to communicate with the apm server.
 type Client struct {
-	mu                sync.Mutex
+	mu                sync.RWMutex
 	bufferPool        sync.Pool
 	DataChannel       chan AgentData
 	client            *http.Client
