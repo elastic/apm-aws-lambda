@@ -85,20 +85,34 @@ Instead of specifying the <<aws-lambda-config-authentication-keys>> as plain tex
 === `ELASTIC_APM_SERVICE_NAME`
 The configured name of your application or service.  The APM agent will use this value when reporting data to the APM Server. If unset, the APM agent will automatically set the value based on the Lambda function name. Use this config option if you want to group multiple Lambda functions under a single service entity in APM.
 
+[[aws-lambda-config-data-receiver-timeout-seconds]]
 === `ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS`
+
+deprecated::[1.2.0,Replaced by `ELASTIC_APM_DATA_RECEIVER_TIMEOUT`. See <<aws-lambda-config-data-receiver-timeout>>]
+
 The {apm-lambda-ext}'s timeout value, in seconds, for receiving data from the APM agent. The _default_ is `15`.
 
 === `ELASTIC_APM_DATA_RECEIVER_TIMEOUT`
+
+coming::[1.2.0,Replaces `ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS`. See <<aws-lambda-config-data-receiver-timeout-seconds>>]
+
 The {apm-lambda-ext}'s timeout value, for receiving data from the APM agent. The _default_ is `15s`.
 
 === `ELASTIC_APM_DATA_RECEIVER_SERVER_PORT`
 The port on which the {apm-lambda-ext} listens to receive data from the APM agent. The _default_ is `8200`.
 
+[[aws-lambda-config-data-forwarder-timeout-seconds]]
 === `ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS`
+
+deprecated::[1.2.0,Replaced by `ELASTIC_APM_DATA_FORWARDER_TIMEOUT`. See <<aws-lambda-config-data-forwarder-timeout>>]
+
 The timeout value, in seconds, for the {apm-lambda-ext}'s HTTP client sending data to the APM Server. The _default_ is `3`. If the extension's attempt to send APM data during this time interval is not successful, the extension queues back the data. Further attempts at sending the data are governed by an exponential backoff algorithm: data will be sent after a increasingly large grace period of 0, then circa 1, 4, 9, 16, 25 and 36 seconds, provided that the Lambda function execution is ongoing.
 
 [[aws-lambda-config-data-forwarder-timeout]]
 === `ELASTIC_APM_DATA_FORWARDER_TIMEOUT`
+
+coming::[1.2.0,Replaces `ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS`. See <<aws-lambda-config-data-forwarder-timeout-seconds>>]
+
 The timeout value, for the {apm-lambda-ext}'s HTTP client sending data to the APM Server. The _default_ is `3s`. If the extension's attempt to send APM data during this time interval is not successful, the extension queues back the data. Further attempts at sending the data are governed by an exponential backoff algorithm: data will be sent after a increasingly large grace period of 0, then circa 1, 4, 9, 16, 25 and 36 seconds, provided that the Lambda function execution is ongoing.
 
 === `ELASTIC_APM_SEND_STRATEGY`
