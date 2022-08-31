@@ -18,15 +18,17 @@
 package app
 
 import (
-	"github.com/elastic/apm-aws-lambda/apmproxy"
-	"github.com/elastic/apm-aws-lambda/extension"
-	"github.com/elastic/apm-aws-lambda/logger"
-	"github.com/elastic/apm-aws-lambda/logsapi"
+	"context"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/elastic/apm-aws-lambda/apmproxy"
+	"github.com/elastic/apm-aws-lambda/extension"
+	"github.com/elastic/apm-aws-lambda/logger"
+	"github.com/elastic/apm-aws-lambda/logsapi"
 
 	"go.elastic.co/ecszap"
 	"go.uber.org/zap"
@@ -43,7 +45,7 @@ type App struct {
 
 // New returns an App or an error if the
 // creation failed.
-func New(opts ...configOption) (*App, error) {
+func New(ctx context.Context, opts ...configOption) (*App, error) {
 	c := appConfig{}
 
 	for _, opt := range opts {
@@ -57,6 +59,11 @@ func New(opts ...configOption) (*App, error) {
 	var err error
 
 	if app.logger, err = buildLogger(c.logLevel); err != nil {
+		return nil, err
+	}
+
+	apmServerApiKey, apmServerSecretToken, err := loadAWSOptions(ctx, c.awsConfig, app.logger)
+	if err != nil {
 		return nil, err
 	}
 
@@ -114,7 +121,12 @@ func New(opts ...configOption) (*App, error) {
 		apmOpts = append(apmOpts, apmproxy.WithAgentDataBufferSize(size))
 	}
 
-	apmOpts = append(apmOpts, apmproxy.WithURL(os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")), apmproxy.WithLogger(app.logger))
+	apmOpts = append(apmOpts,
+		apmproxy.WithURL(os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")),
+		apmproxy.WithLogger(app.logger),
+		apmproxy.WithAPIKey(apmServerApiKey),
+		apmproxy.WithSecretToken(apmServerSecretToken),
+	)
 
 	ac, err := apmproxy.NewClient(apmOpts...)
 

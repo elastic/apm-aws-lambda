@@ -767,7 +767,7 @@ func TestMetricsWithMetadata(t *testing.T) {
 func runApp(t *testing.T, logsapiAddr string) <-chan struct{} {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	app, err := app.New(
+	app, err := app.New(ctx,
 		app.WithExtensionName("apm-lambda-extension"),
 		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
 		app.WithLogLevel("debug"),
