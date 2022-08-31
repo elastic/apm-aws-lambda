@@ -39,6 +39,7 @@ type RegisterResponse struct {
 type NextEventResponse struct {
 	Timestamp          time.Time `json:"timestamp,omitempty"`
 	EventType          EventType `json:"eventType"`
+	ShutdownReason     string    `json:"shutdownReason,omitempty"`
 	DeadlineMs         int64     `json:"deadlineMs"`
 	RequestID          string    `json:"requestId"`
 	InvokedFunctionArn string    `json:"invokedFunctionArn"`
