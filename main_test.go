@@ -531,7 +531,7 @@ func TestAPMServerRecovery(t *testing.T) {
 	logsapiAddr := randomAddr()
 	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
-	t.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1")
+	t.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT", "1s")
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},

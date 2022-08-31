@@ -83,20 +83,18 @@ func New(opts ...configOption) (*App, error) {
 
 	var apmOpts []apmproxy.Option
 
-	receiverTimeoutSeconds, err := getIntFromEnvIfAvailable("ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS")
-	if err != nil {
-		return nil, err
-	}
-	if receiverTimeoutSeconds != 0 {
-		apmOpts = append(apmOpts, apmproxy.WithReceiverTimeout(time.Duration(receiverTimeoutSeconds)*time.Second))
+	if receiverTimeout, ok, err := parseDurationTimeout(app.logger, "ELASTIC_APM_DATA_RECEIVER_TIMEOUT", "ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS"); err != nil || ok {
+		if err != nil {
+			return nil, err
+		}
+		apmOpts = append(apmOpts, apmproxy.WithReceiverTimeout(receiverTimeout))
 	}
 
-	dataForwarderTimeoutSeconds, err := getIntFromEnvIfAvailable("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS")
-	if err != nil {
-		return nil, err
-	}
-	if dataForwarderTimeoutSeconds != 0 {
-		apmOpts = append(apmOpts, apmproxy.WithDataForwarderTimeout(time.Duration(dataForwarderTimeoutSeconds)*time.Second))
+	if dataForwarderTimeout, ok, err := parseDurationTimeout(app.logger, "ELASTIC_APM_DATA_FORWARDER_TIMEOUT", "ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS"); err != nil || ok {
+		if err != nil {
+			return nil, err
+		}
+		apmOpts = append(apmOpts, apmproxy.WithDataForwarderTimeout(dataForwarderTimeout))
 	}
 
 	if port := os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"); port != "" {
@@ -129,17 +127,28 @@ func New(opts ...configOption) (*App, error) {
 	return app, nil
 }
 
-func getIntFromEnvIfAvailable(name string) (int, error) {
-	strValue := os.Getenv(name)
-	if strValue == "" {
-		return 0, nil
+func parseDurationTimeout(l *zap.SugaredLogger, flag string, deprecatedFlag string) (time.Duration, bool, error) {
+	if strValue, ok := os.LookupEnv(flag); ok {
+		d, err := time.ParseDuration(strValue)
+		if err != nil {
+			return 0, false, fmt.Errorf("failed to parse %s: %w", flag, err)
+		}
+
+		return d, true, nil
 	}
 
-	value, err := strconv.Atoi(strValue)
-	if err != nil {
-		return -1, err
+	if strValueSeconds, ok := os.LookupEnv(deprecatedFlag); ok {
+		l.Warnf("%s is deprecated, please consider moving to %s", deprecatedFlag, flag)
+
+		seconds, err := strconv.Atoi(strValueSeconds)
+		if err != nil {
+			return 0, false, fmt.Errorf("failed to parse %s: %w", deprecatedFlag, err)
+		}
+
+		return time.Duration(seconds) * time.Second, true, nil
 	}
-	return value, nil
+
+	return 0, false, nil
 }
 
 func parseStrategy(value string) (apmproxy.SendStrategy, bool) {
