@@ -219,7 +219,6 @@ func (c *Client) UpdateStatus(ctx context.Context, status Status) {
 	// successful request
 	c.mu.RLock()
 	if status == c.Status {
-		c.logger.Debugf("APM server Transport status not changed: %s", status)
 		c.mu.RUnlock()
 		return
 	}
@@ -228,6 +227,9 @@ func (c *Client) UpdateStatus(ctx context.Context, status Status) {
 	switch status {
 	case Healthy:
 		c.mu.Lock()
+		if c.Status == status {
+			return
+		}
 		c.Status = status
 		c.logger.Debugf("APM server Transport status set to %s", c.Status)
 		c.ReconnectionCount = -1
