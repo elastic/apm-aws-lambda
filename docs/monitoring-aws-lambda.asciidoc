@@ -92,6 +92,7 @@ deprecated::[1.2.0,Replaced by `ELASTIC_APM_DATA_RECEIVER_TIMEOUT`. See <<aws-la
 
 The {apm-lambda-ext}'s timeout value, in seconds, for receiving data from the APM agent. The _default_ is `15`.
 
+[[aws-lambda-config-data-receiver-timeout]]
 === `ELASTIC_APM_DATA_RECEIVER_TIMEOUT`
 
 coming::[1.2.0,Replaces `ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS`. See <<aws-lambda-config-data-receiver-timeout-seconds>>]
