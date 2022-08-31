@@ -117,7 +117,7 @@ func (app *App) Run(ctx context.Context) error {
 			}
 
 			if event.EventType == extension.Shutdown {
-				app.logger.Info("Received shutdown event, exiting...")
+				app.logger.Infof("Received shutdown event: %s. Exiting...", event.ShutdownReason)
 				return nil
 			}
 			app.logger.Debug("Waiting for background data send to end")
