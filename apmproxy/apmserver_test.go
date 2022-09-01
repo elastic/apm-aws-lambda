@@ -20,12 +20,14 @@ package apmproxy_test
 import (
 	"compress/gzip"
 	"context"
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/elastic/apm-aws-lambda/apmproxy"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -428,6 +430,111 @@ func TestAPMServerAuthFails(t *testing.T) {
 	assert.Equal(t, apmClient.Status, apmproxy.Started)
 	assert.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
 	assert.NotEqual(t, apmClient.Status, apmproxy.Healthy)
+}
+
+func TestAPMServerRatelimit(t *testing.T) {
+	// Compress the data
+	pr, pw := io.Pipe()
+	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
+	go func() {
+		if _, err := gw.Write([]byte("")); err != nil {
+			t.Fail()
+			return
+		}
+		if err := gw.Close(); err != nil {
+			t.Fail()
+			return
+		}
+		if err := pw.Close(); err != nil {
+			t.Fail()
+			return
+		}
+	}()
+
+	// Create AgentData struct with compressed data
+	data, _ := io.ReadAll(pr)
+	agentData := apmproxy.AgentData{Data: data, ContentEncoding: "gzip"}
+
+	// Create apm server and handler
+	var shouldSucceed atomic.Bool
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Fail the first request
+		if shouldSucceed.CompareAndSwap(false, true) {
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer apmServer.Close()
+
+	apmClient, err := apmproxy.NewClient(
+		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, apmClient.Status, apmproxy.Started)
+
+	// First request fails but does not trigger the backoff
+	assert.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	assert.Equal(t, apmClient.Status, apmproxy.RateLimited)
+
+	// Followup request is succesful
+	assert.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	assert.Equal(t, apmClient.Status, apmproxy.Healthy)
+
+}
+
+func TestAPMServerClientFail(t *testing.T) {
+	// Compress the data
+	pr, pw := io.Pipe()
+	gw, _ := gzip.NewWriterLevel(pw, gzip.BestSpeed)
+	go func() {
+		if _, err := gw.Write([]byte("")); err != nil {
+			t.Fail()
+			return
+		}
+		if err := gw.Close(); err != nil {
+			t.Fail()
+			return
+		}
+		if err := pw.Close(); err != nil {
+			t.Fail()
+			return
+		}
+	}()
+
+	// Create AgentData struct with compressed data
+	data, _ := io.ReadAll(pr)
+	agentData := apmproxy.AgentData{Data: data, ContentEncoding: "gzip"}
+
+	// Create apm server and handler
+	var shouldSucceed atomic.Bool
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Fail the first request
+		if shouldSucceed.CompareAndSwap(false, true) {
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			return
+		}
+
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer apmServer.Close()
+
+	apmClient, err := apmproxy.NewClient(
+		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, apmClient.Status, apmproxy.Started)
+
+	// First request fails but does not trigger the backoff
+	assert.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	assert.Equal(t, apmClient.Status, apmproxy.ClientFailing)
+
+	// Followup request is succesful
+	assert.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	assert.Equal(t, apmClient.Status, apmproxy.Healthy)
 }
 
 func TestContinuedAPMServerFailure(t *testing.T) {
