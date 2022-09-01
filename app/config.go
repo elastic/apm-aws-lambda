@@ -17,8 +17,11 @@
 
 package app
 
+import "github.com/aws/aws-sdk-go-v2/aws"
+
 type appConfig struct {
 	awsLambdaRuntimeAPI string
+	awsConfig           aws.Config
 	extensionName       string
 	disableLogsAPI      bool
 	logLevel            string
@@ -62,5 +65,12 @@ func WithLogLevel(level string) configOption {
 func WithLogsapiAddress(s string) configOption {
 	return func(c *appConfig) {
 		c.logsapiAddr = s
+	}
+}
+
+// WithAWSConfig sets the AWS config.
+func WithAWSConfig(awsConfig aws.Config) configOption {
+	return func(c *appConfig) {
+		c.awsConfig = awsConfig
 	}
 }
