@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/elastic/apm-aws-lambda/app"
 )
 
@@ -33,10 +34,16 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
-	app, err := app.New(
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		log.Fatalf("failed to load AWS default config: %v", err)
+	}
+
+	app, err := app.New(ctx,
 		app.WithExtensionName(filepath.Base(os.Args[0])),
 		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
 		app.WithLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL")),
+		app.WithAWSConfig(cfg),
 	)
 	if err != nil {
 		log.Fatalf("failed to create the app: %v", err)

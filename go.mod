@@ -14,6 +14,7 @@ require (
 )
 
 require (
+	github.com/aws/aws-sdk-go-v2 v1.16.7
 	github.com/aws/aws-sdk-go-v2/config v1.15.14
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.15.13
 	go.elastic.co/apm/v2 v2.1.1-0.20220617022209-90f624fe11b0
@@ -21,7 +22,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.16.7 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.9 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.8 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.14 // indirect

@@ -98,8 +98,11 @@ func newMockApmServer(t *testing.T, l *zap.SugaredLogger) (*MockServerInternals,
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		decompressedBytes, err := e2eTesting.GetDecompressedBytesFromRequest(r)
 		if err != nil {
+			l.Debugf("failed to read decompressedBytes: %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
+
 		l.Debugf("Event type received by mock APM server : %s", string(decompressedBytes))
 		switch APMServerBehavior(decompressedBytes) {
 		case TimelyResponse:
@@ -119,12 +122,12 @@ func newMockApmServer(t *testing.T, l *zap.SugaredLogger) (*MockServerInternals,
 			panic("Server crashed")
 		default:
 		}
+
 		if r.RequestURI == "/intake/v2/events" {
-			w.WriteHeader(http.StatusAccepted)
 			apmServerInternals.Data += string(decompressedBytes)
 			l.Debug("APM Payload processed")
+			w.WriteHeader(http.StatusAccepted)
 		} else if r.RequestURI == "/" {
-			w.WriteHeader(http.StatusOK)
 			infoPayload, err := json.Marshal(ApmInfo{
 				BuildDate:    time.Now(),
 				BuildSHA:     "7814d524d3602e70b703539c57568cba6964fc20",
@@ -132,11 +135,14 @@ func newMockApmServer(t *testing.T, l *zap.SugaredLogger) (*MockServerInternals,
 				Version:      "8.1.2",
 			})
 			if err != nil {
+				l.Debugf("failed to marshal payload: %v", err)
 				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
-			_, err = w.Write(infoPayload)
-			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
+
+			if _, err = w.Write(infoPayload); err != nil {
+				l.Debugf("failed to write payload: %v", err)
+				return
 			}
 		}
 	}))
@@ -531,7 +537,7 @@ func TestAPMServerRecovery(t *testing.T) {
 	logsapiAddr := randomAddr()
 	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
-	t.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS", "1")
+	t.Setenv("ELASTIC_APM_DATA_FORWARDER_TIMEOUT", "1s")
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
@@ -767,7 +773,7 @@ func TestMetricsWithMetadata(t *testing.T) {
 func runApp(t *testing.T, logsapiAddr string) <-chan struct{} {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	app, err := app.New(
+	app, err := app.New(ctx,
 		app.WithExtensionName("apm-lambda-extension"),
 		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
 		app.WithLogLevel("debug"),
