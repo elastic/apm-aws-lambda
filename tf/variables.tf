@@ -10,3 +10,14 @@ variable "log_level" {
   default     = "trace"
 }
 
+variable "ec_region" {
+  type        = string
+  description = "ec region"
+  default     = "aws-eu-central-1"
+}
+
+variable "ec_deployment_template" {
+  type        = string
+  description = "ec deployment template"
+  default     = "aws-storage-optimized-v2"
+}
