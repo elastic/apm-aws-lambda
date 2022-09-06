@@ -61,7 +61,7 @@ module "lambda_function" {
 
   layers = [
     module.lambda_layer_local.lambda_layer_arn,
-    "arn:aws:lambda:eu-central-1:267093732750:layer:elastic-apm-node-ver-3-38-0:1",
+    "arn:aws:lambda:${var.aws_region}:267093732750:layer:elastic-apm-node-ver-3-38-0:1",
   ]
 
   environment_variables = {
