@@ -25,25 +25,10 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 )
 
 // Run runs the app.
 func (app *App) Run(ctx context.Context) error {
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to load AWS default config: %w", err)
-	}
-	manager := secretsmanager.NewFromConfig(cfg)
-	// pulls ELASTIC_ env variable into globals for easy access
-	config := extension.ProcessEnv(manager, app.logger)
-
-	// TODO move to functional options
-	app.apmClient.ServerAPIKey = config.ApmServerApiKey
-	app.apmClient.ServerSecretToken = config.ApmServerSecretToken
-
 	// register extension with AWS Extension API
 	res, err := app.extensionClient.Register(ctx, app.extensionName)
 	if err != nil {
@@ -117,7 +102,7 @@ func (app *App) Run(ctx context.Context) error {
 			}
 
 			if event.EventType == extension.Shutdown {
-				app.logger.Info("Received shutdown event, exiting...")
+				app.logger.Infof("Received shutdown event: %s. Exiting...", event.ShutdownReason)
 				return nil
 			}
 			app.logger.Debug("Waiting for background data send to end")
