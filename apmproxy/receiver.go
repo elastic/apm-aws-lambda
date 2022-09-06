@@ -87,7 +87,7 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 	reverseProxy.Transport = customTransport
 
 	reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		c.SetApmServerTransportState(r.Context(), Failing)
+		c.UpdateStatus(r.Context(), Failing)
 		c.logger.Errorf("Error querying version from the APM server: %v", err)
 	}
 
