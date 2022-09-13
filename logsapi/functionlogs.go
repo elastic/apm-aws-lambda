@@ -24,7 +24,7 @@ import (
 	"go.elastic.co/fastjson"
 )
 
-type LogContainer struct {
+type logContainer struct {
 	Log *logLine
 }
 
@@ -53,12 +53,12 @@ func (l *logLine) MarshalFastJSON(w *fastjson.Writer) error {
 	return firstErr
 }
 
-func (lc LogContainer) MarshalFastJSON(json *fastjson.Writer) error {
+func (lc logContainer) MarshalFastJSON(json *fastjson.Writer) error {
 	json.RawString(`{"log":`)
 	if err := lc.Log.MarshalFastJSON(json); err != nil {
 		return err
 	}
-	json.RawString(`}`)
+	json.RawByte('}')
 	return nil
 }
 
@@ -69,7 +69,7 @@ func ProcessFunctionLog(
 	functionData *extension.NextEventResponse,
 	log LogEvent,
 ) (apmproxy.AgentData, error) {
-	lc := LogContainer{
+	lc := logContainer{
 		Log: &logLine{
 			Timestamp: model.Time(log.Time),
 			Message:   log.StringRecord,
