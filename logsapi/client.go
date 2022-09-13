@@ -69,7 +69,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 }
 
 // StartService starts the HTTP server listening for log events and subscribes to the Logs API.
-func (lc *Client) StartService(eventTypes []EventType, extensionID string) error {
+func (lc *Client) StartService(eventTypes []LogType, extensionID string) error {
 	addr, err := lc.startHTTPServer()
 	if err != nil {
 		return err

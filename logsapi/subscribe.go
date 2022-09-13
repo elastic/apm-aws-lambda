@@ -30,7 +30,7 @@ import (
 // SubscribeRequest is the request body that is sent to Logs API on subscribe
 type SubscribeRequest struct {
 	SchemaVersion SchemaVersion `json:"schemaVersion"`
-	EventTypes    []EventType   `json:"types"`
+	EventTypes    []LogType     `json:"types"`
 	BufferingCfg  BufferingCfg  `json:"buffering"`
 	Destination   Destination   `json:"destination"`
 }
@@ -80,7 +80,7 @@ func (lc *Client) startHTTPServer() (string, error) {
 	return addr, nil
 }
 
-func (lc *Client) subscribe(types []EventType, extensionID string, uri string) error {
+func (lc *Client) subscribe(types []LogType, extensionID string, uri string) error {
 	data, err := json.Marshal(&SubscribeRequest{
 		SchemaVersion: SchemaVersionLatest,
 		EventTypes:    types,

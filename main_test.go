@@ -216,7 +216,7 @@ func newTestStructs(t *testing.T) chan MockEvent {
 }
 
 func processMockEvent(currId string, event MockEvent, extensionPort string, logsapiAddr string, internals *MockServerInternals, l *zap.SugaredLogger) {
-	sendLogEvent(logsapiAddr, currId, logsapi.Start, l)
+	sendLogEvent(logsapiAddr, currId, logsapi.PlatformStart, l)
 	client := http.Client{}
 
 	// Use a custom transport with a low timeout
@@ -311,10 +311,10 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, logs
 	case Shutdown:
 	}
 	if sendRuntimeDone {
-		sendLogEvent(logsapiAddr, currId, logsapi.RuntimeDone, l)
+		sendLogEvent(logsapiAddr, currId, logsapi.PlatformRuntimeDone, l)
 	}
 	if sendMetrics {
-		sendLogEvent(logsapiAddr, currId, logsapi.Report, l)
+		sendLogEvent(logsapiAddr, currId, logsapi.PlatformReport, l)
 	}
 }
 
@@ -335,11 +335,11 @@ func sendNextEventInfo(w http.ResponseWriter, id string, event MockEvent, l *zap
 	}
 }
 
-func sendLogEvent(logsapiAddr string, requestId string, logEventType logsapi.SubEventType, l *zap.SugaredLogger) {
+func sendLogEvent(logsapiAddr string, requestId string, logEventType logsapi.SubLogType, l *zap.SugaredLogger) {
 	record := logsapi.LogEventRecord{
 		RequestID: requestId,
 	}
-	if logEventType == logsapi.Report {
+	if logEventType == logsapi.PlatformReport {
 		record.Metrics = logsapi.PlatformMetrics{
 			BilledDurationMs: 60,
 			DurationMs:       59.9,
