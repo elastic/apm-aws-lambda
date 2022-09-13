@@ -8,7 +8,7 @@ module "ec_deployment" {
   integrations_server = true
   apm_server_expvar = false
   apm_server_pprof = false
-  region = var.ec_region
+  region = var.ess_region
   deployment_template = var.ec_deployment_template
 }
 

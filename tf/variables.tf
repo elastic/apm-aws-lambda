@@ -10,9 +10,9 @@ variable "log_level" {
   default     = "trace"
 }
 
-variable "ec_region" {
+variable "ess_region" {
   type        = string
-  description = "ec region"
+  description = "ess region"
   default     = "aws-eu-central-1"
 }
 
