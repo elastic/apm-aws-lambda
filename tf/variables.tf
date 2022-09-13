@@ -18,6 +18,6 @@ variable "ess_region" {
 
 variable "ec_deployment_template" {
   type        = string
-  description = "ec deployment template"
+  description = "Elastic Cloud deployment template"
   default     = "aws-storage-optimized-v2"
 }
