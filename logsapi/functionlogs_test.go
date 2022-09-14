@@ -38,8 +38,9 @@ func TestProcessFunctionLog(t *testing.T) {
 	}
 	reqID := "8476a536-e9f4-11e8-9739-2dfe598c3fcd"
 	invokedFnArn := "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"
-	expectedEventJSON := fmt.Sprintf(
-		`{"log":{"message":"%s","@timestamp":%d,"faas":{"coldstart":false,"execution":"%s","id":"%s"}}}`,
+	expectedData := fmt.Sprintf(
+		"%s\n{\"log\":{\"message\":\"%s\",\"@timestamp\":%d,\"faas\":{\"coldstart\":false,\"execution\":\"%s\",\"id\":\"%s\"}}}",
+		metadataContainer.Metadata,
 		event.StringRecord,
 		event.Time.UnixNano()/int64(time.Microsecond),
 		reqID,
@@ -49,9 +50,5 @@ func TestProcessFunctionLog(t *testing.T) {
 	apmData, err := ProcessFunctionLog(metadataContainer, reqID, invokedFnArn, event)
 
 	require.NoError(t, err)
-	assert.Equal(
-		t,
-		fmt.Sprintf("%s\n%s", metadataContainer.Metadata, expectedEventJSON),
-		string(apmData.Data),
-	)
+	assert.Equal(t, expectedData, string(apmData.Data))
 }
