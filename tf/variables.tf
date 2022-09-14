@@ -13,11 +13,11 @@ variable "log_level" {
 variable "ess_region" {
   type        = string
   description = "ess region"
-  default     = "aws-eu-central-1"
+  default     = "gcp-us-west2"
 }
 
 variable "ec_deployment_template" {
   type        = string
   description = "Elastic Cloud deployment template"
-  default     = "aws-storage-optimized-v2"
+  default     = "gcp-compute-optimized"
 }
