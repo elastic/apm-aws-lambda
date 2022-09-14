@@ -173,7 +173,15 @@ func (app *App) processEvent(
 	runtimeDone := make(chan struct{})
 	if app.logsClient != nil {
 		go func() {
-			if err := app.logsClient.ProcessLogs(invocationCtx, event.RequestID, app.apmClient, metadataContainer, runtimeDone, prevEvent); err != nil {
+			if err := app.logsClient.ProcessLogs(
+				invocationCtx,
+				event.RequestID,
+				event.InvokedFunctionArn,
+				app.apmClient,
+				metadataContainer,
+				runtimeDone,
+				prevEvent,
+			); err != nil {
 				app.logger.Errorf("Error while processing Lambda Logs ; %v", err)
 			} else {
 				close(runtimeDone)

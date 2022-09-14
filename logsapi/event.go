@@ -73,6 +73,7 @@ type LogEventRecord struct {
 func (lc *Client) ProcessLogs(
 	ctx context.Context,
 	requestID string,
+	invokedFnArn string,
 	apmClient *apmproxy.Client,
 	metadataContainer *apmproxy.MetadataContainer,
 	runtimeDoneSignal chan struct{},
@@ -108,12 +109,16 @@ func (lc *Client) ProcessLogs(
 					lc.logger.Debug("Log API runtimeDone event request id didn't match")
 				}
 			case FunctionLog:
-				lc.logger.Debug("Received function log")
-				processedLog, err := ProcessFunctionLog(metadataContainer, prevEvent, logEvent)
-				if err != nil {
-					lc.logger.Errorf("Error processing function log : %v", err)
+				if metadataContainer != nil && len(metadataContainer.Metadata) > 0 {
+					lc.logger.Debug("Received function log")
+					processedLog, err := ProcessFunctionLog(metadataContainer, requestID, invokedFnArn, logEvent)
+					if err != nil {
+						lc.logger.Errorf("Error processing function log : %v", err)
+					} else {
+						apmClient.EnqueueAPMData(processedLog)
+					}
 				} else {
-					apmClient.EnqueueAPMData(processedLog)
+					lc.logger.Warn("Function log received before metadata populated, quietly dropping log")
 				}
 			}
 		case <-ctx.Done():

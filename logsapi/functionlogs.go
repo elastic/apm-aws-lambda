@@ -19,7 +19,6 @@ package logsapi
 
 import (
 	"github.com/elastic/apm-aws-lambda/apmproxy"
-	"github.com/elastic/apm-aws-lambda/extension"
 	"go.elastic.co/apm/v2/model"
 	"go.elastic.co/fastjson"
 )
@@ -66,7 +65,8 @@ func (lc logContainer) MarshalFastJSON(json *fastjson.Writer) error {
 // event from Lambda logs API to create a payload for APM server
 func ProcessFunctionLog(
 	metadataContainer *apmproxy.MetadataContainer,
-	functionData *extension.NextEventResponse,
+	requestID string,
+	invokedFnArn string,
 	log LogEvent,
 ) (apmproxy.AgentData, error) {
 	lc := logContainer{
@@ -76,12 +76,9 @@ func ProcessFunctionLog(
 		},
 	}
 
-	if functionData != nil {
-		// FaaS Fields
-		lc.Log.FAAS = &model.FAAS{
-			Execution: functionData.RequestID,
-			ID:        functionData.InvokedFunctionArn,
-		}
+	lc.Log.FAAS = &model.FAAS{
+		ID:        invokedFnArn,
+		Execution: requestID,
 	}
 
 	var jsonWriter fastjson.Writer

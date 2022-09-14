@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/elastic/apm-aws-lambda/apmproxy"
-	"github.com/elastic/apm-aws-lambda/extension"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,36 +34,24 @@ func TestProcessFunctionLog(t *testing.T) {
 	event := LogEvent{
 		Time:         time.Date(2022, 11, 12, 0, 0, 0, 0, time.UTC),
 		Type:         FunctionLog,
-		StringRecord: "ERROR encountered. Stack trace:\nmy-function (line 10)\n",
+		StringRecord: "ERROR encountered. Stack trace:my-function (line 10)",
 	}
+	reqID := "8476a536-e9f4-11e8-9739-2dfe598c3fcd"
+	invokedFnArn := "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"
+	expectedEventJSON := fmt.Sprintf(
+		`{"log":{"message":"%s","@timestamp":%d,"faas":{"coldstart":false,"execution":"%s","id":"%s"}}}`,
+		event.StringRecord,
+		event.Time.UnixNano()/int64(time.Microsecond),
+		reqID,
+		invokedFnArn,
+	)
 
-	t.Run("without_faas", func(t *testing.T) {
-		expectedEventJSON := `{"log":{"message":"ERROR encountered. Stack trace:\nmy-function (line 10)\n","@timestamp":1668211200000000}}`
+	apmData, err := ProcessFunctionLog(metadataContainer, reqID, invokedFnArn, event)
 
-		apmData, err := ProcessFunctionLog(metadataContainer, nil, event)
-
-		require.NoError(t, err)
-		assert.Equal(
-			t,
-			fmt.Sprintf("%s\n%s", metadataContainer.Metadata, expectedEventJSON),
-			string(apmData.Data),
-		)
-	})
-
-	t.Run("with_faas", func(t *testing.T) {
-		nextEventResp := &extension.NextEventResponse{
-			RequestID:          "8476a536-e9f4-11e8-9739-2dfe598c3fcd",
-			InvokedFunctionArn: "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime",
-		}
-		expectedEventJSON := `{"log":{"message":"ERROR encountered. Stack trace:\nmy-function (line 10)\n","@timestamp":1668211200000000,"faas":{"coldstart":false,"execution":"8476a536-e9f4-11e8-9739-2dfe598c3fcd","id":"arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"}}}`
-
-		apmData, err := ProcessFunctionLog(metadataContainer, nextEventResp, event)
-
-		require.NoError(t, err)
-		assert.Equal(
-			t,
-			fmt.Sprintf("%s\n%s", metadataContainer.Metadata, expectedEventJSON),
-			string(apmData.Data),
-		)
-	})
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		fmt.Sprintf("%s\n%s", metadataContainer.Metadata, expectedEventJSON),
+		string(apmData.Data),
+	)
 }
