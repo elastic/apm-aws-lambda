@@ -3,13 +3,13 @@ provider "aws" {
 }
 
 module "ec_deployment" {
-  source = "github.com/elastic/apm-server//testing/infra/terraform/modules/ec_deployment?depth=1"
+  source                 = "github.com/elastic/apm-server//testing/infra/terraform/modules/ec_deployment?depth=1"
   deployment_name_prefix = "apm-aws-lambda-smoke-testing"
-  integrations_server = true
-  apm_server_expvar = false
-  apm_server_pprof = false
-  region = var.ess_region
-  deployment_template = var.ess_deployment_template
+  integrations_server    = true
+  apm_server_expvar      = false
+  apm_server_pprof       = false
+  region                 = var.ess_region
+  deployment_template    = var.ess_deployment_template
 }
 
 module "lambda_function" {
