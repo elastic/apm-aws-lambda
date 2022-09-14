@@ -29,10 +29,10 @@ import (
 
 // SubscribeRequest is the request body that is sent to Logs API on subscribe
 type SubscribeRequest struct {
-	SchemaVersion SchemaVersion `json:"schemaVersion"`
-	LogTypes      []LogType     `json:"types"`
-	BufferingCfg  BufferingCfg  `json:"buffering"`
-	Destination   Destination   `json:"destination"`
+	SchemaVersion SchemaVersion      `json:"schemaVersion"`
+	LogTypes      []SubscriptionType `json:"types"`
+	BufferingCfg  BufferingCfg       `json:"buffering"`
+	Destination   Destination        `json:"destination"`
 }
 
 // SchemaVersion is the Lambda runtime API schema version
@@ -80,7 +80,7 @@ func (lc *Client) startHTTPServer() (string, error) {
 	return addr, nil
 }
 
-func (lc *Client) subscribe(types []LogType, extensionID string, uri string) error {
+func (lc *Client) subscribe(types []SubscriptionType, extensionID string, uri string) error {
 	data, err := json.Marshal(&SubscribeRequest{
 		SchemaVersion: SchemaVersionLatest,
 		LogTypes:      types,

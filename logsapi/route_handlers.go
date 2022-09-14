@@ -48,7 +48,7 @@ func handleLogEventsRequest(logger *zap.SugaredLogger, logsChannel chan LogEvent
 func (le *LogEvent) UnmarshalJSON(data []byte) error {
 	b := struct {
 		Time   time.Time       `json:"time"`
-		Type   SubLogType      `json:"type"`
+		Type   LogEventType    `json:"type"`
 		Record json.RawMessage `json:"record"`
 	}{}
 

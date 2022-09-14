@@ -104,13 +104,14 @@ func TestSubscribe(t *testing.T) {
 			}))
 			defer s.Close()
 
-			c, err := logsapi.NewClient(append(tc.opts, logsapi.WithLogsAPIBaseURL(s.URL))...)
+			cOpts := append(tc.opts, logsapi.WithLogsAPIBaseURL(s.URL), logsapi.WithLogsAPISubscriptionTypes(logsapi.Platform))
+			c, err := logsapi.NewClient(cOpts...)
 			require.NoError(t, err)
 
 			if tc.expectedErr {
-				require.Error(t, c.StartService([]logsapi.LogType{logsapi.Platform}, "foo"))
+				require.Error(t, c.StartService("foo"))
 			} else {
-				require.NoError(t, c.StartService([]logsapi.LogType{logsapi.Platform}, "foo"))
+				require.NoError(t, c.StartService("foo"))
 			}
 
 			require.NoError(t, c.Shutdown())
@@ -142,9 +143,15 @@ func TestSubscribeAWSRequest(t *testing.T) {
 			}))
 			defer s.Close()
 
-			c, err := logsapi.NewClient(append(tc.opts, logsapi.WithLogsAPIBaseURL(s.URL), logsapi.WithLogBuffer(1))...)
+			cOpts := append(
+				tc.opts,
+				logsapi.WithLogsAPIBaseURL(s.URL),
+				logsapi.WithLogBuffer(1),
+				logsapi.WithLogsAPISubscriptionTypes(logsapi.Platform, logsapi.Function),
+			)
+			c, err := logsapi.NewClient(cOpts...)
 			require.NoError(t, err)
-			require.NoError(t, c.StartService([]logsapi.LogType{logsapi.Platform}, "testID"))
+			require.NoError(t, c.StartService("testID"))
 
 			// Create a request to send to the logs listener
 			platformDoneEvent := `{

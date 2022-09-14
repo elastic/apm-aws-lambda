@@ -43,7 +43,7 @@ func TestLogEventUnmarshalReport(t *testing.T) {
 
 	err := le.UnmarshalJSON(reportJSON)
 	require.NoError(t, err)
-	assert.Equal(t, SubLogType("platform.report"), le.Type)
+	assert.Equal(t, LogEventType("platform.report"), le.Type)
 	assert.Equal(t, "2020-08-20T12:31:32.123Z", le.Time.Format(time.RFC3339Nano))
 	rec := LogEventRecord{
 		RequestID: "6f7f0961f83442118a7af6fe80b88d56",
@@ -70,7 +70,7 @@ func TestLogEventUnmarshalFault(t *testing.T) {
 
 	err := le.UnmarshalJSON(reportJSON)
 	require.NoError(t, err)
-	assert.Equal(t, SubLogType("platform.fault"), le.Type)
+	assert.Equal(t, LogEventType("platform.fault"), le.Type)
 	assert.Equal(t, "2020-08-20T12:31:32.123Z", le.Time.Format(time.RFC3339Nano))
 	rec := "RequestId: d783b35e-a91d-4251-af17-035953428a2c Process exited before completing request"
 	assert.Equal(t, rec, le.StringRecord)
@@ -92,7 +92,7 @@ func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {
 
 	err := le.UnmarshalJSON(jsonBytes)
 	require.NoError(t, err)
-	assert.Equal(t, SubLogType("platform.runtimeDone"), le.Type)
+	assert.Equal(t, LogEventType("platform.runtimeDone"), le.Type)
 	assert.Equal(t, "2021-02-04T20:00:05.123Z", le.Time.Format(time.RFC3339Nano))
 	rec := LogEventRecord{
 		RequestID: "6f7f0961f83442118a7af6fe80b88",
@@ -113,7 +113,7 @@ func Test_unmarshalRuntimeDoneRecordString(t *testing.T) {
 
 	err := le.UnmarshalJSON(jsonBytes)
 	require.NoError(t, err)
-	assert.Equal(t, SubLogType("platform.runtimeDone"), le.Type)
+	assert.Equal(t, LogEventType("platform.runtimeDone"), le.Type)
 	assert.Equal(t, "2021-02-04T20:00:05.123Z", le.Time.Format(time.RFC3339Nano))
 	assert.Equal(t, "Unknown application error occurred", le.StringRecord)
 }

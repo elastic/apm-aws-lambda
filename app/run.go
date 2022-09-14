@@ -25,7 +25,6 @@ import (
 
 	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"github.com/elastic/apm-aws-lambda/extension"
-	"github.com/elastic/apm-aws-lambda/logsapi"
 )
 
 // Run runs the app.
@@ -58,10 +57,7 @@ func (app *App) Run(ctx context.Context) error {
 	}()
 
 	if app.logsClient != nil {
-		if err := app.logsClient.StartService(
-			[]logsapi.LogType{logsapi.Platform, logsapi.Function},
-			app.extensionClient.ExtensionID,
-		); err != nil {
+		if err := app.logsClient.StartService(app.extensionClient.ExtensionID); err != nil {
 			app.logger.Warnf("Error while subscribing to the Logs API: %v", err)
 
 			// disable logs API if the service failed to start

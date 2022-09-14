@@ -335,7 +335,7 @@ func sendNextEventInfo(w http.ResponseWriter, id string, event MockEvent, l *zap
 	}
 }
 
-func sendLogEvent(logsapiAddr string, requestId string, logEventType logsapi.SubLogType, l *zap.SugaredLogger) {
+func sendLogEvent(logsapiAddr string, requestId string, logEventType logsapi.LogEventType, l *zap.SugaredLogger) {
 	record := logsapi.LogEventRecord{
 		RequestID: requestId,
 	}
