@@ -16,7 +16,7 @@ See https://www.elastic.co/community/security for more information.
 Please fill in the following details to help us reproduce the bug:
 -->
 
-**APM K8s Attacher version** (`apm-k8s-attacher version`):
+**APM AWS Lambda extensiom version** (`apm-aws-lambda version`):
 
 **Describe the bug**
 A clear and concise description of what the bug is.
