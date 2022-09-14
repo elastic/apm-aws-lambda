@@ -9,7 +9,7 @@ module "ec_deployment" {
   apm_server_expvar = false
   apm_server_pprof = false
   region = var.ess_region
-  deployment_template = var.ec_deployment_template
+  deployment_template = var.ess_deployment_template
 }
 
 module "lambda_function" {

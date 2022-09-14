@@ -16,7 +16,7 @@ variable "ess_region" {
   default     = "gcp-us-west2"
 }
 
-variable "ec_deployment_template" {
+variable "ess_deployment_template" {
   type        = string
   description = "Elastic Cloud deployment template"
   default     = "gcp-compute-optimized"
