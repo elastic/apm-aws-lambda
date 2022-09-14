@@ -66,7 +66,7 @@ func (lc *Client) ProcessLogs(
 ) error {
 	// platformStartReqID is to identify the requestID for the function
 	// logs under the assumption that function logs for a specific request
-	// ID will be interleaved b/w its PlatformStart and PlatformEnd events.
+	// ID will be bounded by PlatformStart and PlatformEnd events.
 	var platformStartReqID string
 	for {
 		select {
