@@ -30,13 +30,12 @@ type logContainer struct {
 type logLine struct {
 	Timestamp model.Time
 	Message   string
-	FAAS      *model.FAAS
+	FAAS      *faas
 }
 
 func (l *logLine) MarshalFastJSON(w *fastjson.Writer) error {
 	var firstErr error
-	w.RawByte('{')
-	w.RawString("\"message\":")
+	w.RawString("{\"message\":")
 	w.String(l.Message)
 	w.RawString(",\"@timestamp\":")
 	if err := l.Timestamp.MarshalFastJSON(w); err != nil && firstErr == nil {
@@ -50,6 +49,29 @@ func (l *logLine) MarshalFastJSON(w *fastjson.Writer) error {
 	}
 	w.RawByte('}')
 	return firstErr
+}
+
+// faas struct is a subset of go.elastic.co/apm/v2/model#FAAS
+//
+// The purpose of having a separate struct is to have a custom
+// marshalling logic that is targeted for the faas fields
+// available for function logs. For example: `coldstart` value
+// cannot be inferred for function logs so this struct drops
+// the field entirely.
+type faas struct {
+	// ID holds a unique identifier of the invoked serverless function.
+	ID string `json:"id,omitempty"`
+	// Execution holds the request ID of the function invocation.
+	Execution string `json:"execution,omitempty"`
+}
+
+func (f *faas) MarshalFastJSON(w *fastjson.Writer) error {
+	w.RawString("{\"id\":")
+	w.String(f.ID)
+	w.RawString(",\"execution\":")
+	w.String(f.Execution)
+	w.RawByte('}')
+	return nil
 }
 
 func (lc logContainer) MarshalFastJSON(json *fastjson.Writer) error {
@@ -76,7 +98,7 @@ func ProcessFunctionLog(
 		},
 	}
 
-	lc.Log.FAAS = &model.FAAS{
+	lc.Log.FAAS = &faas{
 		ID:        invokedFnArn,
 		Execution: requestID,
 	}

@@ -39,12 +39,12 @@ func TestProcessFunctionLog(t *testing.T) {
 	reqID := "8476a536-e9f4-11e8-9739-2dfe598c3fcd"
 	invokedFnArn := "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"
 	expectedData := fmt.Sprintf(
-		"%s\n{\"log\":{\"message\":\"%s\",\"@timestamp\":%d,\"faas\":{\"coldstart\":false,\"execution\":\"%s\",\"id\":\"%s\"}}}",
+		"%s\n{\"log\":{\"message\":\"%s\",\"@timestamp\":%d,\"faas\":{\"id\":\"%s\",\"execution\":\"%s\"}}}",
 		metadataContainer.Metadata,
 		event.StringRecord,
 		event.Time.UnixNano()/int64(time.Microsecond),
-		reqID,
 		invokedFnArn,
+		reqID,
 	)
 
 	apmData, err := ProcessFunctionLog(metadataContainer, reqID, invokedFnArn, event)

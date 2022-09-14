@@ -50,6 +50,7 @@ const (
 	PlatformFault       SubLogType = "platform.fault"
 	PlatformReport      SubLogType = "platform.report"
 	PlatformStart       SubLogType = "platform.start"
+	PlatformEnd         SubLogType = "platform.end"
 	FunctionLog         SubLogType = "function"
 )
 
@@ -79,11 +80,17 @@ func (lc *Client) ProcessLogs(
 	runtimeDoneSignal chan struct{},
 	prevEvent *extension.NextEventResponse,
 ) error {
+	// platformStartReqID is to identify the requestID for the function
+	// logs under the assumption that function logs for a specific request
+	// ID will be interleaved b/w its PlatformStart and PlatformEnd events.
+	var platformStartReqID string
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
 			lc.logger.Debugf("Received log event %v", logEvent.Type)
 			switch logEvent.Type {
+			case PlatformStart:
+				platformStartReqID = logEvent.Record.RequestID
 			// Check the logEvent for runtimeDone and compare the RequestID
 			// to the id that came in via the Next API
 			case PlatformRuntimeDone:
@@ -111,7 +118,12 @@ func (lc *Client) ProcessLogs(
 			case FunctionLog:
 				if metadataContainer != nil && len(metadataContainer.Metadata) > 0 {
 					lc.logger.Debug("Received function log")
-					processedLog, err := ProcessFunctionLog(metadataContainer, requestID, invokedFnArn, logEvent)
+					processedLog, err := ProcessFunctionLog(
+						metadataContainer,
+						platformStartReqID,
+						invokedFnArn,
+						logEvent,
+					)
 					if err != nil {
 						lc.logger.Errorf("Error processing function log : %v", err)
 					} else {
