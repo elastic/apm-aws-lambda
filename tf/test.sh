@@ -16,8 +16,8 @@ terraform init | tee tf.log
 terraform apply -auto-approve | tee -a tf.log
 
 echo "-> Calling the lambda function..."
-aws lambda invoke --function-name smoke-testing-test response.json
-aws lambda invoke --function-name smoke-testing-test response.json
+aws lambda invoke --region=eu-central-1 --function-name smoke-testing-test response.json
+aws lambda invoke --region=eu-central-1 --function-name smoke-testing-test response.json
 
 echo "-> Waiting for the agent documents to be indexed in Elasticsearch..."
 
