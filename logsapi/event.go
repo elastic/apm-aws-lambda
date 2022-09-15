@@ -19,9 +19,10 @@ package logsapi
 
 import (
 	"context"
-	"github.com/elastic/apm-aws-lambda/extension"
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"time"
+
+	"github.com/elastic/apm-aws-lambda/apmproxy"
+	"github.com/elastic/apm-aws-lambda/extension"
 )
 
 // EventType represents the type of logs in Lambda
