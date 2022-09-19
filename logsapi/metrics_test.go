@@ -161,7 +161,7 @@ func TestProcessPlatformReport_DataCorruption(t *testing.T) {
 	timestamp := time.Date(2022, 11, 12, 0, 0, 0, 0, time.UTC)
 	logEvent := LogEvent{
 		Time: timestamp,
-		Type: Report,
+		Type: PlatformReport,
 		Record: LogEventRecord{
 			RequestID: reqID,
 			Metrics: PlatformMetrics{
@@ -203,7 +203,7 @@ func BenchmarkPlatformReport(b *testing.B) {
 	timestamp := time.Date(2022, 11, 12, 0, 0, 0, 0, time.UTC)
 	logEvent := LogEvent{
 		Time: timestamp,
-		Type: Report,
+		Type: PlatformReport,
 		Record: LogEventRecord{
 			RequestID: reqID,
 			Metrics: PlatformMetrics{
