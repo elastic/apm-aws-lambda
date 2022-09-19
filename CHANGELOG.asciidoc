@@ -29,6 +29,7 @@ https://github.com/elastic/apm-aws-lambda/compare/v1.1.0...main[View commits]
 [float]
 ===== Features
 - Disable CGO to prevent libc/ABI compatibility issues {lambda-pull}292[292]
+- Add support for collecting and shipping function logs to APM Server {lambda-pull}303[303]
 
 [float]
 ===== Bug fixes

@@ -25,33 +25,23 @@ import (
 	"github.com/elastic/apm-aws-lambda/extension"
 )
 
-// EventType represents the type of logs in Lambda
-type EventType string
+// LogEventType represents the log type that is received in the log messages
+type LogEventType string
 
 const (
-	// Platform is to receive logs emitted by the platform
-	Platform EventType = "platform"
-	// Function is to receive logs emitted by the function
-	Function EventType = "function"
-	// Extension is to receive logs emitted by the extension
-	Extension EventType = "extension"
-)
-
-// SubEventType is a Logs API sub event type
-type SubEventType string
-
-const (
-	// RuntimeDone event is sent when lambda function is finished it's execution
-	RuntimeDone SubEventType = "platform.runtimeDone"
-	Fault       SubEventType = "platform.fault"
-	Report      SubEventType = "platform.report"
-	Start       SubEventType = "platform.start"
+	// PlatformRuntimeDone event is sent when lambda function is finished it's execution
+	PlatformRuntimeDone LogEventType = "platform.runtimeDone"
+	PlatformFault       LogEventType = "platform.fault"
+	PlatformReport      LogEventType = "platform.report"
+	PlatformStart       LogEventType = "platform.start"
+	PlatformEnd         LogEventType = "platform.end"
+	FunctionLog         LogEventType = "function"
 )
 
 // LogEvent represents an event received from the Logs API
 type LogEvent struct {
 	Time         time.Time    `json:"time"`
-	Type         SubEventType `json:"type"`
+	Type         LogEventType `json:"type"`
 	StringRecord string
 	Record       LogEventRecord
 }
@@ -68,19 +58,26 @@ type LogEventRecord struct {
 func (lc *Client) ProcessLogs(
 	ctx context.Context,
 	requestID string,
+	invokedFnArn string,
 	apmClient *apmproxy.Client,
 	metadataContainer *apmproxy.MetadataContainer,
 	runtimeDoneSignal chan struct{},
 	prevEvent *extension.NextEventResponse,
 ) error {
+	// platformStartReqID is to identify the requestID for the function
+	// logs under the assumption that function logs for a specific request
+	// ID will be bounded by PlatformStart and PlatformEnd events.
+	var platformStartReqID string
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
 			lc.logger.Debugf("Received log event %v", logEvent.Type)
 			switch logEvent.Type {
+			case PlatformStart:
+				platformStartReqID = logEvent.Record.RequestID
 			// Check the logEvent for runtimeDone and compare the RequestID
 			// to the id that came in via the Next API
-			case RuntimeDone:
+			case PlatformRuntimeDone:
 				if logEvent.Record.RequestID == requestID {
 					lc.logger.Info("Received runtimeDone event for this function invocation")
 					runtimeDoneSignal <- struct{}{}
@@ -89,7 +86,7 @@ func (lc *Client) ProcessLogs(
 
 				lc.logger.Debug("Log API runtimeDone event request id didn't match")
 			// Check if the logEvent contains metrics and verify that they can be linked to the previous invocation
-			case Report:
+			case PlatformReport:
 				if prevEvent != nil && logEvent.Record.RequestID == prevEvent.RequestID {
 					lc.logger.Debug("Received platform report for the previous function invocation")
 					processedMetrics, err := ProcessPlatformReport(metadataContainer, prevEvent, logEvent)
@@ -101,6 +98,21 @@ func (lc *Client) ProcessLogs(
 				} else {
 					lc.logger.Warn("report event request id didn't match the previous event id")
 					lc.logger.Debug("Log API runtimeDone event request id didn't match")
+				}
+			case FunctionLog:
+				// TODO: @lahsivjar Buffer logs and send batches of data to APM-Server.
+				// Buffering should account for metadata being available before sending.
+				lc.logger.Debug("Received function log")
+				processedLog, err := ProcessFunctionLog(
+					metadataContainer,
+					platformStartReqID,
+					invokedFnArn,
+					logEvent,
+				)
+				if err != nil {
+					lc.logger.Errorf("Error processing function log : %v", err)
+				} else {
+					apmClient.EnqueueAPMData(processedLog)
 				}
 			}
 		case <-ctx.Done():

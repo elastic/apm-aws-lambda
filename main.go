@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -39,12 +40,24 @@ func main() {
 		log.Fatalf("failed to load AWS default config: %v", err)
 	}
 
-	app, err := app.New(ctx,
+	appConfigs := []app.ConfigOption{
 		app.WithExtensionName(filepath.Base(os.Args[0])),
 		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
 		app.WithLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL")),
 		app.WithAWSConfig(cfg),
-	)
+	}
+
+	captureLogs, err := strconv.ParseBool(os.Getenv("ELASTIC_APM_LAMBDA_CAPTURE_LOGS"))
+	// Default capture function logs to true
+	if err != nil {
+		captureLogs = true
+	}
+
+	if captureLogs {
+		appConfigs = append(appConfigs, app.WithFunctionLogSubscription())
+	}
+
+	app, err := app.New(ctx, appConfigs...)
 	if err != nil {
 		log.Fatalf("failed to create the app: %v", err)
 	}
