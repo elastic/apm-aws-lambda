@@ -184,7 +184,7 @@ func TestProcessPlatformReport_DataCorruption(t *testing.T) {
 	agentData, err := ProcessPlatformReport(mc, nextEventResp, logEvent)
 	require.NoError(t, err)
 
-	// process another metadata to corroupt the already processed one
+	// process another platform report to ensure the previous payload is not corrupted
 	logEvent.Record.RequestID = "corrupt-req-id"
 	nextEventResp.RequestID = "corrupt-req-id"
 	_, err = ProcessPlatformReport(mc, nextEventResp, logEvent)
