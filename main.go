@@ -47,9 +47,14 @@ func main() {
 		app.WithAWSConfig(cfg),
 	}
 
-	disableFnLog, _ := strconv.ParseBool(os.Getenv("ELASTIC_DISABLE_FUNCTION_LOG_SUBSCRIPTION"))
-	if disableFnLog {
-		appConfigs = append(appConfigs, app.WithoutFunctionLogSubscription())
+	captureLogs, err := strconv.ParseBool(os.Getenv("ELASTIC_APM_LAMBDA_CAPTURE_LOGS"))
+	// Default capture function logs to true
+	if err != nil {
+		captureLogs = true
+	}
+
+	if captureLogs {
+		appConfigs = append(appConfigs, app.WithFunctionLogSubscription())
 	}
 
 	app, err := app.New(ctx, appConfigs...)

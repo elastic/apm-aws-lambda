@@ -104,7 +104,7 @@ func TestSubscribe(t *testing.T) {
 			}))
 			defer s.Close()
 
-			cOpts := append(tc.opts, logsapi.WithLogsAPIBaseURL(s.URL), logsapi.WithLogsAPISubscriptionTypes(logsapi.Platform))
+			cOpts := append(tc.opts, logsapi.WithLogsAPIBaseURL(s.URL), logsapi.WithSubscriptionTypes(logsapi.Platform))
 			c, err := logsapi.NewClient(cOpts...)
 			require.NoError(t, err)
 
@@ -147,7 +147,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 				tc.opts,
 				logsapi.WithLogsAPIBaseURL(s.URL),
 				logsapi.WithLogBuffer(1),
-				logsapi.WithLogsAPISubscriptionTypes(logsapi.Platform, logsapi.Function),
+				logsapi.WithSubscriptionTypes(logsapi.Platform, logsapi.Function),
 			)
 			c, err := logsapi.NewClient(cOpts...)
 			require.NoError(t, err)

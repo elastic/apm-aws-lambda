@@ -49,8 +49,8 @@ func WithLogger(logger *zap.SugaredLogger) ClientOption {
 	}
 }
 
-// WithLogsAPISubscriptionTypes sets the logstreams that the Logs API will subscribe to.
-func WithLogsAPISubscriptionTypes(types ...SubscriptionType) ClientOption {
+// WithSubscriptionTypes sets the logstreams that the Logs API will subscribe to.
+func WithSubscriptionTypes(types ...SubscriptionType) ClientOption {
 	return func(c *Client) {
 		c.logsAPISubscriptionTypes = types
 	}

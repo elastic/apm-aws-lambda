@@ -76,7 +76,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		}
 
 		subscriptionLogStreams := []logsapi.SubscriptionType{logsapi.Platform}
-		if !c.disableFunctionLogSubscription {
+		if c.enableFunctionLogSubscription {
 			subscriptionLogStreams = append(subscriptionLogStreams, logsapi.Function)
 		}
 
@@ -85,7 +85,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 			logsapi.WithListenerAddress(addr),
 			logsapi.WithLogBuffer(100),
 			logsapi.WithLogger(app.logger),
-			logsapi.WithLogsAPISubscriptionTypes(subscriptionLogStreams...),
+			logsapi.WithSubscriptionTypes(subscriptionLogStreams...),
 		)
 		if err != nil {
 			return nil, err

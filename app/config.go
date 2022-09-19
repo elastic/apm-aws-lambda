@@ -20,13 +20,13 @@ package app
 import "github.com/aws/aws-sdk-go-v2/aws"
 
 type appConfig struct {
-	awsLambdaRuntimeAPI            string
-	awsConfig                      aws.Config
-	extensionName                  string
-	disableLogsAPI                 bool
-	disableFunctionLogSubscription bool
-	logLevel                       string
-	logsapiAddr                    string
+	awsLambdaRuntimeAPI           string
+	awsConfig                     aws.Config
+	extensionName                 string
+	disableLogsAPI                bool
+	enableFunctionLogSubscription bool
+	logLevel                      string
+	logsapiAddr                   string
 }
 
 // ConfigOption is used to configure the lambda extension
@@ -55,12 +55,12 @@ func WithoutLogsAPI() ConfigOption {
 	}
 }
 
-// WithoutFunctionLogSubscription disables the logs api subscription
-// to function log stream. This option will only work if LogsAPI is
-// not disabled by the WithoutLogsAPI config option.
-func WithoutFunctionLogSubscription() ConfigOption {
+// WithFunctionLogSubscription enables the logs api subscription
+// to function log stream. This option will only work if LogsAPI
+// is not disabled by the WithoutLogsAPI config option.
+func WithFunctionLogSubscription() ConfigOption {
 	return func(c *appConfig) {
-		c.disableFunctionLogSubscription = true
+		c.enableFunctionLogSubscription = true
 	}
 }
 

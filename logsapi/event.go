@@ -100,21 +100,19 @@ func (lc *Client) ProcessLogs(
 					lc.logger.Debug("Log API runtimeDone event request id didn't match")
 				}
 			case FunctionLog:
-				if metadataContainer != nil && len(metadataContainer.Metadata) > 0 {
-					lc.logger.Debug("Received function log")
-					processedLog, err := ProcessFunctionLog(
-						metadataContainer,
-						platformStartReqID,
-						invokedFnArn,
-						logEvent,
-					)
-					if err != nil {
-						lc.logger.Errorf("Error processing function log : %v", err)
-					} else {
-						apmClient.EnqueueAPMData(processedLog)
-					}
+				// TODO: @lahsivjar Buffer logs and send batches of data to APM-Server.
+				// Buffering should account for metadata being available before sending.
+				lc.logger.Debug("Received function log")
+				processedLog, err := ProcessFunctionLog(
+					metadataContainer,
+					platformStartReqID,
+					invokedFnArn,
+					logEvent,
+				)
+				if err != nil {
+					lc.logger.Errorf("Error processing function log : %v", err)
 				} else {
-					lc.logger.Warn("Function log received before metadata populated, quietly dropping log")
+					apmClient.EnqueueAPMData(processedLog)
 				}
 			}
 		case <-ctx.Done():
