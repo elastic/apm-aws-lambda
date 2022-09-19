@@ -18,6 +18,7 @@
 package logsapi
 
 import (
+	"errors"
 	"math"
 
 	"github.com/elastic/apm-aws-lambda/apmproxy"
@@ -63,7 +64,11 @@ func (mc MetricsContainer) MarshalFastJSON(json *fastjson.Writer) error {
 }
 
 func ProcessPlatformReport(metadataContainer *apmproxy.MetadataContainer, functionData *extension.NextEventResponse, platformReport LogEvent) (apmproxy.AgentData, error) {
-	var metricsData []byte
+
+	if metadataContainer == nil || len(metadataContainer.Metadata) == 0 {
+		return apmproxy.AgentData{}, errors.New("metadata is not populated")
+	}
+
 	metricsContainer := MetricsContainer{
 		Metrics: &model.Metrics{},
 	}
@@ -101,10 +106,11 @@ func ProcessPlatformReport(metadataContainer *apmproxy.MetadataContainer, functi
 		return apmproxy.AgentData{}, err
 	}
 
-	if metadataContainer.Metadata != nil {
-		metricsData = append(metadataContainer.Metadata, []byte("\n")...)
-	}
+	capacity := len(metadataContainer.Metadata) + jsonWriter.Size() + 1 // 1 for newline
+	metricsData := make([]byte, len(metadataContainer.Metadata), capacity)
+	copy(metricsData, metadataContainer.Metadata)
 
+	metricsData = append(metricsData, []byte("\n")...)
 	metricsData = append(metricsData, jsonWriter.Bytes()...)
 	return apmproxy.AgentData{Data: metricsData}, nil
 }
