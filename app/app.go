@@ -45,7 +45,7 @@ type App struct {
 
 // New returns an App or an error if the
 // creation failed.
-func New(ctx context.Context, opts ...configOption) (*App, error) {
+func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 	c := appConfig{}
 
 	for _, opt := range opts {
@@ -62,7 +62,7 @@ func New(ctx context.Context, opts ...configOption) (*App, error) {
 		return nil, err
 	}
 
-	apmServerApiKey, apmServerSecretToken, err := loadAWSOptions(ctx, c.awsConfig, app.logger)
+	apmServerAPIKey, apmServerSecretToken, err := loadAWSOptions(ctx, c.awsConfig, app.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -75,11 +75,17 @@ func New(ctx context.Context, opts ...configOption) (*App, error) {
 			addr = c.logsapiAddr
 		}
 
+		subscriptionLogStreams := []logsapi.SubscriptionType{logsapi.Platform}
+		if c.enableFunctionLogSubscription {
+			subscriptionLogStreams = append(subscriptionLogStreams, logsapi.Function)
+		}
+
 		lc, err := logsapi.NewClient(
 			logsapi.WithLogsAPIBaseURL(fmt.Sprintf("http://%s", c.awsLambdaRuntimeAPI)),
 			logsapi.WithListenerAddress(addr),
 			logsapi.WithLogBuffer(100),
 			logsapi.WithLogger(app.logger),
+			logsapi.WithSubscriptionTypes(subscriptionLogStreams...),
 		)
 		if err != nil {
 			return nil, err
@@ -124,7 +130,7 @@ func New(ctx context.Context, opts ...configOption) (*App, error) {
 	apmOpts = append(apmOpts,
 		apmproxy.WithURL(os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")),
 		apmproxy.WithLogger(app.logger),
-		apmproxy.WithAPIKey(apmServerApiKey),
+		apmproxy.WithAPIKey(apmServerAPIKey),
 		apmproxy.WithSecretToken(apmServerSecretToken),
 	)
 

@@ -20,41 +20,52 @@ package app
 import "github.com/aws/aws-sdk-go-v2/aws"
 
 type appConfig struct {
-	awsLambdaRuntimeAPI string
-	awsConfig           aws.Config
-	extensionName       string
-	disableLogsAPI      bool
-	logLevel            string
-	logsapiAddr         string
+	awsLambdaRuntimeAPI           string
+	awsConfig                     aws.Config
+	extensionName                 string
+	disableLogsAPI                bool
+	enableFunctionLogSubscription bool
+	logLevel                      string
+	logsapiAddr                   string
 }
 
-type configOption func(*appConfig)
+// ConfigOption is used to configure the lambda extension
+type ConfigOption func(*appConfig)
 
 // WithLambdaRuntimeAPI sets the AWS Lambda Runtime API
 // endpoint (normally taken from $AWS_LAMBDA_RUNTIME_API),
 // used by the AWS client.
-func WithLambdaRuntimeAPI(api string) configOption {
+func WithLambdaRuntimeAPI(api string) ConfigOption {
 	return func(c *appConfig) {
 		c.awsLambdaRuntimeAPI = api
 	}
 }
 
 // WithExtensionName sets the extension name.
-func WithExtensionName(name string) configOption {
+func WithExtensionName(name string) ConfigOption {
 	return func(c *appConfig) {
 		c.extensionName = name
 	}
 }
 
 // WithoutLogsAPI disables the logs api.
-func WithoutLogsAPI() configOption {
+func WithoutLogsAPI() ConfigOption {
 	return func(c *appConfig) {
 		c.disableLogsAPI = true
 	}
 }
 
+// WithFunctionLogSubscription enables the logs api subscription
+// to function log stream. This option will only work if LogsAPI
+// is not disabled by the WithoutLogsAPI config option.
+func WithFunctionLogSubscription() ConfigOption {
+	return func(c *appConfig) {
+		c.enableFunctionLogSubscription = true
+	}
+}
+
 // WithLogLevel sets the log level.
-func WithLogLevel(level string) configOption {
+func WithLogLevel(level string) ConfigOption {
 	return func(c *appConfig) {
 		c.logLevel = level
 	}
@@ -62,14 +73,14 @@ func WithLogLevel(level string) configOption {
 
 // WithLogsapiAddress sets the listener address of the
 // server listening for logs event.
-func WithLogsapiAddress(s string) configOption {
+func WithLogsapiAddress(s string) ConfigOption {
 	return func(c *appConfig) {
 		c.logsapiAddr = s
 	}
 }
 
 // WithAWSConfig sets the AWS config.
-func WithAWSConfig(awsConfig aws.Config) configOption {
+func WithAWSConfig(awsConfig aws.Config) ConfigOption {
 	return func(c *appConfig) {
 		c.awsConfig = awsConfig
 	}

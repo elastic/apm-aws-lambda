@@ -19,12 +19,13 @@ package logsapi_test
 
 import (
 	"bytes"
-	"github.com/elastic/apm-aws-lambda/logsapi"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
+
+	"github.com/elastic/apm-aws-lambda/logsapi"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -103,13 +104,14 @@ func TestSubscribe(t *testing.T) {
 			}))
 			defer s.Close()
 
-			c, err := logsapi.NewClient(append(tc.opts, logsapi.WithLogsAPIBaseURL(s.URL))...)
+			cOpts := append(tc.opts, logsapi.WithLogsAPIBaseURL(s.URL), logsapi.WithSubscriptionTypes(logsapi.Platform))
+			c, err := logsapi.NewClient(cOpts...)
 			require.NoError(t, err)
 
 			if tc.expectedErr {
-				require.Error(t, c.StartService([]logsapi.EventType{logsapi.Platform}, "foo"))
+				require.Error(t, c.StartService("foo"))
 			} else {
-				require.NoError(t, c.StartService([]logsapi.EventType{logsapi.Platform}, "foo"))
+				require.NoError(t, c.StartService("foo"))
 			}
 
 			require.NoError(t, c.Shutdown())
@@ -141,9 +143,15 @@ func TestSubscribeAWSRequest(t *testing.T) {
 			}))
 			defer s.Close()
 
-			c, err := logsapi.NewClient(append(tc.opts, logsapi.WithLogsAPIBaseURL(s.URL), logsapi.WithLogBuffer(1))...)
+			cOpts := append(
+				tc.opts,
+				logsapi.WithLogsAPIBaseURL(s.URL),
+				logsapi.WithLogBuffer(1),
+				logsapi.WithSubscriptionTypes(logsapi.Platform, logsapi.Function),
+			)
+			c, err := logsapi.NewClient(cOpts...)
 			require.NoError(t, err)
-			require.NoError(t, c.StartService([]logsapi.EventType{logsapi.Platform}, "testID"))
+			require.NoError(t, c.StartService("testID"))
 
 			// Create a request to send to the logs listener
 			platformDoneEvent := `{

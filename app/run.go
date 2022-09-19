@@ -19,12 +19,12 @@ package app
 
 import (
 	"context"
-	"github.com/elastic/apm-aws-lambda/apmproxy"
-	"github.com/elastic/apm-aws-lambda/extension"
-	"github.com/elastic/apm-aws-lambda/logsapi"
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/elastic/apm-aws-lambda/apmproxy"
+	"github.com/elastic/apm-aws-lambda/extension"
 )
 
 // Run runs the app.
@@ -57,7 +57,7 @@ func (app *App) Run(ctx context.Context) error {
 	}()
 
 	if app.logsClient != nil {
-		if err := app.logsClient.StartService([]logsapi.EventType{logsapi.Platform}, app.extensionClient.ExtensionID); err != nil {
+		if err := app.logsClient.StartService(app.extensionClient.ExtensionID); err != nil {
 			app.logger.Warnf("Error while subscribing to the Logs API: %v", err)
 
 			// disable logs API if the service failed to start
@@ -169,7 +169,15 @@ func (app *App) processEvent(
 	runtimeDone := make(chan struct{})
 	if app.logsClient != nil {
 		go func() {
-			if err := app.logsClient.ProcessLogs(invocationCtx, event.RequestID, app.apmClient, metadataContainer, runtimeDone, prevEvent); err != nil {
+			if err := app.logsClient.ProcessLogs(
+				invocationCtx,
+				event.RequestID,
+				event.InvokedFunctionArn,
+				app.apmClient,
+				metadataContainer,
+				runtimeDone,
+				prevEvent,
+			); err != nil {
 				app.logger.Errorf("Error while processing Lambda Logs ; %v", err)
 			} else {
 				close(runtimeDone)
