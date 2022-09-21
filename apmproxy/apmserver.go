@@ -93,7 +93,7 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 // The function compresses the APM agent data, if it's not already compressed.
 // It sets the APM transport status to failing upon errors, as part of the backoff
 // strategy.
-func (c *Client) PostToApmServer(ctx context.Context, agentData AgentData) error {
+func (c *Client) PostToApmServer(ctx context.Context, agentData APMData) error {
 	// todo: can this be a streaming or streaming style call that keeps the
 	//       connection open across invocations?
 	if c.IsUnhealthy() {
@@ -283,7 +283,7 @@ func (c *Client) ComputeGracePeriod() time.Duration {
 
 // EnqueueAPMData adds a AgentData struct to the agent data channel, effectively queueing for a send
 // to the APM server.
-func (c *Client) EnqueueAPMData(agentData AgentData) {
+func (c *Client) EnqueueAPMData(agentData APMData) {
 	select {
 	case c.DataChannel <- agentData:
 		c.logger.Debug("Adding agent data to buffer to be sent to apm server")

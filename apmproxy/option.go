@@ -74,7 +74,7 @@ func WithSendStrategy(strategy SendStrategy) Option {
 // WithAgentDataBufferSize sets the agent data buffer size.
 func WithAgentDataBufferSize(size int) Option {
 	return func(c *Client) {
-		c.DataChannel = make(chan AgentData, size)
+		c.DataChannel = make(chan APMData, size)
 	}
 }
 

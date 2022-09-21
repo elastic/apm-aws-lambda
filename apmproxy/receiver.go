@@ -29,12 +29,24 @@ import (
 	"time"
 )
 
-type AgentData struct {
+// APMDataType represents source of APMData
+type APMDataType string
+
+const (
+	// Agent data type represents APMData collected from APM agents
+	Agent APMDataType = "agent"
+	// Lambda data type represents APMData collected from logs API
+	Lambda APMDataType = "lambda"
+)
+
+// APMData represents data to be sent to APMServer
+type APMData struct {
 	Data            []byte
+	Type            APMDataType
 	ContentEncoding string
 }
 
-// StartHttpServer starts the server listening for APM agent data.
+// StartReceiver starts the server listening for APM agent data.
 func (c *Client) StartReceiver() error {
 	mux := http.NewServeMux()
 
@@ -123,8 +135,9 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 
 		agentFlushed := r.URL.Query().Get("flushed") == "true"
 
-		agentData := AgentData{
+		agentData := APMData{
 			Data:            rawBytes,
+			Type:            Agent,
 			ContentEncoding: r.Header.Get("Content-Encoding"),
 		}
 

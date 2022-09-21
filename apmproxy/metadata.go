@@ -31,7 +31,7 @@ type MetadataContainer struct {
 
 // ProcessMetadata return a byte array containing the Metadata marshaled in JSON
 // In case we want to update the Metadata values, usage of https://github.com/tidwall/sjson is advised
-func ProcessMetadata(data AgentData) ([]byte, error) {
+func ProcessMetadata(data APMData) ([]byte, error) {
 	uncompressedData, err := GetUncompressedBytes(data.Data, data.ContentEncoding)
 	if err != nil {
 		return nil, fmt.Errorf("error uncompressing agent data for metadata extraction: %w", err)

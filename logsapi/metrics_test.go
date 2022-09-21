@@ -75,10 +75,11 @@ func TestProcessPlatformReport_Coldstart(t *testing.T) {
 
 	desiredOutputMetrics := fmt.Sprintf(`{"metricset":{"samples":{"faas.coldstart_duration":{"value":422.9700012207031},"faas.timeout":{"value":5000},"system.memory.total":{"value":1.34217728e+08},"system.memory.actual.free":{"value":5.4525952e+07},"faas.duration":{"value":182.42999267578125},"faas.billed_duration":{"value":183}},"timestamp":%d,"faas":{"coldstart":true,"execution":"6f7f0961f83442118a7af6fe80b88d56","id":"arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"}}}`, timestamp.UnixNano()/1e3)
 
-	rawBytes, err := ProcessPlatformReport(&mc, &event, logEvent)
+	apmData, err := ProcessPlatformReport(&mc, &event, logEvent)
 	require.NoError(t, err)
+	assert.Equal(t, apmproxy.Lambda, apmData.Type)
 
-	requestBytes, err := apmproxy.GetUncompressedBytes(rawBytes.Data, "")
+	requestBytes, err := apmproxy.GetUncompressedBytes(apmData.Data, "")
 	require.NoError(t, err)
 
 	out := string(requestBytes)
@@ -135,10 +136,11 @@ func TestProcessPlatformReport_NoColdstart(t *testing.T) {
 
 	desiredOutputMetrics := fmt.Sprintf(`{"metricset":{"samples":{"faas.coldstart_duration":{"value":0},"faas.timeout":{"value":5000},"system.memory.total":{"value":1.34217728e+08},"system.memory.actual.free":{"value":5.4525952e+07},"faas.duration":{"value":182.42999267578125},"faas.billed_duration":{"value":183}},"timestamp":%d,"faas":{"coldstart":false,"execution":"6f7f0961f83442118a7af6fe80b88d56","id":"arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"}}}`, timestamp.UnixNano()/1e3)
 
-	rawBytes, err := ProcessPlatformReport(&mc, &event, logEvent)
+	apmData, err := ProcessPlatformReport(&mc, &event, logEvent)
 	require.NoError(t, err)
+	assert.Equal(t, apmproxy.Lambda, apmData.Type)
 
-	requestBytes, err := apmproxy.GetUncompressedBytes(rawBytes.Data, "")
+	requestBytes, err := apmproxy.GetUncompressedBytes(apmData.Data, "")
 	require.NoError(t, err)
 
 	out := string(requestBytes)
@@ -183,6 +185,7 @@ func TestProcessPlatformReport_DataCorruption(t *testing.T) {
 
 	agentData, err := ProcessPlatformReport(mc, nextEventResp, logEvent)
 	require.NoError(t, err)
+	assert.Equal(t, apmproxy.Lambda, agentData.Type)
 
 	// process another platform report to ensure the previous payload is not corrupted
 	logEvent.Record.RequestID = "corrupt-req-id"

@@ -50,5 +50,6 @@ func TestProcessFunctionLog(t *testing.T) {
 	apmData, err := ProcessFunctionLog(metadataContainer, reqID, invokedFnArn, event)
 
 	require.NoError(t, err)
+	assert.Equal(t, apmproxy.Lambda, apmData.Type)
 	assert.Equal(t, expectedData, string(apmData.Data))
 }

@@ -63,10 +63,10 @@ func (mc MetricsContainer) MarshalFastJSON(json *fastjson.Writer) error {
 	return nil
 }
 
-func ProcessPlatformReport(metadataContainer *apmproxy.MetadataContainer, functionData *extension.NextEventResponse, platformReport LogEvent) (apmproxy.AgentData, error) {
+func ProcessPlatformReport(metadataContainer *apmproxy.MetadataContainer, functionData *extension.NextEventResponse, platformReport LogEvent) (apmproxy.APMData, error) {
 
 	if metadataContainer == nil || len(metadataContainer.Metadata) == 0 {
-		return apmproxy.AgentData{}, errors.New("metadata is not populated")
+		return apmproxy.APMData{}, errors.New("metadata is not populated")
 	}
 
 	metricsContainer := MetricsContainer{
@@ -103,7 +103,7 @@ func ProcessPlatformReport(metadataContainer *apmproxy.MetadataContainer, functi
 
 	var jsonWriter fastjson.Writer
 	if err := metricsContainer.MarshalFastJSON(&jsonWriter); err != nil {
-		return apmproxy.AgentData{}, err
+		return apmproxy.APMData{}, err
 	}
 
 	capacity := len(metadataContainer.Metadata) + jsonWriter.Size() + 1 // 1 for newline
@@ -112,5 +112,5 @@ func ProcessPlatformReport(metadataContainer *apmproxy.MetadataContainer, functi
 
 	metricsData = append(metricsData, []byte("\n")...)
 	metricsData = append(metricsData, jsonWriter.Bytes()...)
-	return apmproxy.AgentData{Data: metricsData}, nil
+	return apmproxy.APMData{Type: apmproxy.Lambda, Data: metricsData}, nil
 }

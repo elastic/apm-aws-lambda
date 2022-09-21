@@ -52,7 +52,7 @@ const (
 type Client struct {
 	mu                sync.RWMutex
 	bufferPool        sync.Pool
-	DataChannel       chan AgentData
+	DataChannel       chan APMData
 	client            *http.Client
 	Status            Status
 	ReconnectionCount int
@@ -72,7 +72,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		bufferPool: sync.Pool{New: func() interface{} {
 			return &bytes.Buffer{}
 		}},
-		DataChannel: make(chan AgentData, defaultAgentBufferSize),
+		DataChannel: make(chan APMData, defaultAgentBufferSize),
 		client: &http.Client{
 			Transport: http.DefaultTransport.(*http.Transport).Clone(),
 		},

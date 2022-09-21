@@ -57,7 +57,7 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 
 	// Create AgentData struct with compressed data
 	data, _ := io.ReadAll(pr)
-	agentData := apmproxy.AgentData{Data: data, ContentEncoding: "gzip"}
+	agentData := apmproxy.APMData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -83,7 +83,7 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 func TestPostToApmServerDataNotCompressed(t *testing.T) {
 	s := "A long time ago in a galaxy far, far away..."
 	body := []byte(s)
-	agentData := apmproxy.AgentData{Data: body, ContentEncoding: ""}
+	agentData := apmproxy.APMData{Data: body, ContentEncoding: ""}
 
 	// Compress the data, so it can be compared with what
 	// the apm server receives
@@ -251,7 +251,7 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 
 	// Create AgentData struct with compressed data
 	data, _ := io.ReadAll(pr)
-	agentData := apmproxy.AgentData{Data: data, ContentEncoding: "gzip"}
+	agentData := apmproxy.APMData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -302,7 +302,7 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 
 	// Create AgentData struct with compressed data
 	data, _ := io.ReadAll(pr)
-	agentData := apmproxy.AgentData{Data: data, ContentEncoding: "gzip"}
+	agentData := apmproxy.APMData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -356,7 +356,7 @@ func TestAPMServerRecovery(t *testing.T) {
 
 	// Create AgentData struct with compressed data
 	data, _ := io.ReadAll(pr)
-	agentData := apmproxy.AgentData{Data: data, ContentEncoding: "gzip"}
+	agentData := apmproxy.APMData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -409,7 +409,7 @@ func TestAPMServerAuthFails(t *testing.T) {
 
 	// Create AgentData struct with compressed data
 	data, _ := io.ReadAll(pr)
-	agentData := apmproxy.AgentData{Data: data, ContentEncoding: "gzip"}
+	agentData := apmproxy.APMData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -453,7 +453,7 @@ func TestAPMServerRatelimit(t *testing.T) {
 
 	// Create AgentData struct with compressed data
 	data, _ := io.ReadAll(pr)
-	agentData := apmproxy.AgentData{Data: data, ContentEncoding: "gzip"}
+	agentData := apmproxy.APMData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	var shouldSucceed atomic.Bool
@@ -506,7 +506,7 @@ func TestAPMServerClientFail(t *testing.T) {
 
 	// Create AgentData struct with compressed data
 	data, _ := io.ReadAll(pr)
-	agentData := apmproxy.AgentData{Data: data, ContentEncoding: "gzip"}
+	agentData := apmproxy.APMData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	var shouldSucceed atomic.Bool
@@ -558,7 +558,7 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 
 	// Create AgentData struct with compressed data
 	data, _ := io.ReadAll(pr)
-	agentData := apmproxy.AgentData{Data: data, ContentEncoding: "gzip"}
+	agentData := apmproxy.APMData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -615,7 +615,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 {"transaction": { "id": "00xxxxFFaaaa1234", "trace_id": "0123456789abcdef0123456789abcdef", "name": "amqp receive", "parent_id": "abcdefabcdef01234567", "type": "messaging", "duration": 3, "span_count": { "started": 1 }, "context": {"message": {"queue": { "name": "new_users"}, "age":{ "ms": 1577958057123}, "headers": {"user_id": "1ax3", "involved_services": ["user", "auth"]}, "body": "user created", "routing_key": "user-created-transaction"}},"session":{"id":"sunday","sequence":123}}}
 {"transaction": { "name": "july-2021-delete-after-july-31", "type": "lambda", "result": "success", "id": "142e61450efb8574", "trace_id": "eb56529a1f461c5e7e2f66ecb075e983", "subtype": null, "action": null, "duration": 38.853, "timestamp": 1631736666365048, "sampled": true, "context": { "cloud": { "origin": { "account": { "id": "abc123" }, "provider": "aws", "region": "us-east-1", "service": { "name": "serviceName" } } }, "service": { "origin": { "id": "abc123", "name": "service-name", "version": "1.0" } }, "user": {}, "tags": {}, "custom": { } }, "sync": true, "span_count": { "started": 0 }, "outcome": "unknown", "faas": { "coldstart": false, "execution": "2e13b309-23e1-417f-8bf7-074fc96bc683", "trigger": { "request_id": "FuH2Cir_vHcEMUA=", "type": "http" } }, "sample_rate": 1 } }
 `)
-	agentData := apmproxy.AgentData{Data: benchBody, ContentEncoding: ""}
+	agentData := apmproxy.APMData{Data: benchBody, ContentEncoding: ""}
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
