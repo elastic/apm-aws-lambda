@@ -20,7 +20,6 @@ package logsapi
 import (
 	"fmt"
 	"log"
-	"strings"
 	"testing"
 	"time"
 
@@ -32,10 +31,6 @@ import (
 )
 
 func TestProcessPlatformReport_Coldstart(t *testing.T) {
-	mc := apmproxy.MetadataContainer{
-		Metadata: []byte(fmt.Sprintf(`{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"%s"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`, extension.Version)),
-	}
-
 	timestamp := time.Now()
 
 	pm := PlatformMetrics{
@@ -71,11 +66,9 @@ func TestProcessPlatformReport_Coldstart(t *testing.T) {
 		},
 	}
 
-	desiredOutputMetadata := fmt.Sprintf(`{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"%s"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`, extension.Version)
-
 	desiredOutputMetrics := fmt.Sprintf(`{"metricset":{"samples":{"faas.coldstart_duration":{"value":422.9700012207031},"faas.timeout":{"value":5000},"system.memory.total":{"value":1.34217728e+08},"system.memory.actual.free":{"value":5.4525952e+07},"faas.duration":{"value":182.42999267578125},"faas.billed_duration":{"value":183}},"timestamp":%d,"faas":{"coldstart":true,"execution":"6f7f0961f83442118a7af6fe80b88d56","id":"arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"}}}`, timestamp.UnixNano()/1e3)
 
-	apmData, err := ProcessPlatformReport(&mc, &event, logEvent)
+	apmData, err := ProcessPlatformReport(&event, logEvent)
 	require.NoError(t, err)
 	assert.Equal(t, apmproxy.Lambda, apmData.Type)
 
@@ -85,18 +78,10 @@ func TestProcessPlatformReport_Coldstart(t *testing.T) {
 	out := string(requestBytes)
 	log.Println(out)
 
-	processingResult := strings.Split(string(requestBytes), "\n")
-
-	assert.JSONEq(t, desiredOutputMetadata, processingResult[0])
-	assert.JSONEq(t, desiredOutputMetrics, processingResult[1])
+	assert.JSONEq(t, desiredOutputMetrics, string(requestBytes))
 }
 
 func TestProcessPlatformReport_NoColdstart(t *testing.T) {
-
-	mc := apmproxy.MetadataContainer{
-		Metadata: []byte(fmt.Sprintf(`{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"%s"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`, extension.Version)),
-	}
-
 	timestamp := time.Now()
 
 	pm := PlatformMetrics{
@@ -132,75 +117,19 @@ func TestProcessPlatformReport_NoColdstart(t *testing.T) {
 		},
 	}
 
-	desiredOutputMetadata := fmt.Sprintf(`{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"%s"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`, extension.Version)
-
 	desiredOutputMetrics := fmt.Sprintf(`{"metricset":{"samples":{"faas.coldstart_duration":{"value":0},"faas.timeout":{"value":5000},"system.memory.total":{"value":1.34217728e+08},"system.memory.actual.free":{"value":5.4525952e+07},"faas.duration":{"value":182.42999267578125},"faas.billed_duration":{"value":183}},"timestamp":%d,"faas":{"coldstart":false,"execution":"6f7f0961f83442118a7af6fe80b88d56","id":"arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"}}}`, timestamp.UnixNano()/1e3)
 
-	apmData, err := ProcessPlatformReport(&mc, &event, logEvent)
+	apmData, err := ProcessPlatformReport(&event, logEvent)
 	require.NoError(t, err)
 	assert.Equal(t, apmproxy.Lambda, apmData.Type)
 
 	requestBytes, err := apmproxy.GetUncompressedBytes(apmData.Data, "")
 	require.NoError(t, err)
 
-	out := string(requestBytes)
-	log.Println(out)
-
-	processingResult := strings.Split(string(requestBytes), "\n")
-
-	assert.JSONEq(t, desiredOutputMetadata, processingResult[0])
-	assert.JSONEq(t, desiredOutputMetrics, processingResult[1])
-}
-
-func TestProcessPlatformReport_DataCorruption(t *testing.T) {
-	// Allocate big capacity metadata array to prevent reallocation
-	raw := make([]byte, 0, 7000)
-	mc := &apmproxy.MetadataContainer{
-		Metadata: append(raw, []byte(fmt.Sprintf(`{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"%s"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`, extension.Version))...),
-	}
-	reqID := "8476a536-e9f4-11e8-9739-2dfe598c3fcd"
-	invokedFnArn := "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"
-	timestamp := time.Date(2022, 11, 12, 0, 0, 0, 0, time.UTC)
-	logEvent := LogEvent{
-		Time: timestamp,
-		Type: PlatformReport,
-		Record: LogEventRecord{
-			RequestID: reqID,
-			Metrics: PlatformMetrics{
-				DurationMs:       1.0,
-				BilledDurationMs: 1,
-				MemorySizeMB:     1,
-				MaxMemoryUsedMB:  1,
-				InitDurationMs:   1.0,
-			},
-		},
-	}
-	nextEventResp := &extension.NextEventResponse{
-		Timestamp:          timestamp,
-		EventType:          extension.Invoke,
-		RequestID:          reqID,
-		InvokedFunctionArn: invokedFnArn,
-	}
-	expected := "{\"metricset\":{\"samples\":{\"system.memory.total\":{\"value\":1.048576e+06},\"system.memory.actual.free\":{\"value\":0},\"faas.duration\":{\"value\":1},\"faas.billed_duration\":{\"value\":1},\"faas.coldstart_duration\":{\"value\":1},\"faas.timeout\":{\"value\":-1.6682112e+12}},\"timestamp\":1668211200000000,\"faas\":{\"coldstart\":true,\"execution\":\"8476a536-e9f4-11e8-9739-2dfe598c3fcd\",\"id\":\"arn:aws:lambda:us-east-2:123456789012:function:custom-runtime\"}}}"
-
-	agentData, err := ProcessPlatformReport(mc, nextEventResp, logEvent)
-	require.NoError(t, err)
-	assert.Equal(t, apmproxy.Lambda, agentData.Type)
-
-	// process another platform report to ensure the previous payload is not corrupted
-	logEvent.Record.RequestID = "corrupt-req-id"
-	nextEventResp.RequestID = "corrupt-req-id"
-	_, err = ProcessPlatformReport(mc, nextEventResp, logEvent)
-	require.NoError(t, err)
-
-	data := strings.Split(string(agentData.Data), "\n")
-	assert.JSONEq(t, expected, data[1])
+	assert.JSONEq(t, desiredOutputMetrics, string(requestBytes))
 }
 
 func BenchmarkPlatformReport(b *testing.B) {
-	mc := &apmproxy.MetadataContainer{
-		Metadata: []byte(`{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"1.1.0"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`),
-	}
 	reqID := "8476a536-e9f4-11e8-9739-2dfe598c3fcd"
 	invokedFnArn := "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"
 	timestamp := time.Date(2022, 11, 12, 0, 0, 0, 0, time.UTC)
@@ -226,7 +155,7 @@ func BenchmarkPlatformReport(b *testing.B) {
 	}
 
 	for n := 0; n < b.N; n++ {
-		_, err := ProcessPlatformReport(mc, nextEventResp, logEvent)
+		_, err := ProcessPlatformReport(nextEventResp, logEvent)
 		require.NoError(b, err)
 	}
 }

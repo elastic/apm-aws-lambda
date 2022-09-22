@@ -31,6 +31,8 @@ import (
 	"time"
 )
 
+const defaultBatchSize = 20
+
 type jsonResult struct {
 	Errors []jsonError `json:"errors,omitempty"`
 }
@@ -40,27 +42,21 @@ type jsonError struct {
 	Document string `json:"document,omitempty"`
 }
 
-// ForwardApmData receives agent data as it comes in and posts it to the APM server.
-// Stop checking for, and sending agent data when the function invocation
+// ForwardApmData receives apm data as it comes in and posts it to the APM server.
+// Stop checking for, and sending apm data when the function invocation
 // has completed, signaled via a channel.
-func (c *Client) ForwardApmData(ctx context.Context, metadataContainer *MetadataContainer) error {
+func (c *Client) ForwardApmData(ctx context.Context) error {
 	if c.IsUnhealthy() {
 		return nil
 	}
+	batch := NewBatch(defaultBatchSize)
 	for {
 		select {
 		case <-ctx.Done():
 			c.logger.Debug("Invocation context cancelled, not processing any more agent data")
-			return nil
-		case agentData := <-c.DataChannel:
-			if metadataContainer.Metadata == nil {
-				metadata, err := ProcessMetadata(agentData)
-				if err != nil {
-					return fmt.Errorf("failed to extract metadata from agent payload %w", err)
-				}
-				metadataContainer.Metadata = metadata
-			}
-			if err := c.PostToApmServer(ctx, agentData); err != nil {
+			return c.sendBatch(ctx, batch)
+		case apmData := <-c.DataChannel:
+			if err := c.forwardAPMDataByType(ctx, apmData, batch); err != nil {
 				return fmt.Errorf("error sending to APM server, skipping: %v", err)
 			}
 		}
@@ -74,15 +70,20 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 		return
 	}
 	c.logger.Debug("Flush started - Checking for agent data")
+	batch := NewBatch(defaultBatchSize)
 	for {
 		select {
-		case agentData := <-c.DataChannel:
+		case apmData := <-c.DataChannel:
 			c.logger.Debug("Flush in progress - Processing agent data")
-			if err := c.PostToApmServer(ctx, agentData); err != nil {
+			if err := c.forwardAPMDataByType(ctx, apmData, batch); err != nil {
 				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		default:
 			c.logger.Debug("Flush ended - No agent data on buffer")
+			// Flush any remaining data in batch
+			if err := c.sendBatch(ctx, batch); err != nil {
+				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
+			}
 			return
 		}
 	}
@@ -312,4 +313,65 @@ func (c *Client) WaitForFlush() <-chan struct{} {
 	c.flushMutex.Lock()
 	defer c.flushMutex.Unlock()
 	return c.flushCh
+}
+
+func (c *Client) forwardAPMDataByType(ctx context.Context, apmData APMData, batch *BatchData) error {
+	switch apmData.Type {
+	case Agent:
+		if len(c.metadata) == 0 {
+			metadata, err := ProcessMetadata(apmData)
+			if err != nil {
+				return fmt.Errorf("failed to extract metadata from agent payload %w", err)
+			}
+			c.setMetadata(metadata)
+		}
+		return c.PostToApmServer(ctx, apmData)
+	case Lambda:
+		if err := batch.Add(apmData); err != nil {
+			c.logger.Warnf("Dropping data due to error: %v", err)
+		}
+		if batch.ShouldFlush() {
+			return c.sendBatch(ctx, batch)
+		}
+		return nil
+	default:
+		return errors.New("invalid apm data type")
+	}
+}
+
+func (c *Client) sendBatch(ctx context.Context, batch *BatchData) error {
+	// TODO: @lahsivjar keep buffering logs in DataChannel until metadata
+	// is available.
+	if len(c.metadata) == 0 {
+		return errors.New("metadata not yet populated, dropping data")
+	}
+	if batch.Size() == 0 {
+		return nil
+	}
+	defer batch.Reset()
+	return c.PostToApmServer(ctx, c.getWithMetadata(batch))
+}
+
+func (c *Client) setMetadata(metadata []byte) {
+	c.metadataMutex.Lock()
+	defer c.metadataMutex.Unlock()
+	c.metadata = metadata
+}
+
+func (c *Client) getWithMetadata(batch *BatchData) APMData {
+	c.metadataMutex.RLock()
+	defer c.metadataMutex.RUnlock()
+
+	capacity := len(c.metadata) + 1
+	for _, d := range batch.agentData {
+		capacity += len(d.Data) + 1
+	}
+
+	withMeta := make([]byte, len(c.metadata), capacity)
+	copy(withMeta, c.metadata)
+	for _, d := range batch.agentData {
+		withMeta = append(withMeta, '\n')
+		withMeta = append(withMeta, d.Data...)
+	}
+	return APMData{Data: withMeta}
 }

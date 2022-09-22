@@ -60,7 +60,6 @@ func (lc *Client) ProcessLogs(
 	requestID string,
 	invokedFnArn string,
 	apmClient *apmproxy.Client,
-	metadataContainer *apmproxy.MetadataContainer,
 	runtimeDoneSignal chan struct{},
 	prevEvent *extension.NextEventResponse,
 ) error {
@@ -89,7 +88,7 @@ func (lc *Client) ProcessLogs(
 			case PlatformReport:
 				if prevEvent != nil && logEvent.Record.RequestID == prevEvent.RequestID {
 					lc.logger.Debug("Received platform report for the previous function invocation")
-					processedMetrics, err := ProcessPlatformReport(metadataContainer, prevEvent, logEvent)
+					processedMetrics, err := ProcessPlatformReport(prevEvent, logEvent)
 					if err != nil {
 						lc.logger.Errorf("Error processing Lambda platform metrics : %v", err)
 					} else {
@@ -100,11 +99,8 @@ func (lc *Client) ProcessLogs(
 					lc.logger.Debug("Log API runtimeDone event request id didn't match")
 				}
 			case FunctionLog:
-				// TODO: @lahsivjar Buffer logs and send batches of data to APM-Server.
-				// Buffering should account for metadata being available before sending.
 				lc.logger.Debug("Received function log")
 				processedLog, err := ProcessFunctionLog(
-					metadataContainer,
 					platformStartReqID,
 					invokedFnArn,
 					logEvent,

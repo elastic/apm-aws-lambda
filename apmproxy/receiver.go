@@ -39,7 +39,9 @@ const (
 	Lambda APMDataType = "lambda"
 )
 
-// APMData represents data to be sent to APMServer
+// APMData represents data to be sent to APMServer. `Agent` type
+// data will have `metadata` as ndjson whereas `lambda` type data
+// will be without metadata.
 type APMData struct {
 	Data            []byte
 	Type            APMDataType

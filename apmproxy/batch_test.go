@@ -15,37 +15,47 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package logsapi
+package apmproxy
 
 import (
-	"fmt"
 	"testing"
-	"time"
 
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestProcessFunctionLog(t *testing.T) {
-	event := LogEvent{
-		Time:         time.Date(2022, 11, 12, 0, 0, 0, 0, time.UTC),
-		Type:         FunctionLog,
-		StringRecord: "ERROR encountered. Stack trace:my-function (line 10)",
+func TestAdd(t *testing.T) {
+	t.Run("empty", func(t *testing.T) {
+		b := NewBatch(1)
+
+		assert.NoError(t, b.Add(APMData{}))
+	})
+	t.Run("full", func(t *testing.T) {
+		b := NewBatch(1)
+		require.NoError(t, b.Add(APMData{}))
+
+		assert.ErrorIs(t, ErrBatchFull, b.Add(APMData{}))
+	})
+}
+
+func TestReset(t *testing.T) {
+	b := NewBatch(1)
+	require.NoError(t, b.Add(APMData{}))
+	require.Equal(t, 1, b.Size())
+	b.Reset()
+
+	assert.Equal(t, 0, b.Size())
+}
+
+func TestShouldFlush(t *testing.T) {
+	b := NewBatch(10)
+
+	// Should flush at 90% full
+	for i := 0; i < 9; i++ {
+		assert.False(t, b.ShouldFlush())
+		require.NoError(t, b.Add(APMData{}))
 	}
-	reqID := "8476a536-e9f4-11e8-9739-2dfe598c3fcd"
-	invokedFnArn := "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"
-	expectedData := fmt.Sprintf(
-		"{\"log\":{\"message\":\"%s\",\"@timestamp\":%d,\"faas\":{\"id\":\"%s\",\"execution\":\"%s\"}}}",
-		event.StringRecord,
-		event.Time.UnixNano()/int64(time.Microsecond),
-		invokedFnArn,
-		reqID,
-	)
 
-	apmData, err := ProcessFunctionLog(reqID, invokedFnArn, event)
-
-	require.NoError(t, err)
-	assert.Equal(t, apmproxy.Lambda, apmData.Type)
-	assert.Equal(t, expectedData, string(apmData.Data))
+	require.Equal(t, 9, b.Size())
+	assert.True(t, b.ShouldFlush())
 }
