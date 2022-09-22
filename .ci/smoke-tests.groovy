@@ -31,6 +31,7 @@ pipeline {
       steps {
         deleteDir()
         gitCheckout(basedir: "${BASE_DIR}", shallow: false)
+        setEnvVar('GO_VERSION', readFile("${BASE_DIR}/.go-version").trim())
       }
     }
 
@@ -49,7 +50,7 @@ pipeline {
       steps {
         dir ("${BASE_DIR}") {
           withTestClusterEnv {
-            withGoEnv(version: readFile(file: ".go-version").trim()) {
+            withGoEnv() {
               script {
                 def smokeTests = sh(returnStdout: true, script: 'make smoketest/discover').trim().split('\r?\n')
                 def smokeTestJobs = [:]
@@ -66,7 +67,7 @@ pipeline {
         always {
           dir("${BASE_DIR}") {
             withTestClusterEnv {
-              withGoEnv(version: readFile(file: ".go-version").trim()) {
+              withGoEnv() {
                 sh(label: 'Teardown smoke tests infra', script: 'make smoketest/all/cleanup')
               }
             }
