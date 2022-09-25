@@ -55,3 +55,11 @@ func WithSubscriptionTypes(types ...SubscriptionType) ClientOption {
 		c.logsAPISubscriptionTypes = types
 	}
 }
+
+// WithMetadataAvailableIndicator configures a channel
+// which will broadcast metadata available event on close
+func WithMetadataAvailableIndicator(ch <-chan struct{}) ClientOption {
+	return func(c *Client) {
+		c.metadataAvailable = ch
+	}
+}

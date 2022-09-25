@@ -66,8 +66,9 @@ type Client struct {
 	flushMutex sync.Mutex
 	flushCh    chan struct{}
 
-	metadataMutex sync.RWMutex
-	metadata      []byte
+	metadataAvailable chan<- struct{}
+	metadataMutex     sync.RWMutex
+	metadata          []byte
 }
 
 func NewClient(opts ...Option) (*Client, error) {

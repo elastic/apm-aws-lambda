@@ -599,7 +599,13 @@ func TestForwardApmData(t *testing.T) {
 	t.Cleanup(apmServer.Close)
 	metadata := `{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"1.1.0"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`
 	assertGzipBody := func(expected string) {
-		buf := bytes.NewReader(<-receivedReqBodyChan)
+		var body []byte
+		select {
+		case body = <-receivedReqBodyChan:
+		case <-time.After(1 * time.Second):
+			require.Fail(t, "mock APM-Server timed out waiting for request")
+		}
+		buf := bytes.NewReader(body)
 		r, err := gzip.NewReader(buf)
 		require.NoError(t, err)
 		out, err := io.ReadAll(r)
@@ -608,13 +614,15 @@ func TestForwardApmData(t *testing.T) {
 	}
 	agentData := fmt.Sprintf("%s\n%s", metadata, `{"log": {"message": "test"}}`)
 	lambdaData := `{"log": {"message": "test"}}`
+	metaAvailable := make(chan struct{})
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(metaAvailable),
+		// Use unbuffered channel for ease of testing
+		apmproxy.WithAgentDataBufferSize(0),
 	)
 	require.NoError(t, err)
-	// Override DataChannel to be unbuffered for ease of testing
-	apmClient.DataChannel = make(chan apmproxy.APMData)
 
 	// Start forwarding APM data
 	ctx, cancel := context.WithCancel(context.Background())
