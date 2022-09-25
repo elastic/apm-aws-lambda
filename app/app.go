@@ -67,6 +67,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		return nil, err
 	}
 
+	metadataAvailable := make(chan struct{})
 	app.extensionClient = extension.NewClient(c.awsLambdaRuntimeAPI, app.logger)
 
 	if !c.disableLogsAPI {
@@ -86,6 +87,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 			logsapi.WithLogBuffer(100),
 			logsapi.WithLogger(app.logger),
 			logsapi.WithSubscriptionTypes(subscriptionLogStreams...),
+			logsapi.WithMetadataAvailableIndicator(metadataAvailable),
 		)
 		if err != nil {
 			return nil, err
@@ -132,6 +134,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		apmproxy.WithLogger(app.logger),
 		apmproxy.WithAPIKey(apmServerAPIKey),
 		apmproxy.WithSecretToken(apmServerSecretToken),
+		apmproxy.WithMetadataAvailableIndicator(metadataAvailable),
 	)
 
 	ac, err := apmproxy.NewClient(apmOpts...)

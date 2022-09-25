@@ -324,6 +324,8 @@ func (c *Client) forwardAPMDataByType(ctx context.Context, apmData APMData, batc
 				return fmt.Errorf("failed to extract metadata from agent payload %w", err)
 			}
 			c.setMetadata(metadata)
+			// broadcast that metadata is available
+			close(c.metadataAvailable)
 		}
 		return c.PostToApmServer(ctx, apmData)
 	case Lambda:
@@ -340,10 +342,8 @@ func (c *Client) forwardAPMDataByType(ctx context.Context, apmData APMData, batc
 }
 
 func (c *Client) sendBatch(ctx context.Context, batch *BatchData) error {
-	// TODO: @lahsivjar keep buffering logs in DataChannel until metadata
-	// is available.
 	if len(c.metadata) == 0 {
-		return errors.New("metadata not yet populated, dropping data")
+		return errors.New("unexpected state, metadata should always be populated")
 	}
 	if batch.Size() == 0 {
 		return nil

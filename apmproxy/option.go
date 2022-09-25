@@ -83,3 +83,11 @@ func WithLogger(logger *zap.SugaredLogger) Option {
 		c.logger = logger
 	}
 }
+
+// WithMetadataAvailableIndicator configures a channel
+// which will broadcast metadata available event on close
+func WithMetadataAvailableIndicator(ch chan<- struct{}) Option {
+	return func(c *Client) {
+		c.metadataAvailable = ch
+	}
+}
