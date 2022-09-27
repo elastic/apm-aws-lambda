@@ -513,6 +513,8 @@ func TestAPMServerHangs(t *testing.T) {
 	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
+		// The first response sets the metadata so that the lambda logs handler is accepting requests
+		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
@@ -772,12 +774,14 @@ func TestMetricsWithMetadata(t *testing.T) {
 
 func runApp(t *testing.T, logsapiAddr string) <-chan struct{} {
 	ctx, cancel := context.WithCancel(context.Background())
+	metadataIndicator := make(chan struct{})
 
 	app, err := app.New(ctx,
 		app.WithExtensionName("apm-lambda-extension"),
 		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
 		app.WithLogLevel("debug"),
 		app.WithLogsapiAddress(logsapiAddr),
+		app.WithMetadataAvailableIndicator(metadataIndicator),
 	)
 	require.NoError(t, err)
 

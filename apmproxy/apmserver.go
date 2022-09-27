@@ -31,8 +31,6 @@ import (
 	"time"
 )
 
-const defaultBatchSize = 20
-
 type jsonResult struct {
 	Errors []jsonError `json:"errors,omitempty"`
 }
@@ -49,14 +47,13 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 	if c.IsUnhealthy() {
 		return nil
 	}
-	batch := NewBatch(defaultBatchSize)
 	for {
 		select {
 		case <-ctx.Done():
 			c.logger.Debug("Invocation context cancelled, not processing any more agent data")
-			return c.sendBatch(ctx, batch)
+			return c.sendBatch(ctx)
 		case apmData := <-c.DataChannel:
-			if err := c.forwardAPMDataByType(ctx, apmData, batch); err != nil {
+			if err := c.forwardAPMDataByType(ctx, apmData); err != nil {
 				return fmt.Errorf("error sending to APM server, skipping: %v", err)
 			}
 		}
@@ -70,18 +67,17 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 		return
 	}
 	c.logger.Debug("Flush started - Checking for agent data")
-	batch := NewBatch(defaultBatchSize)
 	for {
 		select {
 		case apmData := <-c.DataChannel:
 			c.logger.Debug("Flush in progress - Processing agent data")
-			if err := c.forwardAPMDataByType(ctx, apmData, batch); err != nil {
+			if err := c.forwardAPMDataByType(ctx, apmData); err != nil {
 				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		default:
 			c.logger.Debug("Flush ended - No agent data on buffer")
 			// Flush any remaining data in batch
-			if err := c.sendBatch(ctx, batch); err != nil {
+			if err := c.sendBatch(ctx); err != nil {
 				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 			return
@@ -282,12 +278,12 @@ func (c *Client) ComputeGracePeriod() time.Duration {
 	return time.Duration((gracePeriodWithoutJitter + jitter*gracePeriodWithoutJitter) * float64(time.Second))
 }
 
-// EnqueueAPMData adds a AgentData struct to the agent data channel, effectively queueing for a send
+// EnqueueAPMData adds a apm data struct to the agent data channel, effectively queueing for a send
 // to the APM server.
-func (c *Client) EnqueueAPMData(agentData APMData) {
+func (c *Client) EnqueueAPMData(apmData APMData) {
 	select {
-	case c.DataChannel <- agentData:
-		c.logger.Debug("Adding agent data to buffer to be sent to apm server")
+	case c.DataChannel <- apmData:
+		c.logger.Debug("Adding APM data to buffer to be sent to apm server")
 	default:
 		c.logger.Warn("Channel full: dropping a subset of agent data")
 	}
@@ -315,25 +311,30 @@ func (c *Client) WaitForFlush() <-chan struct{} {
 	return c.flushCh
 }
 
-func (c *Client) forwardAPMDataByType(ctx context.Context, apmData APMData, batch *BatchData) error {
+func (c *Client) forwardAPMDataByType(ctx context.Context, apmData APMData) error {
 	switch apmData.Type {
 	case Agent:
-		if len(c.metadata) == 0 {
+		if c.batch == nil {
 			metadata, err := ProcessMetadata(apmData)
 			if err != nil {
 				return fmt.Errorf("failed to extract metadata from agent payload %w", err)
 			}
-			c.setMetadata(metadata)
+			c.batch = NewBatch(c.maxBatchSize, metadata)
 			// broadcast that metadata is available
 			close(c.metadataAvailable)
 		}
 		return c.PostToApmServer(ctx, apmData)
 	case Lambda:
-		if err := batch.Add(apmData); err != nil {
+		if c.batch == nil {
+			// This state is not possible since we are pushing back on
+			// lambda logs API until metadata is available.
+			return errors.New("unexpected state, metadata not yet set")
+		}
+		if err := c.batch.Add(apmData); err != nil {
 			c.logger.Warnf("Dropping data due to error: %v", err)
 		}
-		if batch.ShouldFlush() {
-			return c.sendBatch(ctx, batch)
+		if c.batch.ShouldShip() {
+			return c.sendBatch(ctx)
 		}
 		return nil
 	default:
@@ -341,37 +342,10 @@ func (c *Client) forwardAPMDataByType(ctx context.Context, apmData APMData, batc
 	}
 }
 
-func (c *Client) sendBatch(ctx context.Context, batch *BatchData) error {
-	if len(c.metadata) == 0 {
-		return errors.New("unexpected state, metadata should always be populated")
-	}
-	if batch.Size() == 0 {
+func (c *Client) sendBatch(ctx context.Context) error {
+	if c.batch == nil || c.batch.Count() == 0 {
 		return nil
 	}
-	defer batch.Reset()
-	return c.PostToApmServer(ctx, c.getWithMetadata(batch))
-}
-
-func (c *Client) setMetadata(metadata []byte) {
-	c.metadataMutex.Lock()
-	defer c.metadataMutex.Unlock()
-	c.metadata = metadata
-}
-
-func (c *Client) getWithMetadata(batch *BatchData) APMData {
-	c.metadataMutex.RLock()
-	defer c.metadataMutex.RUnlock()
-
-	capacity := len(c.metadata) + 1
-	for _, d := range batch.agentData {
-		capacity += len(d.Data) + 1
-	}
-
-	withMeta := make([]byte, len(c.metadata), capacity)
-	copy(withMeta, c.metadata)
-	for _, d := range batch.agentData {
-		withMeta = append(withMeta, '\n')
-		withMeta = append(withMeta, d.Data...)
-	}
-	return APMData{Data: withMeta}
+	defer c.batch.Reset()
+	return c.PostToApmServer(ctx, c.batch.ToAPMData())
 }

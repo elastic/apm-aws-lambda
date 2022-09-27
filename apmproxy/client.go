@@ -46,6 +46,8 @@ const (
 	defaultDataForwarderTimeout time.Duration = 3 * time.Second
 	defaultReceiverAddr                       = ":8200"
 	defaultAgentBufferSize      int           = 100
+	defaultMaxBatchSize         int           = 50
+	defaultMaxBatchAge          int           = 10
 )
 
 // Client is the client used to communicate with the apm server.
@@ -66,9 +68,11 @@ type Client struct {
 	flushMutex sync.Mutex
 	flushCh    chan struct{}
 
+	batch        *BatchData
+	maxBatchSize int
+	maxBatchAge  int
+
 	metadataAvailable chan<- struct{}
-	metadataMutex     sync.RWMutex
-	metadata          []byte
 }
 
 func NewClient(opts ...Option) (*Client, error) {
@@ -90,6 +94,8 @@ func NewClient(opts ...Option) (*Client, error) {
 		},
 		sendStrategy: SyncFlush,
 		flushCh:      make(chan struct{}),
+		maxBatchSize: defaultMaxBatchSize,
+		maxBatchAge:  defaultMaxBatchAge,
 	}
 
 	c.client.Timeout = defaultDataForwarderTimeout
@@ -104,6 +110,10 @@ func NewClient(opts ...Option) (*Client, error) {
 
 	if c.logger == nil {
 		return nil, errors.New("logger cannot be empty")
+	}
+
+	if c.metadataAvailable == nil {
+		return nil, errors.New("metadata available indicator is required")
 	}
 
 	// normalize server URL

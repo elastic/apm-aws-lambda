@@ -78,6 +78,7 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
@@ -124,6 +125,7 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
@@ -133,6 +135,7 @@ func TestGracePeriod(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 
@@ -173,6 +176,7 @@ func TestSetHealthyTransport(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
@@ -186,6 +190,7 @@ func TestSetFailingTransport(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	apmClient.ReconnectionCount = 0
@@ -198,6 +203,7 @@ func TestSetPendingTransport(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
@@ -213,6 +219,7 @@ func TestSetPendingTransportExplicitly(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
@@ -225,6 +232,7 @@ func TestSetInvalidTransport(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL("https://example.com"),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
@@ -269,6 +277,7 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
@@ -323,6 +332,7 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 
@@ -377,6 +387,7 @@ func TestAPMServerRecovery(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 
@@ -423,6 +434,7 @@ func TestAPMServerAuthFails(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
@@ -474,6 +486,7 @@ func TestAPMServerRatelimit(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	assert.Equal(t, apmClient.Status, apmproxy.Started)
@@ -527,6 +540,7 @@ func TestAPMServerClientFail(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	assert.Equal(t, apmClient.Status, apmproxy.Started)
@@ -577,6 +591,7 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
@@ -639,6 +654,14 @@ func TestForwardApmData(t *testing.T) {
 		Type: apmproxy.Agent,
 	}
 	assertGzipBody(agentData)
+	// After reading agent data with metadata the metadata indicator
+	// channel should be closed
+	select {
+	case _, ok := <-metaAvailable:
+		require.False(t, ok)
+	default:
+		require.Fail(t, "meta channel should be closed after reading agent data")
+	}
 
 	// Send lambda logs API data
 	var expected bytes.Buffer
@@ -679,6 +702,7 @@ func BenchmarkFlushAPMData(b *testing.B) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(b).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(b, err)
 
@@ -725,6 +749,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(b).Sugar()),
+		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(b, err)
 
