@@ -91,3 +91,11 @@ func WithMetadataAvailableIndicator(ch chan<- struct{}) Option {
 		c.metadataAvailable = ch
 	}
 }
+
+// WithMaxBatchSize configures the maximum number of events in the
+// payload sent to APM Server.
+func WithMaxBatchSize(batchSize int) Option {
+	return func(c *Client) {
+		c.maxBatchSize = batchSize
+	}
+}

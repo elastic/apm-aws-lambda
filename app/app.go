@@ -19,6 +19,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -52,6 +53,10 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		opt(&c)
 	}
 
+	if c.metadataAvailable == nil {
+		return nil, errors.New("metadata available indicator is required")
+	}
+
 	app := &App{
 		extensionName: c.extensionName,
 	}
@@ -67,7 +72,6 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		return nil, err
 	}
 
-	metadataAvailable := make(chan struct{})
 	app.extensionClient = extension.NewClient(c.awsLambdaRuntimeAPI, app.logger)
 
 	if !c.disableLogsAPI {
@@ -87,7 +91,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 			logsapi.WithLogBuffer(100),
 			logsapi.WithLogger(app.logger),
 			logsapi.WithSubscriptionTypes(subscriptionLogStreams...),
-			logsapi.WithMetadataAvailableIndicator(metadataAvailable),
+			logsapi.WithMetadataAvailableIndicator(c.metadataAvailable),
 		)
 		if err != nil {
 			return nil, err
@@ -134,7 +138,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		apmproxy.WithLogger(app.logger),
 		apmproxy.WithAPIKey(apmServerAPIKey),
 		apmproxy.WithSecretToken(apmServerSecretToken),
-		apmproxy.WithMetadataAvailableIndicator(metadataAvailable),
+		apmproxy.WithMetadataAvailableIndicator(c.metadataAvailable),
 	)
 
 	ac, err := apmproxy.NewClient(apmOpts...)

@@ -19,43 +19,64 @@ package apmproxy
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+const metadata = `{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"1.1.0"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`
+
 func TestAdd(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		b := NewBatch(1)
+		b := NewBatch(1, []byte(metadata))
 
-		assert.NoError(t, b.Add(APMData{}))
+		assert.NoError(t, b.Add(APMData{Type: Lambda}))
 	})
 	t.Run("full", func(t *testing.T) {
-		b := NewBatch(1)
-		require.NoError(t, b.Add(APMData{}))
+		b := NewBatch(1, []byte(metadata))
+		require.NoError(t, b.Add(APMData{Type: Lambda}))
 
-		assert.ErrorIs(t, ErrBatchFull, b.Add(APMData{}))
+		assert.ErrorIs(t, ErrBatchFull, b.Add(APMData{Type: Lambda}))
 	})
 }
 
 func TestReset(t *testing.T) {
-	b := NewBatch(1)
-	require.NoError(t, b.Add(APMData{}))
-	require.Equal(t, 1, b.Size())
+	b := NewBatch(1, []byte(metadata))
+	require.NoError(t, b.Add(APMData{Type: Lambda}))
+	require.Equal(t, 1, b.Count())
 	b.Reset()
 
-	assert.Equal(t, 0, b.Size())
+	assert.Equal(t, 0, b.Count())
+	assert.Equal(t, 0, b.age)
 }
 
-func TestShouldFlush(t *testing.T) {
-	b := NewBatch(10)
+func TestShouldShip_ReasonSize(t *testing.T) {
+	b := NewBatch(10, []byte(metadata))
 
 	// Should flush at 90% full
 	for i := 0; i < 9; i++ {
-		assert.False(t, b.ShouldFlush())
-		require.NoError(t, b.Add(APMData{}))
+		assert.False(t, b.ShouldShip())
+		require.NoError(t, b.Add(APMData{Type: Lambda}))
 	}
 
-	require.Equal(t, 9, b.Size())
-	assert.True(t, b.ShouldFlush())
+	require.Equal(t, 9, b.Count())
+	assert.True(t, b.ShouldShip())
+}
+
+func TestShouldShip_ReasonAge(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping testing in short mode")
+	}
+
+	b := NewBatch(10, []byte(metadata))
+
+	assert.False(t, b.ShouldShip())
+	require.NoError(t, b.Add(APMData{Type: Lambda}))
+
+	<-time.After(11 * time.Second)
+
+	// Should flush after 10 seconds
+	require.Equal(t, 1, b.Count())
+	assert.True(t, b.ShouldShip())
 }

@@ -33,6 +33,7 @@ const (
 	PlatformRuntimeDone LogEventType = "platform.runtimeDone"
 	PlatformFault       LogEventType = "platform.fault"
 	PlatformReport      LogEventType = "platform.report"
+	PlatformLogsDropped LogEventType = "platform.logsDropped"
 	PlatformStart       LogEventType = "platform.start"
 	PlatformEnd         LogEventType = "platform.end"
 	FunctionLog         LogEventType = "function"
@@ -90,7 +91,7 @@ func (lc *Client) ProcessLogs(
 					lc.logger.Debug("Received platform report for the previous function invocation")
 					processedMetrics, err := ProcessPlatformReport(prevEvent, logEvent)
 					if err != nil {
-						lc.logger.Errorf("Error processing Lambda platform metrics : %v", err)
+						lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
 					} else {
 						apmClient.EnqueueAPMData(processedMetrics)
 					}
@@ -98,6 +99,8 @@ func (lc *Client) ProcessLogs(
 					lc.logger.Warn("report event request id didn't match the previous event id")
 					lc.logger.Debug("Log API runtimeDone event request id didn't match")
 				}
+			case PlatformLogsDropped:
+				lc.logger.Warn("Logs dropped due to extension falling behind: %v", logEvent.Record)
 			case FunctionLog:
 				lc.logger.Debug("Received function log")
 				processedLog, err := ProcessFunctionLog(

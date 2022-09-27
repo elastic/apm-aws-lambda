@@ -18,8 +18,9 @@
 package apmproxy_test
 
 import (
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"testing"
+
+	"github.com/elastic/apm-aws-lambda/apmproxy"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -34,10 +35,7 @@ func TestClient(t *testing.T) {
 			expectedErr: true,
 		},
 		"missing base url": {
-			opts: []apmproxy.Option{
-				apmproxy.WithURL(""),
-				apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
-			},
+			opts:        []apmproxy.Option{},
 			expectedErr: true,
 		},
 		"missing logger": {
@@ -46,10 +44,18 @@ func TestClient(t *testing.T) {
 			},
 			expectedErr: true,
 		},
+		"missing metadata indicator": {
+			opts: []apmproxy.Option{
+				apmproxy.WithURL("https://example.com"),
+				apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+			},
+			expectedErr: true,
+		},
 		"valid": {
 			opts: []apmproxy.Option{
 				apmproxy.WithURL("https://example.com"),
 				apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+				apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 			},
 		},
 	}

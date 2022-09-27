@@ -17,54 +17,100 @@
 
 package apmproxy
 
-import "errors"
+import (
+	"bytes"
+	"errors"
+	"time"
+)
 
-// ErrBatchFull signfies that the batch has reached full
-// capacity and cannot accept more entires.
-var ErrBatchFull = errors.New("batch is full")
+var (
+	// ErrBatchFull signfies that the batch has reached full capacity
+	// and cannot accept more entires.
+	ErrBatchFull = errors.New("batch is full")
+	// ErrInvalidType is returned for any APMData that is not Lambda type
+	ErrInvalidType = errors.New("only accepts lambda type data")
+	// ErrInvalidEncoding is returned for any APMData that is encoded
+	// with any encoding format
+	ErrInvalidEncoding = errors.New("encoded data not supported")
+)
+
+var (
+	maxSizeThreshold              = 0.9
+	maturityAgeThresholdInSeconds = 10
+)
 
 // BatchData represents a batch of data without metadata
 // that will be sent to APMServer. BatchData is not safe
 // concurrent access.
 type BatchData struct {
-	agentData []APMData
-	maxSize   int
+	metadataBytes int
+	buf           bytes.Buffer
+	count         int
+	maxSize       int
+	age           int64
 }
 
 // NewBatch creates a new BatchData which can accept a
 // maximum number of entires as specified by the argument
-func NewBatch(maxSize int) *BatchData {
-	return &BatchData{
-		maxSize:   maxSize,
-		agentData: make([]APMData, 0, maxSize),
+func NewBatch(maxSize int, metadata []byte) *BatchData {
+	b := &BatchData{
+		maxSize: maxSize,
 	}
+	b.metadataBytes, _ = b.buf.Write(metadata)
+	return b
 }
 
 // Add adds a new entry to the batch. Returns ErrBatchFull
 // if batch has reached it's maximum size.
 func (b *BatchData) Add(d APMData) error {
-	if len(b.agentData) >= b.maxSize {
+	if b.count >= b.maxSize {
 		return ErrBatchFull
 	}
-
-	b.agentData = append(b.agentData, d)
+	if d.Type != Lambda {
+		return ErrInvalidType
+	}
+	if d.ContentEncoding != "" {
+		return ErrInvalidEncoding
+	}
+	if err := b.buf.WriteByte('\n'); err != nil {
+		return err
+	}
+	if _, err := b.buf.Write(d.Data); err != nil {
+		return err
+	}
+	if b.count == 0 {
+		// For first entry, set the age of the batch
+		b.age = time.Now().Unix()
+	}
+	b.count++
 	return nil
 }
 
-// Size return the number of entries in batch.
-func (b *BatchData) Size() int {
-	return len(b.agentData)
+// Count return the number of APMData entries in batch.
+func (b *BatchData) Count() int {
+	return b.count
 }
 
-// ShouldFlush indicates when a batch is ready for flush.
-// A batch is marked as ready for flush once it reaches
-// 90% of its max size.
-func (b *BatchData) ShouldFlush() bool {
-	return len(b.agentData) >= int(float32(b.maxSize)*0.9)
+// ShouldShip indicates when a batch is ready for sending.
+// A batch is marked as ready for flush when one of the
+// below conditions is reached:
+// 1. max size is greater than threshold
+// 2. batch is older than maturity age
+func (b *BatchData) ShouldShip() bool {
+	return b.count >= int(float64(b.maxSize)*maxSizeThreshold) ||
+		(b.age > 0 && time.Now().Unix()-b.age > int64(maturityAgeThresholdInSeconds))
 }
 
 // Reset resets the batch to prepare for new set of data
 func (b *BatchData) Reset() {
-	b.agentData = nil
-	b.agentData = make([]APMData, 0, b.maxSize)
+	b.count, b.age = 0, 0
+	b.buf.Truncate(b.metadataBytes)
+}
+
+// ToAPMData returns APMData with metadata and the accumulated batch
+func (b *BatchData) ToAPMData() APMData {
+	return APMData{
+		Data: b.buf.Bytes(),
+		Type: Lambda,
+	}
 }
