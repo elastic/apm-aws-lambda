@@ -630,12 +630,14 @@ func TestForwardApmData(t *testing.T) {
 	agentData := fmt.Sprintf("%s\n%s", metadata, `{"log": {"message": "test"}}`)
 	lambdaData := `{"log": {"message": "test"}}`
 	metaAvailable := make(chan struct{})
+	maxBatchAge := 500 * time.Millisecond
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 		apmproxy.WithMetadataAvailableIndicator(metaAvailable),
-		// Use unbuffered channel for ease of testing
-		apmproxy.WithAgentDataBufferSize(0),
+		apmproxy.WithAgentDataBufferSize(10),
+		// Configure a small batch age for ease of testing
+		apmproxy.WithMaxBatchAge(maxBatchAge),
 	)
 	require.NoError(t, err)
 
@@ -668,6 +670,10 @@ func TestForwardApmData(t *testing.T) {
 	expected.WriteString(metadata)
 	// Send multiple lambda logs to batch data
 	for i := 0; i < 5; i++ {
+		if i == 4 {
+			// Wait for batch age to make sure the batch is mature to be sent
+			<-time.After(maxBatchAge + time.Millisecond)
+		}
 		apmClient.DataChannel <- apmproxy.APMData{
 			Data: []byte(lambdaData),
 			Type: apmproxy.Lambda,
@@ -676,10 +682,9 @@ func TestForwardApmData(t *testing.T) {
 		expected.WriteString(lambdaData)
 	}
 
-	// Trigger a batch send by cancelling context
-	cancel()
 	assertGzipBody(expected.String())
 	// Wait for ForwardApmData to exit
+	cancel()
 	wg.Wait()
 }
 

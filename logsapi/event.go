@@ -100,7 +100,7 @@ func (lc *Client) ProcessLogs(
 					lc.logger.Debug("Log API runtimeDone event request id didn't match")
 				}
 			case PlatformLogsDropped:
-				lc.logger.Warn("Logs dropped due to extension falling behind: %v", logEvent.Record)
+				lc.logger.Warnf("Logs dropped due to extension falling behind: %v", logEvent.Record)
 			case FunctionLog:
 				lc.logger.Debug("Received function log")
 				processedLog, err := ProcessFunctionLog(

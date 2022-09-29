@@ -29,12 +29,12 @@ const metadata = `{"metadata":{"service":{"agent":{"name":"apm-lambda-extension"
 
 func TestAdd(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		b := NewBatch(1, 100, []byte(metadata))
+		b := NewBatch(1, time.Hour, []byte(metadata))
 
 		assert.NoError(t, b.Add(APMData{Type: Lambda}))
 	})
 	t.Run("full", func(t *testing.T) {
-		b := NewBatch(1, 100, []byte(metadata))
+		b := NewBatch(1, time.Hour, []byte(metadata))
 		require.NoError(t, b.Add(APMData{Type: Lambda}))
 
 		assert.ErrorIs(t, ErrBatchFull, b.Add(APMData{Type: Lambda}))
@@ -42,17 +42,17 @@ func TestAdd(t *testing.T) {
 }
 
 func TestReset(t *testing.T) {
-	b := NewBatch(1, 100, []byte(metadata))
+	b := NewBatch(1, time.Hour, []byte(metadata))
 	require.NoError(t, b.Add(APMData{Type: Lambda}))
 	require.Equal(t, 1, b.Count())
 	b.Reset()
 
 	assert.Equal(t, 0, b.Count())
-	assert.Equal(t, int64(0), b.age)
+	assert.True(t, b.age.IsZero())
 }
 
 func TestShouldShip_ReasonSize(t *testing.T) {
-	b := NewBatch(10, 100, []byte(metadata))
+	b := NewBatch(10, time.Hour, []byte(metadata))
 
 	// Should flush at 90% full
 	for i := 0; i < 9; i++ {
@@ -65,12 +65,12 @@ func TestShouldShip_ReasonSize(t *testing.T) {
 }
 
 func TestShouldShip_ReasonAge(t *testing.T) {
-	b := NewBatch(10, 2, []byte(metadata))
+	b := NewBatch(10, time.Second, []byte(metadata))
 
 	assert.False(t, b.ShouldShip())
 	require.NoError(t, b.Add(APMData{Type: Lambda}))
 
-	<-time.After(3 * time.Second)
+	<-time.After(2 * time.Second)
 
 	// Should be ready for send after 3 seconds
 	require.Equal(t, 1, b.Count())

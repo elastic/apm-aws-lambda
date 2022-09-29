@@ -36,26 +36,27 @@ var (
 
 var (
 	maxSizeThreshold = 0.9
+	zeroTime         = time.Time{}
 )
 
 // BatchData represents a batch of data without metadata
 // that will be sent to APMServer. BatchData is not safe
 // concurrent access.
 type BatchData struct {
-	metadataBytes   int
-	buf             bytes.Buffer
-	count           int
-	maxSize         int
-	maxAgeInSeconds int
-	age             int64
+	metadataBytes int
+	buf           bytes.Buffer
+	count         int
+	age           time.Time
+	maxSize       int
+	maxAge        time.Duration
 }
 
 // NewBatch creates a new BatchData which can accept a
 // maximum number of entires as specified by the argument
-func NewBatch(maxSize int, maxAgeInSeconds int, metadata []byte) *BatchData {
+func NewBatch(maxSize int, maxAge time.Duration, metadata []byte) *BatchData {
 	b := &BatchData{
-		maxSize:         maxSize,
-		maxAgeInSeconds: maxAgeInSeconds,
+		maxSize: maxSize,
+		maxAge:  maxAge,
 	}
 	b.metadataBytes, _ = b.buf.Write(metadata)
 	return b
@@ -81,7 +82,7 @@ func (b *BatchData) Add(d APMData) error {
 	}
 	if b.count == 0 {
 		// For first entry, set the age of the batch
-		b.age = time.Now().Unix()
+		b.age = time.Now()
 	}
 	b.count++
 	return nil
@@ -98,13 +99,13 @@ func (b *BatchData) Count() int {
 // 1. max size is greater than threshold (90% of maxSize)
 // 2. batch is older than maturity age
 func (b *BatchData) ShouldShip() bool {
-	return b.count >= int(float64(b.maxSize)*maxSizeThreshold) ||
-		(b.age > 0 && time.Now().Unix()-b.age > int64(b.maxAgeInSeconds))
+	return (b.count >= int(float64(b.maxSize)*maxSizeThreshold)) ||
+		(!b.age.IsZero() && time.Since(b.age) > b.maxAge)
 }
 
 // Reset resets the batch to prepare for new set of data
 func (b *BatchData) Reset() {
-	b.count, b.age = 0, 0
+	b.count, b.age = 0, zeroTime
 	b.buf.Truncate(b.metadataBytes)
 }
 

@@ -47,7 +47,7 @@ const (
 	defaultReceiverAddr                       = ":8200"
 	defaultAgentBufferSize      int           = 100
 	defaultMaxBatchSize         int           = 50
-	defaultMaxBatchAge          int           = 10
+	defaultMaxBatchAge          time.Duration = 10 * time.Second
 )
 
 // Client is the client used to communicate with the apm server.
@@ -70,7 +70,7 @@ type Client struct {
 
 	batch        *BatchData
 	maxBatchSize int
-	maxBatchAge  int
+	maxBatchAge  time.Duration
 
 	metadataAvailable chan<- struct{}
 }

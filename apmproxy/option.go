@@ -78,6 +78,8 @@ func WithAgentDataBufferSize(size int) Option {
 	}
 }
 
+// WithLogger configures a custom zap logger to be used by
+// the client.
 func WithLogger(logger *zap.SugaredLogger) Option {
 	return func(c *Client) {
 		c.logger = logger
@@ -89,5 +91,27 @@ func WithLogger(logger *zap.SugaredLogger) Option {
 func WithMetadataAvailableIndicator(ch chan<- struct{}) Option {
 	return func(c *Client) {
 		c.metadataAvailable = ch
+	}
+}
+
+// WithMaxBatchSize configures the maximum batch size for
+// the payload sent to the APMServer
+func WithMaxBatchSize(size int) Option {
+	return func(c *Client) {
+		c.maxBatchSize = size
+	}
+}
+
+// WithMaxBatchAge configures the maximum age of the batch
+// before it is sent to APMServer. Age is measured from the
+// time the first entry is added in the batch.
+//
+// It is possible for batch age to be greater than the
+// configured max batch age when sending since a send is
+// triggered by a new log event and log events can be delayed
+// due to various factors.
+func WithMaxBatchAge(age time.Duration) Option {
+	return func(c *Client) {
+		c.maxBatchAge = age
 	}
 }

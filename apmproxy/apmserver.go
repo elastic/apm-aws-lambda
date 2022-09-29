@@ -51,7 +51,8 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			c.logger.Debug("Invocation context cancelled, not processing any more agent data")
-			return c.sendBatch(ctx)
+			// Any remaining data in the batch will be handled by FlushAPMData
+			return nil
 		case apmData := <-c.DataChannel:
 			if err := c.forwardAPMDataByType(ctx, apmData); err != nil {
 				return fmt.Errorf("error sending to APM server, skipping: %v", err)
