@@ -694,7 +694,7 @@ func TestInfoRequestHangs(t *testing.T) {
 	lambdaServerInternals := newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
-		{Type: InvokeStandardInfo, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
+		{Type: InvokeStandardInfo, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	select {

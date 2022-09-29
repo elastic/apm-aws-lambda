@@ -48,7 +48,7 @@ func TestReset(t *testing.T) {
 	b.Reset()
 
 	assert.Equal(t, 0, b.Count())
-	assert.Equal(t, 0, b.age)
+	assert.Equal(t, int64(0), b.age)
 }
 
 func TestShouldShip_ReasonSize(t *testing.T) {
@@ -65,18 +65,14 @@ func TestShouldShip_ReasonSize(t *testing.T) {
 }
 
 func TestShouldShip_ReasonAge(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping testing in short mode")
-	}
-
-	b := NewBatch(10, 10, []byte(metadata))
+	b := NewBatch(10, 2, []byte(metadata))
 
 	assert.False(t, b.ShouldShip())
 	require.NoError(t, b.Add(APMData{Type: Lambda}))
 
-	<-time.After(11 * time.Second)
+	<-time.After(3 * time.Second)
 
-	// Should flush after 10 seconds
+	// Should be ready for send after 3 seconds
 	require.Equal(t, 1, b.Count())
 	assert.True(t, b.ShouldShip())
 }

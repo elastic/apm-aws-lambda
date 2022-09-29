@@ -25,7 +25,7 @@ import (
 
 var (
 	// ErrBatchFull signfies that the batch has reached full capacity
-	// and cannot accept more entires.
+	// and cannot accept more entries.
 	ErrBatchFull = errors.New("batch is full")
 	// ErrInvalidType is returned for any APMData that is not Lambda type
 	ErrInvalidType = errors.New("only accepts lambda type data")
@@ -62,9 +62,9 @@ func NewBatch(maxSize int, maxAgeInSeconds int, metadata []byte) *BatchData {
 }
 
 // Add adds a new entry to the batch. Returns ErrBatchFull
-// if batch has reached it's maximum size.
+// if batch has reached its maximum size.
 func (b *BatchData) Add(d APMData) error {
-	if b.count >= b.maxSize {
+	if b.count == b.maxSize {
 		return ErrBatchFull
 	}
 	if d.Type != Lambda {

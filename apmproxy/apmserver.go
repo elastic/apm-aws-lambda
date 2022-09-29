@@ -319,7 +319,7 @@ func (c *Client) forwardAPMDataByType(ctx context.Context, apmData APMData) erro
 			if err != nil {
 				return fmt.Errorf("failed to extract metadata from agent payload %w", err)
 			}
-			c.batch = NewBatch(c.maxBatchSize, metadata)
+			c.batch = NewBatch(c.maxBatchSize, c.maxBatchAge, metadata)
 			// broadcast that metadata is available
 			close(c.metadataAvailable)
 		}
