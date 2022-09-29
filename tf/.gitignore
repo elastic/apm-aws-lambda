@@ -2,3 +2,9 @@
 
 *.tfstate
 *.tfstate.*
+
+# smoke tests
+response.json
+tf.log
+
+builds/
