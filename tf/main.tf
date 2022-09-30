@@ -10,6 +10,7 @@ module "ec_deployment" {
   apm_server_pprof       = false
   region                 = var.ess_region
   deployment_template    = var.ess_deployment_template
+  stack_version          = var.ess_version
 }
 
 module "lambda_function" {
