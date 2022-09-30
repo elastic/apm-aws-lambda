@@ -31,18 +31,18 @@ By using an AWS Lambda extension, Elastic APM agents can send data to a local La
 [[aws-lambda-overhead]]
 == Performance impact and overhead
 As described in <<aws-lambda-arch>>, using Elastic APM with AWS Lambda requires adding both the Elastic APM AWS Lambda extension and a corresponding Elastic APM agent to the Lambda runtime.
-These components may introduce a small overhead on the size of your function's deployment package as well as the execution duration of your function's invocations. 
+These components may introduce a small overhead on the size of your function's deployment package as well as the execution duration of your function's invocations.
 
 === Impact on the deployment package size
 These components contribute a little to the uncompressed deployment package size of your Lambda function. Overall, the impact of using Elastic APM on the uncompressed deployment package size of your Lambda function is less than 30MB.
 
 === Performance impact
 An advantage of the Elastic APM AWS Lambda extension architecture is that APM data dispatching is decoupled from your function's request processing.
-The Elastic APM AWS Lambda extension flushes APM data to the Elastic backend _after_ your function responds to the client's request. Thus, it does not affect the latency of the client's request. 
-However, the extension's flushing of APM data contributes to the overall execution time of the function invocation. 
-The <<aws-lambda-config-data-forwarder-timeout>> config option with the related _exponential backoff algorithm_ limits and allows to control the impact the extension may have on the function's overall execution time. 
+The Elastic APM AWS Lambda extension flushes APM data to the Elastic backend _after_ your function responds to the client's request. Thus, it does not affect the latency of the client's request.
+However, the extension's flushing of APM data contributes to the overall execution time of the function invocation.
+The <<aws-lambda-config-data-forwarder-timeout>> config option with the related _exponential backoff algorithm_ limits and allows to control the impact the extension may have on the function's overall execution time.
 
-When your function experiences a cold start, the Elastic APM AWS Lambda extension needs to be initialized and, thus, slightly increases the cold start duration (in the range of tens of milliseconds) of your function. 
+When your function experiences a cold start, the Elastic APM AWS Lambda extension needs to be initialized and, thus, slightly increases the cold start duration (in the range of tens of milliseconds) of your function.
 
 APM agents enrich your application's code with measurement code that collects APM data. This measurement code introduces a small performance overhead to your application, which is usually in a negligible range. The same is true with Lambda functions. The concrete performance overhead introduced by APM agents highly depends on the configuration of the agent and on the characteristics of your function's code. The following agent-specific documentation pages provide insights and instructions on tuning the performance the APM agents:
 
