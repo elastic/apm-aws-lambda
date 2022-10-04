@@ -25,27 +25,6 @@
 .aws/
 
 bin/
-/html_docs/aws-lambda-arch.html
-/html_docs/aws-lambda-config-options.html
-/html_docs/aws-lambda-eol.html
-/html_docs/aws-lambda-overhead.html
-/html_docs/aws-lambda-release-notes.html
-/html_docs/aws-lambda-secrets-manager.html
-/html_docs/images/architecture-white.png
-/html_docs/images/secrets-manager.png
-/html_docs/index.html
-/html_docs/raw/aws-lambda-arch.html
-/html_docs/raw/aws-lambda-config-options.html
-/html_docs/raw/aws-lambda-eol.html
-/html_docs/raw/aws-lambda-overhead.html
-/html_docs/raw/aws-lambda-release-notes.html
-/html_docs/raw/aws-lambda-secrets-manager.html
-/html_docs/raw/images/architecture-white.png
-/html_docs/raw/images/secrets-manager.png
-/html_docs/raw/index.html
-/html_docs/raw/lang
-/html_docs/raw/toc.html
-/html_docs/toc.html
 
 # local docs
 html_docs
