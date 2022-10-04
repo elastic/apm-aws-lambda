@@ -7,3 +7,5 @@ please view this documentation at https://www.elastic.co/guide/en/ecs-logging/go
 endif::[]
 
 include::monitoring-aws-lambda.asciidoc[]
+
+include::release-notes.asciidoc[]
