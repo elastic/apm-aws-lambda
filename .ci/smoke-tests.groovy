@@ -31,7 +31,6 @@ pipeline {
       steps {
         deleteDir()
         gitCheckout(basedir: "${BASE_DIR}", shallow: false)
-        setEnvVar('GO_VERSION', readFile("${BASE_DIR}/.go-version").trim())
       }
     }
 
