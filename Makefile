@@ -34,15 +34,14 @@ NOTICE.txt: go.mod
 	@bash ./scripts/notice.sh
 
 check-licenses:
-	go install github.com/elastic/go-licenser@v0.4.0
-	go run github.com/elastic/go-licenser@v0.4.0 -d .
-	go run github.com/elastic/go-licenser@v0.4.0 -d -ext .java .
-	go run github.com/elastic/go-licenser@v0.4.0 -d -ext .js .
+	go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf .
+	go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -ext .java .
+	go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -ext .js .
 
 update-licenses:
-	go install github.com/elastic/go-licenser@v0.4.0
-	go run github.com/elastic/go-licenser@v0.4.0 .
-	go run github.com/elastic/go-licenser@v0.4.0 -ext .java .
+	go run github.com/elastic/go-licenser@v0.4.0 -exclude tf .
+	go run github.com/elastic/go-licenser@v0.4.0 -exclude tf -ext .java .
+	go run github.com/elastic/go-licenser@v0.4.0 -exclude tf -ext .js .
 
 lint:
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 version

@@ -14,3 +14,8 @@ output "elasticsearch_password" {
   description = "The Elasticsearch password"
   sensitive   = true
 }
+
+output "aws_region" {
+  value       = var.aws_region
+  description = "The AWS region"
+}

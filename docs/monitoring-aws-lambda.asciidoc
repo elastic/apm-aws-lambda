@@ -31,18 +31,20 @@ By using an AWS Lambda extension, Elastic APM agents can send data to a local La
 [[aws-lambda-overhead]]
 == Performance impact and overhead
 As described in <<aws-lambda-arch>>, using Elastic APM with AWS Lambda requires adding both the Elastic APM AWS Lambda extension and a corresponding Elastic APM agent to the Lambda runtime.
-These components may introduce a small overhead on the size of your function's deployment package as well as the execution duration of your function's invocations. 
+These components may introduce a small overhead on the size of your function's deployment package as well as the execution duration of your function's invocations.
 
+[float]
 === Impact on the deployment package size
 These components contribute a little to the uncompressed deployment package size of your Lambda function. Overall, the impact of using Elastic APM on the uncompressed deployment package size of your Lambda function is less than 30MB.
 
+[float]
 === Performance impact
 An advantage of the Elastic APM AWS Lambda extension architecture is that APM data dispatching is decoupled from your function's request processing.
-The Elastic APM AWS Lambda extension flushes APM data to the Elastic backend _after_ your function responds to the client's request. Thus, it does not affect the latency of the client's request. 
-However, the extension's flushing of APM data contributes to the overall execution time of the function invocation. 
-The <<aws-lambda-config-data-forwarder-timeout>> config option with the related _exponential backoff algorithm_ limits and allows to control the impact the extension may have on the function's overall execution time. 
+The Elastic APM AWS Lambda extension flushes APM data to the Elastic backend _after_ your function responds to the client's request. Thus, it does not affect the latency of the client's request.
+However, the extension's flushing of APM data contributes to the overall execution time of the function invocation.
+The <<aws-lambda-config-data-forwarder-timeout>> config option with the related _exponential backoff algorithm_ limits and allows to control the impact the extension may have on the function's overall execution time.
 
-When your function experiences a cold start, the Elastic APM AWS Lambda extension needs to be initialized and, thus, slightly increases the cold start duration (in the range of tens of milliseconds) of your function. 
+When your function experiences a cold start, the Elastic APM AWS Lambda extension needs to be initialized and, thus, slightly increases the cold start duration (in the range of tens of milliseconds) of your function.
 
 APM agents enrich your application's code with measurement code that collects APM data. This measurement code introduces a small performance overhead to your application, which is usually in a negligible range. The same is true with Lambda functions. The concrete performance overhead introduced by APM agents highly depends on the configuration of the agent and on the characteristics of your function's code. The following agent-specific documentation pages provide insights and instructions on tuning the performance the APM agents:
 
@@ -65,26 +67,32 @@ The configuration options for the APM agents are documented in the corresponding
 
 The following configuration options are particularly relevant for the {apm-lambda-ext}:
 
+[float]
 [[aws-lambda-extension]]
 === `ELASTIC_APM_LAMBDA_APM_SERVER`
 This required config option controls where the {apm-lambda-ext} will ship data. This should be the URL of the final APM Server destination for your telemetry.
 
+[float]
 === `ELASTIC_APM_LAMBDA_AGENT_DATA_BUFFER_SIZE`
 The size of the buffer that stores APM agent data to be forwarded to the APM server. The _default_ is `100`.
 
+[float]
 [[aws-lambda-config-authentication-keys]]
 === `ELASTIC_APM_SECRET_TOKEN` or `ELASTIC_APM_API_KEY`
 One of these (or, alternatively, the corresponding settings for the AWS Secrets Manager IDs) needs to be set as the authentication method that the {apm-lambda-ext} uses when sending data to the URL configured via `ELASTIC_APM_LAMBDA_APM_SERVER`. Alternatively, you can store your APM Server credentials <<aws-lambda-secrets-manager, using the AWS Secrets Manager>> and use the <<aws-lambda-config-secrets-manager-options>> config options, instead. Sending data to the APM Server if none of these options is set is possible, but your APM agent must be allowed to send data to your APM server in https://www.elastic.co/guide/en/apm/guide/current/configuration-anonymous.html[anonymous mode].
 
+[float]
 [[aws-lambda-config-secrets-manager-options]]
 === `ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID` or `ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID`
 Instead of specifying the <<aws-lambda-config-authentication-keys>> as plain text in your Lambda environment variables, you can <<aws-lambda-secrets-manager, use the AWS Secrets Manager>> to securely store your APM authetication keys. The `ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID` or `ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID` config options allow you to specify the Secrets Manager's secret id of the stored APM API key or APM secret token, respectively, to be used by the {apm-lambda-ext} for authentication.
 
 `ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID` takes precedence over <<aws-lambda-config-authentication-keys, `ELASTIC_APM_SECRET_TOKEN`>>, and `ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID` over <<aws-lambda-config-authentication-keys, `ELASTIC_APM_API_KEY`>>, respectively.
 
+[float]
 === `ELASTIC_APM_SERVICE_NAME`
 The configured name of your application or service.  The APM agent will use this value when reporting data to the APM Server. If unset, the APM agent will automatically set the value based on the Lambda function name. Use this config option if you want to group multiple Lambda functions under a single service entity in APM.
 
+[float]
 [[aws-lambda-config-data-receiver-timeout-seconds]]
 === `ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS`
 
@@ -92,6 +100,7 @@ deprecated::[1.2.0,Replaced by `ELASTIC_APM_DATA_RECEIVER_TIMEOUT`. See <<aws-la
 
 The {apm-lambda-ext}'s timeout value, in seconds, for receiving data from the APM agent. The _default_ is `15`.
 
+[float]
 [[aws-lambda-config-data-receiver-timeout]]
 === `ELASTIC_APM_DATA_RECEIVER_TIMEOUT`
 
@@ -99,9 +108,11 @@ coming::[1.2.0,Replaces `ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS`. See <<aws-l
 
 The {apm-lambda-ext}'s timeout value, for receiving data from the APM agent. The _default_ is `15s`.
 
+[float]
 === `ELASTIC_APM_DATA_RECEIVER_SERVER_PORT`
 The port on which the {apm-lambda-ext} listens to receive data from the APM agent. The _default_ is `8200`.
 
+[float]
 [[aws-lambda-config-data-forwarder-timeout-seconds]]
 === `ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS`
 
@@ -109,6 +120,7 @@ deprecated::[1.2.0,Replaced by `ELASTIC_APM_DATA_FORWARDER_TIMEOUT`. See <<aws-l
 
 The timeout value, in seconds, for the {apm-lambda-ext}'s HTTP client sending data to the APM Server. The _default_ is `3`. If the extension's attempt to send APM data during this time interval is not successful, the extension queues back the data. Further attempts at sending the data are governed by an exponential backoff algorithm: data will be sent after a increasingly large grace period of 0, then circa 1, 4, 9, 16, 25 and 36 seconds, provided that the Lambda function execution is ongoing.
 
+[float]
 [[aws-lambda-config-data-forwarder-timeout]]
 === `ELASTIC_APM_DATA_FORWARDER_TIMEOUT`
 
@@ -116,6 +128,7 @@ coming::[1.2.0,Replaces `ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS`. See <<aws-
 
 The timeout value, for the {apm-lambda-ext}'s HTTP client sending data to the APM Server. The _default_ is `3s`. If the extension's attempt to send APM data during this time interval is not successful, the extension queues back the data. Further attempts at sending the data are governed by an exponential backoff algorithm: data will be sent after a increasingly large grace period of 0, then circa 1, 4, 9, 16, 25 and 36 seconds, provided that the Lambda function execution is ongoing.
 
+[float]
 === `ELASTIC_APM_SEND_STRATEGY`
 Whether to synchronously flush APM agent data from the {apm-lambda-ext} to the APM Server at the end of the function invocation.
 The two accepted values are `background` and `syncflush`. The _default_ is `syncflush`.
@@ -131,6 +144,7 @@ extension receives a signal that the function invocation has completed. This str
 the next request until the extension has flushed all the data. This has a negative effect on the throughput of the function,
 though it ensures that all APM data is sent to the APM server.
 
+[float]
 === `ELASTIC_APM_LOG_LEVEL`
 The logging level to be used by both the APM Agent and the {apm-lambda-ext}. Supported values are `trace`, `debug`, `info`, `warning`, `error`, `critical` and `off`.
 
@@ -138,6 +152,7 @@ The logging level to be used by both the APM Agent and the {apm-lambda-ext}. Sup
 == Using AWS Secrets Manager to manage APM authentication keys
 When using the config options <<aws-lambda-config-authentication-keys>> for authentication of the {apm-lambda-ext}, the corresponding keys are specified in plain text in the environment variables of your Lambda function. If you prefer to securely store the authentication keys, you can use the AWS Secrets Manager and let the extension retrieve the actual keys from the AWS Secrets Manager. Follow the instructions below to set up the AWS Secrets Manager with the extension.
 
+[float]
 [[aws-lambda-secrets-manager-create-secret]]
 === Step 1: Create a secret in the AWS Secrets Manager.
 https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.html[Create a secret in the AWS Secrets Manager] for the {apm-guide-ref}/secret-token.html[APM Secret Token] or the {apm-guide-ref}/api-key.html[APM API key], depending on which one you prefer to use. Make sure to create the secret as a *Plaintext* typed secret and ensure it is created *in the same AWS region* as your target Lambda function that will use the secret.
@@ -148,12 +163,14 @@ include::./secrets-manager/create-secret-widget.asciidoc[]
 
 Remember your chosen secret name. You will use the secret name as the value for the config options <<aws-lambda-config-secrets-manager-options>> when configuring your {apm-lambda-ext}.
 
+[float]
 [[aws-lambda-secrets-manager-permissions]]
 === Step 2: Add permissions to your AWS Lambda function
 For your Lambda function to be able to retrieve the authentication key from the AWS Secrets Manager, you need to provide the following permissions to your Lambda function.
 
 include::./secrets-manager/add-permissions-widget.asciidoc[]
 
+[float]
 === Step 3: Configure the {apm-lambda-ext}
 Finally, you will need to configure the {apm-lambda-ext} to use the secret from the Secrets Manager _instead of_ the value provided through <<aws-lambda-config-authentication-keys>>.
 
