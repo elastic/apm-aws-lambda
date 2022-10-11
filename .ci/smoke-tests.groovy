@@ -2,7 +2,7 @@
 @Library('apm@current') _
 
 pipeline {
-  agent { label 'linux && immutable' }
+  agent none
   environment {
     REPO = 'apm-aws-lambda'
     BASE_DIR = "src/github.com/elastic/${env.REPO}"
@@ -26,58 +26,79 @@ pipeline {
     string(name: 'SMOKETEST_VERSIONS', defaultValue: 'latest', description: 'Run smoke tests using following APM versions')
   }
   stages {
-    stage('Checkout') {
+    stage('Filter build') {
       options { skipDefaultCheckout() }
-      steps {
-        deleteDir()
-        gitCheckout(basedir: "${BASE_DIR}", shallow: false)
+      agent { label 'linux && immutable' }
+      when {
+        beforeAgent true
+        anyOf {
+          branch 'main'
+          expression {
+            if(!isUserTrigger()){
+              currentBuild.result = 'NOT_BUILT'
+              currentBuild.description = "The build has been skipped"
+              currentBuild.displayName = "#${BUILD_NUMBER}-(Skipped)"
+              echo("Support builds for the `main` branch or manually triggered")
+							return false
+            }
+            return true
+          }
+        }
       }
-    }
-
-    stage('Smoke Tests') {
-      options { skipDefaultCheckout() }
-      environment {
-        SSH_KEY = "./id_rsa_terraform"
-        TF_VAR_private_key = "./id_rsa_terraform"
-        TF_VAR_public_key = "./id_rsa_terraform.pub"
-        // cloud tags
-        TF_VAR_BUILD_ID = "${env.BUILD_ID}"
-        TF_VAR_ENVIRONMENT= 'ci'
-        TF_VAR_BRANCH = "${env.BRANCH_NAME.toLowerCase().replaceAll('[^a-z0-9-]', '-')}"
-        TF_VAR_REPO = "${REPO}"
-      }
-      steps {
-        dir ("${BASE_DIR}") {
-          withTestClusterEnv {
-            withGoEnv() {
-              script {
-                def smokeTests = sh(returnStdout: true, script: 'make smoketest/discover').trim().split('\r?\n')
-                def smokeTestJobs = [:]
-                for (smokeTest in smokeTests) {
-                  smokeTestJobs["Run smoke tests in ${smokeTest}"] = runSmokeTest(smokeTest)
+      stages {
+        stage('Checkout') {
+          options { skipDefaultCheckout() }
+          steps {
+            deleteDir()
+            gitCheckout(basedir: "${BASE_DIR}", shallow: false)
+          }
+        }
+        stage('Smoke Tests') {
+          options { skipDefaultCheckout() }
+          environment {
+            SSH_KEY = "./id_rsa_terraform"
+            TF_VAR_private_key = "./id_rsa_terraform"
+            TF_VAR_public_key = "./id_rsa_terraform.pub"
+            // cloud tags
+            TF_VAR_BUILD_ID = "${env.BUILD_ID}"
+            TF_VAR_ENVIRONMENT= 'ci'
+            TF_VAR_BRANCH = "${env.BRANCH_NAME.toLowerCase().replaceAll('[^a-z0-9-]', '-')}"
+            TF_VAR_REPO = "${REPO}"
+          }
+          steps {
+            dir ("${BASE_DIR}") {
+              withTestClusterEnv {
+                withGoEnv() {
+                  script {
+                    def smokeTests = sh(returnStdout: true, script: 'make smoketest/discover').trim().split('\r?\n')
+                    def smokeTestJobs = [:]
+                    for (smokeTest in smokeTests) {
+                      smokeTestJobs["Run smoke tests in ${smokeTest}"] = runSmokeTest(smokeTest)
+                    }
+                    parallel smokeTestJobs
+                  }
                 }
-                parallel smokeTestJobs
+              }
+            }
+          }
+          post {
+            always {
+              dir("${BASE_DIR}") {
+                withTestClusterEnv {
+                  withGoEnv() {
+                    sh(label: 'Teardown smoke tests infra', script: 'make smoketest/all/cleanup')
+                  }
+                }
               }
             }
           }
         }
       }
       post {
-        always {
-          dir("${BASE_DIR}") {
-            withTestClusterEnv {
-              withGoEnv() {
-                sh(label: 'Teardown smoke tests infra', script: 'make smoketest/all/cleanup')
-              }
-            }
-          }
+        cleanup {
+          notifyBuildResult(slackComment: true)
         }
       }
-    }
-  }
-  post {
-    cleanup {
-      notifyBuildResult(slackComment: true)
     }
   }
 }
