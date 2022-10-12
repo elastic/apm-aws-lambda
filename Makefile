@@ -185,7 +185,7 @@ smoketest/discover:
 	@echo "$(SMOKETEST_DIRS)"
 
 .PHONY: smoketest/run
-smoketest/run:
+smoketest/run: build
 	@ for version in $(shell echo $(SMOKETEST_VERSIONS) | tr ',' ' '); do \
 		echo "-> Running $(TEST_DIR) smoke tests for version $${version}..."; \
 		cd $(TEST_DIR) && ./test.sh $${version}; \
