@@ -126,10 +126,9 @@ delete-in-all-aws-regions: validate-layer-name get-all-aws-regions
 # Delete the given LAYER in the given AWS region, it won't fail
 delete: validate-layer-name validate-aws-default-region
 	@aws lambda \
-		--output json \
 		delete-layer-version \
 		--layer-name "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
-		--version-number 1 || true
+		--version-number 1 || echo "delete-layer-version $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) for $${AWS_DEFAULT_REGION} could not be found"
 
 # Grant public access to the given LAYER in the given AWS region
 grant-public-layer-access: validate-layer-name validate-aws-default-region
