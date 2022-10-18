@@ -324,7 +324,6 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 	case Shutdown:
 	}
 	if sendRuntimeDone {
-		l.Info("Queueuing runtime done event")
 		queueLogEvent(q, currID, logsapi.PlatformRuntimeDone, l)
 	}
 	if sendMetrics {

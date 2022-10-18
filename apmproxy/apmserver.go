@@ -363,8 +363,8 @@ func (c *Client) forwardAgentData(ctx context.Context, apmData APMData) error {
 
 func (c *Client) forwardLambdaData(ctx context.Context, apmData APMData) error {
 	if c.batch == nil {
-		// This state is not possible since we are pushing back on
-		// lambda logs API until metadata is available.
+		// This state is not possible since we start processing lambda
+		// logs only after metadata is available and batch is created.
 		return errors.New("unexpected state, metadata not yet set")
 	}
 	if err := c.batch.Add(apmData); err != nil {
