@@ -123,32 +123,13 @@ func TestSubscribeAWSRequest(t *testing.T) {
 	addr := "localhost:8080"
 
 	testCases := map[string]struct {
-		getOpts          func() []logsapi.ClientOption
-		expectedRespCode int
+		opts []logsapi.ClientOption
 	}{
-		"before_metadata_available": {
-			getOpts: func() []logsapi.ClientOption {
-				metaAvailable := make(chan struct{})
-				return []logsapi.ClientOption{
-					logsapi.WithListenerAddress(addr),
-					logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
-					logsapi.WithMetadataAvailableIndicator(metaAvailable),
-				}
+		"valid response": {
+			opts: []logsapi.ClientOption{
+				logsapi.WithListenerAddress(addr),
+				logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
 			},
-			expectedRespCode: http.StatusInternalServerError,
-		},
-		"after_metadata_available": {
-			getOpts: func() []logsapi.ClientOption {
-				metaAvailable := make(chan struct{})
-				// Close the channel to signal metadata is available
-				defer close(metaAvailable)
-				return []logsapi.ClientOption{
-					logsapi.WithListenerAddress(addr),
-					logsapi.WithLogger(zaptest.NewLogger(t).Sugar()),
-					logsapi.WithMetadataAvailableIndicator(metaAvailable),
-				}
-			},
-			expectedRespCode: http.StatusOK,
 		},
 	}
 	for name, tc := range testCases {
@@ -163,7 +144,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 			defer s.Close()
 
 			cOpts := append(
-				tc.getOpts(),
+				tc.opts,
 				logsapi.WithLogsAPIBaseURL(s.URL),
 				logsapi.WithLogBuffer(1),
 				logsapi.WithSubscriptionTypes(logsapi.Platform, logsapi.Function),
@@ -188,7 +169,7 @@ func TestSubscribeAWSRequest(t *testing.T) {
 			// Send the request to the logs listener
 			rsp, err := http.DefaultClient.Do(req)
 			require.NoError(t, err)
-			require.Equal(t, tc.expectedRespCode, rsp.StatusCode)
+			require.Equal(t, http.StatusOK, rsp.StatusCode)
 			require.NoError(t, rsp.Body.Close())
 			require.NoError(t, c.Shutdown())
 		})

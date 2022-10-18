@@ -630,7 +630,7 @@ func TestForwardApmData(t *testing.T) {
 	agentData := fmt.Sprintf("%s\n%s", metadata, `{"log": {"message": "test"}}`)
 	lambdaData := `{"log": {"message": "test"}}`
 	metaAvailable := make(chan struct{})
-	maxBatchAge := 500 * time.Millisecond
+	maxBatchAge := 1 * time.Second
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
@@ -651,7 +651,7 @@ func TestForwardApmData(t *testing.T) {
 	}()
 
 	// Populate metadata by sending agent data
-	apmClient.DataChannel <- apmproxy.APMData{
+	apmClient.AgentDataChannel <- apmproxy.APMData{
 		Data: []byte(agentData),
 		Type: apmproxy.Agent,
 	}
@@ -674,7 +674,7 @@ func TestForwardApmData(t *testing.T) {
 			// Wait for batch age to make sure the batch is mature to be sent
 			<-time.After(maxBatchAge + time.Millisecond)
 		}
-		apmClient.DataChannel <- apmproxy.APMData{
+		apmClient.LambdaDataChannel <- apmproxy.APMData{
 			Data: []byte(lambdaData),
 			Type: apmproxy.Lambda,
 		}
@@ -724,9 +724,9 @@ func BenchmarkFlushAPMData(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		apmClient.DataChannel <- agentAPMData
+		apmClient.AgentDataChannel <- agentAPMData
 		for j := 0; j < 99; j++ {
-			apmClient.DataChannel <- apmproxy.APMData{
+			apmClient.LambdaDataChannel <- apmproxy.APMData{
 				Data: []byte("this is test log"),
 				Type: apmproxy.Lambda,
 			}

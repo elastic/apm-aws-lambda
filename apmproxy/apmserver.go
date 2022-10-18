@@ -47,15 +47,33 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 	if c.IsUnhealthy() {
 		return nil
 	}
+
+	// Wait for metadata to be available, metadata will be available as soon as
+	// the first agent data is processed.
+	select {
+	case <-ctx.Done():
+		c.logger.Debug("Invocation context cancelled, not processing any more agent data")
+		return nil
+	case data := <-c.AgentDataChannel:
+		if err := c.forwardAPMDataByType(ctx, data); err != nil {
+			return err
+		}
+	case <-c.metadataAvailable:
+	}
+
+	// Process lambda and agent data after metadata is available
 	for {
 		select {
 		case <-ctx.Done():
 			c.logger.Debug("Invocation context cancelled, not processing any more agent data")
-			// Any remaining data in the batch will be handled by FlushAPMData
 			return nil
-		case apmData := <-c.DataChannel:
-			if err := c.forwardAPMDataByType(ctx, apmData); err != nil {
-				return fmt.Errorf("error sending to APM server, skipping: %v", err)
+		case data := <-c.AgentDataChannel:
+			if err := c.forwardAPMDataByType(ctx, data); err != nil {
+				return err
+			}
+		case data := <-c.LambdaDataChannel:
+			if err := c.forwardAPMDataByType(ctx, data); err != nil {
+				return err
 			}
 		}
 	}
@@ -68,19 +86,48 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 		return
 	}
 	c.logger.Debug("Flush started - Checking for agent data")
+
+	// Flush agent data first to make sure metadata is available if possible
+	func() {
+		for {
+			select {
+			case <-ctx.Done():
+				c.logger.Debugf("Failed to flush completely, may result in data drop")
+			case data := <-c.AgentDataChannel:
+				if err := c.forwardAPMDataByType(ctx, data); err != nil {
+					c.logger.Errorf("Error sending to APM Server, skipping: %v", err)
+				}
+			default:
+				c.logger.Debug("Flush ended for agent data - no data in buffer")
+				return
+			}
+		}
+	}()
+
+	// If metadata still not available then fail fast
+	select {
+	case <-c.metadataAvailable:
+	default:
+		c.logger.Warnf("Metadata not available at flush, skipping sending lambda data to APM Server")
+		return
+	}
+
+	// Flush lambda data
 	for {
 		select {
-		case apmData := <-c.DataChannel:
-			c.logger.Debug("Flush in progress - Processing agent data")
+		case <-ctx.Done():
+			c.logger.Debugf("Failed to flush completely, may result in data drop")
+		case apmData := <-c.LambdaDataChannel:
+			c.logger.Debug("Flush in progress - Processing lambda data")
 			if err := c.forwardAPMDataByType(ctx, apmData); err != nil {
 				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		default:
-			c.logger.Debug("Flush ended - No agent data on buffer")
 			// Flush any remaining data in batch
 			if err := c.sendBatch(ctx); err != nil {
 				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
 			}
+			c.logger.Debug("Flush ended for lambda data - no data in buffer")
 			return
 		}
 	}
@@ -277,17 +324,6 @@ func (c *Client) ComputeGracePeriod() time.Duration {
 	gracePeriodWithoutJitter := math.Pow(math.Min(float64(c.ReconnectionCount), 6), 2)
 	jitter := rand.Float64()/5 - 0.1
 	return time.Duration((gracePeriodWithoutJitter + jitter*gracePeriodWithoutJitter) * float64(time.Second))
-}
-
-// EnqueueAPMData adds a apm data struct to the agent data channel, effectively queueing for a send
-// to the APM server.
-func (c *Client) EnqueueAPMData(apmData APMData) {
-	select {
-	case c.DataChannel <- apmData:
-		c.logger.Debug("Adding APM data to buffer to be sent to apm server")
-	default:
-		c.logger.Warn("Channel full: dropping a subset of agent data")
-	}
 }
 
 // ShouldFlush returns true if the client should flush APM data after processing the event.

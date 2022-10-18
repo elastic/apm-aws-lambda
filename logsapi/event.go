@@ -93,7 +93,7 @@ func (lc *Client) ProcessLogs(
 					if err != nil {
 						lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
 					} else {
-						apmClient.EnqueueAPMData(processedMetrics)
+						apmClient.LambdaDataChannel <- processedMetrics
 					}
 				} else {
 					lc.logger.Warn("report event request id didn't match the previous event id")
@@ -111,7 +111,7 @@ func (lc *Client) ProcessLogs(
 				if err != nil {
 					lc.logger.Errorf("Error processing function log : %v", err)
 				} else {
-					apmClient.EnqueueAPMData(processedLog)
+					apmClient.LambdaDataChannel <- processedLog
 				}
 			}
 		case <-ctx.Done():

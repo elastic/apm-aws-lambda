@@ -25,22 +25,8 @@ import (
 	"go.uber.org/zap"
 )
 
-func handleLogEventsRequest(
-	logger *zap.SugaredLogger,
-	logsChannel chan LogEvent,
-	metadataAvailable <-chan struct{},
-) func(w http.ResponseWriter, r *http.Request) {
+func handleLogEventsRequest(logger *zap.SugaredLogger, logsChannel chan LogEvent) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		select {
-		case <-metadataAvailable:
-		case <-time.After(100 * time.Millisecond):
-			// Without metadata the events cannot be processed
-			// thus we indicate lambda to keep the buffer
-			logger.Warnf("Metadata unavailable, signaling lambda to buffer log events")
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
 		var logEvents []LogEvent
 		if err := json.NewDecoder(r.Body).Decode(&logEvents); err != nil {
 			logger.Errorf("Error unmarshalling log events: %+v", err)
@@ -54,7 +40,13 @@ func handleLogEventsRequest(
 				w.WriteHeader(http.StatusInternalServerError)
 				continue
 			}
-			logsChannel <- logEvents[idx]
+			select {
+			case logsChannel <- logEvents[idx]:
+			case <-r.Context().Done():
+				logger.Warnf("Failed to enqueue event, signaling lambda to retry")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 		}
 	}
 }

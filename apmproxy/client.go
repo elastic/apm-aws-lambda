@@ -46,6 +46,7 @@ const (
 	defaultDataForwarderTimeout time.Duration = 3 * time.Second
 	defaultReceiverAddr                       = ":8200"
 	defaultAgentBufferSize      int           = 100
+	defaultLambdaBufferSize     int           = 100
 	defaultMaxBatchSize         int           = 50
 	defaultMaxBatchAge          time.Duration = 10 * time.Second
 )
@@ -54,7 +55,8 @@ const (
 type Client struct {
 	mu                sync.RWMutex
 	bufferPool        sync.Pool
-	DataChannel       chan APMData
+	AgentDataChannel  chan APMData
+	LambdaDataChannel chan APMData
 	client            *http.Client
 	Status            Status
 	ReconnectionCount int
@@ -72,7 +74,7 @@ type Client struct {
 	maxBatchSize int
 	maxBatchAge  time.Duration
 
-	metadataAvailable chan<- struct{}
+	metadataAvailable chan struct{}
 }
 
 func NewClient(opts ...Option) (*Client, error) {
@@ -80,7 +82,8 @@ func NewClient(opts ...Option) (*Client, error) {
 		bufferPool: sync.Pool{New: func() interface{} {
 			return &bytes.Buffer{}
 		}},
-		DataChannel: make(chan APMData, defaultAgentBufferSize),
+		AgentDataChannel:  make(chan APMData, defaultAgentBufferSize),
+		LambdaDataChannel: make(chan APMData, defaultLambdaBufferSize),
 		client: &http.Client{
 			Transport: http.DefaultTransport.(*http.Transport).Clone(),
 		},

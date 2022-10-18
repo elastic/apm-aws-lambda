@@ -144,7 +144,11 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 		}
 
 		if len(agentData.Data) != 0 {
-			c.EnqueueAPMData(agentData)
+			select {
+			case c.AgentDataChannel <- agentData:
+			default:
+				c.logger.Warnf("Channel full: dropping a subset of agent data")
+			}
 		}
 
 		if agentFlushed {

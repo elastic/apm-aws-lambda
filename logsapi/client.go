@@ -52,7 +52,6 @@ type Client struct {
 	logsAPIBaseURL           string
 	logsAPISubscriptionTypes []SubscriptionType
 	logsChannel              chan LogEvent
-	metadataAvailable        <-chan struct{}
 	listenerAddr             string
 	server                   *http.Server
 	logger                   *zap.SugaredLogger
@@ -70,7 +69,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleLogEventsRequest(c.logger, c.logsChannel, c.metadataAvailable))
+	mux.HandleFunc("/", handleLogEventsRequest(c.logger, c.logsChannel))
 
 	c.server.Handler = mux
 
