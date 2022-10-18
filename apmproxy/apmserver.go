@@ -55,7 +55,7 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 		c.logger.Debug("Invocation context cancelled, not processing any more agent data")
 		return nil
 	case data := <-c.AgentDataChannel:
-		if err := c.forwardAPMDataByType(ctx, data); err != nil {
+		if err := c.forwardAgentData(ctx, data); err != nil {
 			return err
 		}
 	case <-c.metadataAvailable:
@@ -68,11 +68,11 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 			c.logger.Debug("Invocation context cancelled, not processing any more agent data")
 			return nil
 		case data := <-c.AgentDataChannel:
-			if err := c.forwardAPMDataByType(ctx, data); err != nil {
+			if err := c.forwardAgentData(ctx, data); err != nil {
 				return err
 			}
 		case data := <-c.LambdaDataChannel:
-			if err := c.forwardAPMDataByType(ctx, data); err != nil {
+			if err := c.forwardLambdaData(ctx, data); err != nil {
 				return err
 			}
 		}
@@ -94,7 +94,7 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 			case <-ctx.Done():
 				c.logger.Debugf("Failed to flush completely, may result in data drop")
 			case data := <-c.AgentDataChannel:
-				if err := c.forwardAPMDataByType(ctx, data); err != nil {
+				if err := c.forwardAgentData(ctx, data); err != nil {
 					c.logger.Errorf("Error sending to APM Server, skipping: %v", err)
 				}
 			default:
@@ -119,7 +119,7 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 			c.logger.Debugf("Failed to flush completely, may result in data drop")
 		case apmData := <-c.LambdaDataChannel:
 			c.logger.Debug("Flush in progress - Processing lambda data")
-			if err := c.forwardAPMDataByType(ctx, apmData); err != nil {
+			if err := c.forwardLambdaData(ctx, apmData); err != nil {
 				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		default:
@@ -348,35 +348,32 @@ func (c *Client) WaitForFlush() <-chan struct{} {
 	return c.flushCh
 }
 
-func (c *Client) forwardAPMDataByType(ctx context.Context, apmData APMData) error {
-	switch apmData.Type {
-	case Agent:
-		if c.batch == nil {
-			metadata, err := ProcessMetadata(apmData)
-			if err != nil {
-				return fmt.Errorf("failed to extract metadata from agent payload %w", err)
-			}
-			c.batch = NewBatch(c.maxBatchSize, c.maxBatchAge, metadata)
-			// broadcast that metadata is available
-			close(c.metadataAvailable)
+func (c *Client) forwardAgentData(ctx context.Context, apmData APMData) error {
+	if c.batch == nil {
+		metadata, err := ProcessMetadata(apmData)
+		if err != nil {
+			return fmt.Errorf("failed to extract metadata from agent payload %w", err)
 		}
-		return c.PostToApmServer(ctx, apmData)
-	case Lambda:
-		if c.batch == nil {
-			// This state is not possible since we are pushing back on
-			// lambda logs API until metadata is available.
-			return errors.New("unexpected state, metadata not yet set")
-		}
-		if err := c.batch.Add(apmData); err != nil {
-			c.logger.Warnf("Dropping data due to error: %v", err)
-		}
-		if c.batch.ShouldShip() {
-			return c.sendBatch(ctx)
-		}
-		return nil
-	default:
-		return errors.New("invalid apm data type")
+		c.batch = NewBatch(c.maxBatchSize, c.maxBatchAge, metadata)
+		// broadcast that metadata is available
+		close(c.metadataAvailable)
 	}
+	return c.PostToApmServer(ctx, apmData)
+}
+
+func (c *Client) forwardLambdaData(ctx context.Context, apmData APMData) error {
+	if c.batch == nil {
+		// This state is not possible since we are pushing back on
+		// lambda logs API until metadata is available.
+		return errors.New("unexpected state, metadata not yet set")
+	}
+	if err := c.batch.Add(apmData); err != nil {
+		c.logger.Warnf("Dropping data due to error: %v", err)
+	}
+	if c.batch.ShouldShip() {
+		return c.sendBatch(ctx)
+	}
+	return nil
 }
 
 func (c *Client) sendBatch(ctx context.Context) error {

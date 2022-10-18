@@ -70,7 +70,6 @@ func TestProcessPlatformReport_Coldstart(t *testing.T) {
 
 	apmData, err := ProcessPlatformReport(&event, logEvent)
 	require.NoError(t, err)
-	assert.Equal(t, apmproxy.Lambda, apmData.Type)
 
 	requestBytes, err := apmproxy.GetUncompressedBytes(apmData.Data, "")
 	require.NoError(t, err)
@@ -121,7 +120,6 @@ func TestProcessPlatformReport_NoColdstart(t *testing.T) {
 
 	apmData, err := ProcessPlatformReport(&event, logEvent)
 	require.NoError(t, err)
-	assert.Equal(t, apmproxy.Lambda, apmData.Type)
 
 	requestBytes, err := apmproxy.GetUncompressedBytes(apmData.Data, "")
 	require.NoError(t, err)

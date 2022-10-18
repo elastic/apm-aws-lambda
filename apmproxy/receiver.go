@@ -29,22 +29,11 @@ import (
 	"time"
 )
 
-// APMDataType represents source of APMData
-type APMDataType string
-
-const (
-	// Agent data type represents APMData collected from APM agents
-	Agent APMDataType = "agent"
-	// Lambda data type represents APMData collected from logs API
-	Lambda APMDataType = "lambda"
-)
-
 // APMData represents data to be sent to APMServer. `Agent` type
 // data will have `metadata` as ndjson whereas `lambda` type data
 // will be without metadata.
 type APMData struct {
 	Data            []byte
-	Type            APMDataType
 	ContentEncoding string
 }
 
@@ -139,7 +128,6 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 
 		agentData := APMData{
 			Data:            rawBytes,
-			Type:            Agent,
 			ContentEncoding: r.Header.Get("Content-Encoding"),
 		}
 

@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -46,6 +45,5 @@ func TestProcessFunctionLog(t *testing.T) {
 	apmData, err := ProcessFunctionLog(reqID, invokedFnArn, event)
 
 	require.NoError(t, err)
-	assert.Equal(t, apmproxy.Lambda, apmData.Type)
 	assert.Equal(t, expectedData, string(apmData.Data))
 }

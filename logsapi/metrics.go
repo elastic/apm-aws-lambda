@@ -101,7 +101,6 @@ func ProcessPlatformReport(functionData *extension.NextEventResponse, platformRe
 	}
 
 	return apmproxy.APMData{
-		Type: apmproxy.Lambda,
 		Data: jsonWriter.Bytes(),
 	}, nil
 }

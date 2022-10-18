@@ -108,7 +108,6 @@ func ProcessFunctionLog(
 	}
 
 	return apmproxy.APMData{
-		Type: apmproxy.Lambda,
 		Data: jsonWriter.Bytes(),
 	}, nil
 }
