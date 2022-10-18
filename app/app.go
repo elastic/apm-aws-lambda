@@ -88,7 +88,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		lc, err := logsapi.NewClient(
 			logsapi.WithLogsAPIBaseURL(fmt.Sprintf("http://%s", c.awsLambdaRuntimeAPI)),
 			logsapi.WithListenerAddress(addr),
-			logsapi.WithLogBuffer(0),
+			logsapi.WithLogBuffer(100),
 			logsapi.WithLogger(app.logger),
 			logsapi.WithSubscriptionTypes(subscriptionLogStreams...),
 		)
