@@ -52,7 +52,7 @@ type BatchData struct {
 }
 
 // NewBatch creates a new BatchData which can accept a
-// maximum number of entires as specified by the argument
+// maximum number of entries as specified by the argument
 func NewBatch(maxSize int, maxAge time.Duration, metadata []byte) *BatchData {
 	b := &BatchData{
 		maxSize: maxSize,

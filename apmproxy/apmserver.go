@@ -138,7 +138,7 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 // The function compresses the APM agent data, if it's not already compressed.
 // It sets the APM transport status to failing upon errors, as part of the backoff
 // strategy.
-func (c *Client) PostToApmServer(ctx context.Context, agentData APMData) error {
+func (c *Client) PostToApmServer(ctx context.Context, apmData APMData) error {
 	// todo: can this be a streaming or streaming style call that keeps the
 	//       connection open across invocations?
 	if c.IsUnhealthy() {
@@ -146,11 +146,11 @@ func (c *Client) PostToApmServer(ctx context.Context, agentData APMData) error {
 	}
 
 	endpointURI := "intake/v2/events"
-	encoding := agentData.ContentEncoding
+	encoding := apmData.ContentEncoding
 
 	var r io.Reader
-	if agentData.ContentEncoding != "" {
-		r = bytes.NewReader(agentData.Data)
+	if apmData.ContentEncoding != "" {
+		r = bytes.NewReader(apmData.Data)
 	} else {
 		encoding = "gzip"
 		buf := c.bufferPool.Get().(*bytes.Buffer)
@@ -162,7 +162,7 @@ func (c *Client) PostToApmServer(ctx context.Context, agentData APMData) error {
 		if err != nil {
 			return err
 		}
-		if _, err := gw.Write(agentData.Data); err != nil {
+		if _, err := gw.Write(apmData.Data); err != nil {
 			return fmt.Errorf("failed to compress data: %w", err)
 		}
 		if err := gw.Close(); err != nil {

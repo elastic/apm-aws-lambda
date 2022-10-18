@@ -48,7 +48,7 @@ const (
 	defaultAgentBufferSize      int           = 100
 	defaultLambdaBufferSize     int           = 100
 	defaultMaxBatchSize         int           = 50
-	defaultMaxBatchAge          time.Duration = 10 * time.Second
+	defaultMaxBatchAge          time.Duration = 2 * time.Second
 )
 
 // Client is the client used to communicate with the apm server.
