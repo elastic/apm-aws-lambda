@@ -33,6 +33,7 @@ module "lambda_function" {
     ELASTIC_APM_LOG_LEVEL         = var.log_level
     ELASTIC_APM_LAMBDA_APM_SERVER = module.ec_deployment.apm_url
     ELASTIC_APM_SECRET_TOKEN      = module.ec_deployment.apm_secret_token
+    ELASTIC_APM_SEND_STRATEGY     = "syncflush"
   }
 
   tags = {

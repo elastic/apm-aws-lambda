@@ -46,4 +46,5 @@ Resources:
           ELASTIC_APM_CENTRAL_CONFIG: false
           ELASTIC_APM_CLOUD_PROVIDER: none
           ELASTIC_APM_SERVER_URL: http://localhost:8200
+          ELASTIC_APM_SEND_STRATEGY: syncflush
           APM_AWS_EXTENSION_TEST_UUID: !Ref TestUUID
