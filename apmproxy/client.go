@@ -84,7 +84,7 @@ func NewClient(opts ...Option) (*Client, error) {
 			WriteTimeout:   defaultDataReceiverTimeout,
 			MaxHeaderBytes: 1 << 20,
 		},
-		sendStrategy: SyncFlush,
+		sendStrategy: Background,
 		flushCh:      make(chan struct{}),
 	}
 
