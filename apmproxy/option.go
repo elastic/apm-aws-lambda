@@ -86,14 +86,6 @@ func WithLogger(logger *zap.SugaredLogger) Option {
 	}
 }
 
-// WithMetadataAvailableIndicator configures a channel
-// which will broadcast metadata available event on close
-func WithMetadataAvailableIndicator(ch chan struct{}) Option {
-	return func(c *Client) {
-		c.metadataAvailable = ch
-	}
-}
-
 // WithMaxBatchSize configures the maximum batch size for
 // the payload sent to the APMServer
 func WithMaxBatchSize(size int) Option {

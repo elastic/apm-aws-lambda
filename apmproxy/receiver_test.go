@@ -58,7 +58,6 @@ func TestInfoProxy(t *testing.T) {
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
-		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 
@@ -104,7 +103,6 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
-		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 
@@ -143,7 +141,6 @@ func Test_handleInfoRequest(t *testing.T) {
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
-		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 
@@ -184,7 +181,6 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
-		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	require.NoError(t, apmClient.StartReceiver())
@@ -227,7 +223,6 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
-		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	require.NoError(t, apmClient.StartReceiver())
@@ -271,7 +266,6 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 		apmproxy.WithReceiverAddress(":1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
-		apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 	)
 	require.NoError(t, err)
 	require.NoError(t, apmClient.StartReceiver())

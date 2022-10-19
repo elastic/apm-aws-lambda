@@ -73,8 +73,6 @@ type Client struct {
 	batch        *BatchData
 	maxBatchSize int
 	maxBatchAge  time.Duration
-
-	metadataAvailable chan struct{}
 }
 
 func NewClient(opts ...Option) (*Client, error) {
@@ -113,10 +111,6 @@ func NewClient(opts ...Option) (*Client, error) {
 
 	if c.logger == nil {
 		return nil, errors.New("logger cannot be empty")
-	}
-
-	if c.metadataAvailable == nil {
-		return nil, errors.New("metadata available indicator is required")
 	}
 
 	// normalize server URL

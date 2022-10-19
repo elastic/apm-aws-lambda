@@ -48,20 +48,7 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 		return nil
 	}
 
-	// Wait for metadata to be available, metadata will be available as soon as
-	// the first agent data is processed.
-	select {
-	case <-ctx.Done():
-		c.logger.Debug("Invocation context cancelled, not processing any more agent data")
-		return nil
-	case data := <-c.AgentDataChannel:
-		if err := c.forwardAgentData(ctx, data); err != nil {
-			return err
-		}
-	case <-c.metadataAvailable:
-	}
-
-	// Process lambda and agent data after metadata is available
+	var lambdaDataChan chan APMData
 	for {
 		select {
 		case <-ctx.Done():
@@ -71,7 +58,10 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 			if err := c.forwardAgentData(ctx, data); err != nil {
 				return err
 			}
-		case data := <-c.LambdaDataChannel:
+			// Wait for metadata to be available, metadata will be available as soon as
+			// the first agent data is processed.
+			lambdaDataChan = c.LambdaDataChannel
+		case data := <-lambdaDataChan:
 			if err := c.forwardLambdaData(ctx, data); err != nil {
 				return err
 			}
@@ -88,26 +78,15 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 	c.logger.Debug("Flush started - Checking for agent data")
 
 	// Flush agent data first to make sure metadata is available if possible
-	func() {
-		for {
-			select {
-			case <-ctx.Done():
-				c.logger.Debugf("Failed to flush completely, may result in data drop")
-			case data := <-c.AgentDataChannel:
-				if err := c.forwardAgentData(ctx, data); err != nil {
-					c.logger.Errorf("Error sending to APM Server, skipping: %v", err)
-				}
-			default:
-				c.logger.Debug("Flush ended for agent data - no data in buffer")
-				return
-			}
+	for i := len(c.AgentDataChannel); i > 0; i-- {
+		data := <-c.AgentDataChannel
+		if err := c.forwardAgentData(ctx, data); err != nil {
+			c.logger.Errorf("Error sending to APM Server, skipping: %v", err)
 		}
-	}()
+	}
 
 	// If metadata still not available then fail fast
-	select {
-	case <-c.metadataAvailable:
-	default:
+	if c.batch == nil {
 		c.logger.Warnf("Metadata not available at flush, skipping sending lambda data to APM Server")
 		return
 	}
@@ -355,8 +334,6 @@ func (c *Client) forwardAgentData(ctx context.Context, apmData APMData) error {
 			return fmt.Errorf("failed to extract metadata from agent payload %w", err)
 		}
 		c.batch = NewBatch(c.maxBatchSize, c.maxBatchAge, metadata)
-		// broadcast that metadata is available
-		close(c.metadataAvailable)
 	}
 	return c.PostToApmServer(ctx, apmData)
 }

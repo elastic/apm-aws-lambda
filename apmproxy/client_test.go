@@ -44,18 +44,10 @@ func TestClient(t *testing.T) {
 			},
 			expectedErr: true,
 		},
-		"missing metadata indicator": {
-			opts: []apmproxy.Option{
-				apmproxy.WithURL("https://example.com"),
-				apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
-			},
-			expectedErr: true,
-		},
 		"valid": {
 			opts: []apmproxy.Option{
 				apmproxy.WithURL("https://example.com"),
 				apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
-				apmproxy.WithMetadataAvailableIndicator(make(chan struct{})),
 			},
 		},
 	}

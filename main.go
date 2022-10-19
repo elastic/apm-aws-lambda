@@ -45,7 +45,6 @@ func main() {
 		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
 		app.WithLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL")),
 		app.WithAWSConfig(cfg),
-		app.WithMetadataAvailableIndicator(make(chan struct{})),
 	}
 
 	captureLogs, err := strconv.ParseBool(os.Getenv("ELASTIC_APM_LAMBDA_CAPTURE_LOGS"))

@@ -19,7 +19,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -51,10 +50,6 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 
 	for _, opt := range opts {
 		opt(&c)
-	}
-
-	if c.metadataAvailable == nil {
-		return nil, errors.New("metadata available indicator is required")
 	}
 
 	app := &App{
@@ -137,7 +132,6 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		apmproxy.WithLogger(app.logger),
 		apmproxy.WithAPIKey(apmServerAPIKey),
 		apmproxy.WithSecretToken(apmServerSecretToken),
-		apmproxy.WithMetadataAvailableIndicator(c.metadataAvailable),
 	)
 
 	ac, err := apmproxy.NewClient(apmOpts...)

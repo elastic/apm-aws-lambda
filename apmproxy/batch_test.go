@@ -70,9 +70,9 @@ func TestShouldShip_ReasonAge(t *testing.T) {
 	assert.False(t, b.ShouldShip())
 	require.NoError(t, b.Add(APMData{}))
 
-	<-time.After(2 * time.Second)
+	time.Sleep(time.Second + time.Millisecond)
 
-	// Should be ready for send after 3 seconds
+	// Should be ready to send now
 	require.Equal(t, 1, b.Count())
 	assert.True(t, b.ShouldShip())
 }

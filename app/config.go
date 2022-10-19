@@ -27,7 +27,6 @@ type appConfig struct {
 	enableFunctionLogSubscription bool
 	logLevel                      string
 	logsapiAddr                   string
-	metadataAvailable             chan struct{}
 }
 
 // ConfigOption is used to configure the lambda extension
@@ -84,13 +83,5 @@ func WithLogsapiAddress(s string) ConfigOption {
 func WithAWSConfig(awsConfig aws.Config) ConfigOption {
 	return func(c *appConfig) {
 		c.awsConfig = awsConfig
-	}
-}
-
-// WithMetadataAvailableIndicator configures a channel which should
-// be closed when metadata is available after parsing agent data.
-func WithMetadataAvailableIndicator(ch chan struct{}) ConfigOption {
-	return func(c *appConfig) {
-		c.metadataAvailable = ch
 	}
 }
