@@ -21,3 +21,9 @@ variable "ess_deployment_template" {
   description = "Elastic Cloud deployment template"
   default     = "gcp-compute-optimized"
 }
+
+variable "ess_version" {
+  type        = string
+  description = "ess version"
+  default     = "8.[0-9]?([0-9]).[0-9]?([0-9])$"
+}

@@ -1,0 +1,6 @@
+[[aws-lambda-release-notes]]
+== Release notes
+
+This section summarizes the changes in each release.
+
+include::../CHANGELOG.asciidoc[]

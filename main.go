@@ -47,9 +47,15 @@ func main() {
 		app.WithAWSConfig(cfg),
 	}
 
-	captureLogs, err := strconv.ParseBool(os.Getenv("ELASTIC_APM_LAMBDA_CAPTURE_LOGS"))
-	// Default capture function logs to true
+	// ELASTIC_APM_LAMBDA_CAPTURE_LOGS indicate if the lambda extension
+	// should capture logs, the value defaults to true i.e. the extension
+	// will capture function logs by default
+	rawLambdaCaptureLogs := os.Getenv("ELASTIC_APM_LAMBDA_CAPTURE_LOGS")
+	captureLogs, err := strconv.ParseBool(rawLambdaCaptureLogs)
 	if err != nil {
+		if rawLambdaCaptureLogs != "" {
+			log.Printf("failed to parse env var ELASTIC_APM_LAMBDA_CAPTURE_LOGS, defaulting to true")
+		}
 		captureLogs = true
 	}
 
