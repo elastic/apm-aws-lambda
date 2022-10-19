@@ -94,13 +94,14 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 	// Flush lambda data
 	for {
 		select {
-		case <-ctx.Done():
-			c.logger.Debugf("Failed to flush completely, may result in data drop")
 		case apmData := <-c.LambdaDataChannel:
 			c.logger.Debug("Flush in progress - Processing lambda data")
 			if err := c.forwardLambdaData(ctx, apmData); err != nil {
 				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
 			}
+		case <-ctx.Done():
+			c.logger.Debugf("Failed to flush completely, may result in data drop")
+			return
 		default:
 			// Flush any remaining data in batch
 			if err := c.sendBatch(ctx); err != nil {
