@@ -30,6 +30,7 @@ https://github.com/elastic/apm-aws-lambda/compare/v1.1.0...main[View commits]
 ===== Features
 - Disable CGO to prevent libc/ABI compatibility issues {lambda-pull}292[292]
 - Add support for collecting and shipping function logs to APM Server {lambda-pull}303[303]
+- Batch data collected from lambda logs API before sending to APM Server {lambda-pull}314[314]
 
 [float]
 ===== Bug fixes
