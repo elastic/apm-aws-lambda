@@ -20,7 +20,6 @@ package logsapi
 import (
 	"math"
 
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"github.com/elastic/apm-aws-lambda/extension"
 	"go.elastic.co/apm/v2/model"
 	"go.elastic.co/fastjson"
@@ -62,7 +61,10 @@ func (mc MetricsContainer) MarshalFastJSON(json *fastjson.Writer) error {
 	return nil
 }
 
-func ProcessPlatformReport(functionData *extension.NextEventResponse, platformReport LogEvent) (apmproxy.APMData, error) {
+// ProcessPlatformReport processes the `platform.report` log line from lambda logs API and
+// returns a byte array containing the JSON body for the extracted platform metrics. A non
+// nil error is returned when marshaling of platform metrics into JSON fails.
+func ProcessPlatformReport(functionData *extension.NextEventResponse, platformReport LogEvent) ([]byte, error) {
 	metricsContainer := MetricsContainer{
 		Metrics: &model.Metrics{},
 	}
@@ -97,10 +99,8 @@ func ProcessPlatformReport(functionData *extension.NextEventResponse, platformRe
 
 	var jsonWriter fastjson.Writer
 	if err := metricsContainer.MarshalFastJSON(&jsonWriter); err != nil {
-		return apmproxy.APMData{}, err
+		return nil, err
 	}
 
-	return apmproxy.APMData{
-		Data: jsonWriter.Bytes(),
-	}, nil
+	return jsonWriter.Bytes(), nil
 }

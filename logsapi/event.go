@@ -21,7 +21,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"github.com/elastic/apm-aws-lambda/extension"
 )
 
@@ -60,7 +59,7 @@ func (lc *Client) ProcessLogs(
 	ctx context.Context,
 	requestID string,
 	invokedFnArn string,
-	apmClient *apmproxy.Client,
+	dataChan chan []byte,
 	runtimeDoneSignal chan struct{},
 	prevEvent *extension.NextEventResponse,
 ) error {
@@ -94,7 +93,7 @@ func (lc *Client) ProcessLogs(
 						lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
 					} else {
 						select {
-						case apmClient.LambdaDataChannel <- processedMetrics:
+						case dataChan <- processedMetrics:
 						case <-ctx.Done():
 						}
 					}
@@ -115,7 +114,7 @@ func (lc *Client) ProcessLogs(
 					lc.logger.Errorf("Error processing function log : %v", err)
 				} else {
 					select {
-					case apmClient.LambdaDataChannel <- processedLog:
+					case dataChan <- processedLog:
 					case <-ctx.Done():
 					}
 				}

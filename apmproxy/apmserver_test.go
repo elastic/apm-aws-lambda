@@ -648,9 +648,7 @@ func TestForwardApmData(t *testing.T) {
 			// Wait for batch age to make sure the batch is mature to be sent
 			time.Sleep(maxBatchAge + time.Millisecond)
 		}
-		apmClient.LambdaDataChannel <- apmproxy.APMData{
-			Data: []byte(lambdaData),
-		}
+		apmClient.LambdaDataChannel <- []byte(lambdaData)
 		expected.WriteByte('\n')
 		expected.WriteString(lambdaData)
 	}
@@ -698,9 +696,7 @@ func BenchmarkFlushAPMData(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		apmClient.AgentDataChannel <- agentAPMData
 		for j := 0; j < 99; j++ {
-			apmClient.LambdaDataChannel <- apmproxy.APMData{
-				Data: []byte("this is test log"),
-			}
+			apmClient.LambdaDataChannel <- []byte("this is test log")
 		}
 		apmClient.FlushAPMData(context.Background())
 	}

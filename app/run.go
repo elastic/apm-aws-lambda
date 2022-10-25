@@ -168,7 +168,7 @@ func (app *App) processEvent(
 				invocationCtx,
 				event.RequestID,
 				event.InvokedFunctionArn,
-				app.apmClient,
+				app.apmClient.LambdaDataChannel,
 				runtimeDone,
 				prevEvent,
 			); err != nil {

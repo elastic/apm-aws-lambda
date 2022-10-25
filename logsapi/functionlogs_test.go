@@ -42,8 +42,8 @@ func TestProcessFunctionLog(t *testing.T) {
 		reqID,
 	)
 
-	apmData, err := ProcessFunctionLog(reqID, invokedFnArn, event)
+	data, err := ProcessFunctionLog(reqID, invokedFnArn, event)
 
 	require.NoError(t, err)
-	assert.Equal(t, expectedData, string(apmData.Data))
+	assert.Equal(t, expectedData, string(data))
 }

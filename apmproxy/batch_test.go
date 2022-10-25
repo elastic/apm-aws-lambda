@@ -31,19 +31,19 @@ func TestAdd(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		b := NewBatch(1, time.Hour, []byte(metadata))
 
-		assert.NoError(t, b.Add(APMData{}))
+		assert.NoError(t, b.Add([]byte{}))
 	})
 	t.Run("full", func(t *testing.T) {
 		b := NewBatch(1, time.Hour, []byte(metadata))
-		require.NoError(t, b.Add(APMData{}))
+		require.NoError(t, b.Add([]byte{}))
 
-		assert.ErrorIs(t, ErrBatchFull, b.Add(APMData{}))
+		assert.ErrorIs(t, ErrBatchFull, b.Add([]byte{}))
 	})
 }
 
 func TestReset(t *testing.T) {
 	b := NewBatch(1, time.Hour, []byte(metadata))
-	require.NoError(t, b.Add(APMData{}))
+	require.NoError(t, b.Add([]byte{}))
 	require.Equal(t, 1, b.Count())
 	b.Reset()
 
@@ -57,7 +57,7 @@ func TestShouldShip_ReasonSize(t *testing.T) {
 	// Should flush at 90% full
 	for i := 0; i < 9; i++ {
 		assert.False(t, b.ShouldShip())
-		require.NoError(t, b.Add(APMData{}))
+		require.NoError(t, b.Add([]byte{}))
 	}
 
 	require.Equal(t, 9, b.Count())
@@ -68,7 +68,7 @@ func TestShouldShip_ReasonAge(t *testing.T) {
 	b := NewBatch(10, time.Second, []byte(metadata))
 
 	assert.False(t, b.ShouldShip())
-	require.NoError(t, b.Add(APMData{}))
+	require.NoError(t, b.Add([]byte{}))
 
 	time.Sleep(time.Second + time.Millisecond)
 
