@@ -18,7 +18,6 @@
 package logsapi
 
 import (
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"go.elastic.co/apm/v2/model"
 	"go.elastic.co/fastjson"
 )
@@ -83,13 +82,14 @@ func (lc logContainer) MarshalFastJSON(json *fastjson.Writer) error {
 	return nil
 }
 
-// ProcessFunctionLog consumes agent metadata and log event from Lambda
-// logs API to create a payload for APM server.
+// ProcessFunctionLog processes the `function` log line from lambda logs API and returns
+// a byte array containing the JSON body for the extracted log along with the timestamp.
+// A non nil error is returned when marshaling of the log into JSON fails.
 func ProcessFunctionLog(
 	requestID string,
 	invokedFnArn string,
 	log LogEvent,
-) (apmproxy.APMData, error) {
+) ([]byte, error) {
 	lc := logContainer{
 		Log: &logLine{
 			Timestamp: model.Time(log.Time),
@@ -104,10 +104,8 @@ func ProcessFunctionLog(
 
 	var jsonWriter fastjson.Writer
 	if err := lc.MarshalFastJSON(&jsonWriter); err != nil {
-		return apmproxy.APMData{}, err
+		return nil, err
 	}
 
-	return apmproxy.APMData{
-		Data: jsonWriter.Bytes(),
-	}, nil
+	return jsonWriter.Bytes(), nil
 }

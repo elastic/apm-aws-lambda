@@ -56,7 +56,7 @@ type Client struct {
 	mu                sync.RWMutex
 	bufferPool        sync.Pool
 	AgentDataChannel  chan APMData
-	LambdaDataChannel chan APMData
+	LambdaDataChannel chan []byte
 	client            *http.Client
 	Status            Status
 	ReconnectionCount int
@@ -81,7 +81,7 @@ func NewClient(opts ...Option) (*Client, error) {
 			return &bytes.Buffer{}
 		}},
 		AgentDataChannel:  make(chan APMData, defaultAgentBufferSize),
-		LambdaDataChannel: make(chan APMData, defaultLambdaBufferSize),
+		LambdaDataChannel: make(chan []byte, defaultLambdaBufferSize),
 		client: &http.Client{
 			Transport: http.DefaultTransport.(*http.Transport).Clone(),
 		},

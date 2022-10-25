@@ -48,7 +48,7 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 		return nil
 	}
 
-	var lambdaDataChan chan APMData
+	var lambdaDataChan chan []byte
 	for {
 		select {
 		case <-ctx.Done():
@@ -339,13 +339,13 @@ func (c *Client) forwardAgentData(ctx context.Context, apmData APMData) error {
 	return c.PostToApmServer(ctx, apmData)
 }
 
-func (c *Client) forwardLambdaData(ctx context.Context, apmData APMData) error {
+func (c *Client) forwardLambdaData(ctx context.Context, data []byte) error {
 	if c.batch == nil {
 		// This state is not possible since we start processing lambda
 		// logs only after metadata is available and batch is created.
 		return errors.New("unexpected state, metadata not yet set")
 	}
-	if err := c.batch.Add(apmData); err != nil {
+	if err := c.batch.Add(data); err != nil {
 		c.logger.Warnf("Dropping data due to error: %v", err)
 	}
 	if c.batch.ShouldShip() {

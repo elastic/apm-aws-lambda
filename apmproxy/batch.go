@@ -62,17 +62,14 @@ func NewBatch(maxSize int, maxAge time.Duration, metadata []byte) *BatchData {
 
 // Add adds a new entry to the batch. Returns ErrBatchFull
 // if batch has reached its maximum size.
-func (b *BatchData) Add(d APMData) error {
+func (b *BatchData) Add(d []byte) error {
 	if b.count == b.maxSize {
 		return ErrBatchFull
-	}
-	if d.ContentEncoding != "" {
-		return ErrInvalidEncoding
 	}
 	if err := b.buf.WriteByte('\n'); err != nil {
 		return err
 	}
-	if _, err := b.buf.Write(d.Data); err != nil {
+	if _, err := b.buf.Write(d); err != nil {
 		return err
 	}
 	if b.count == 0 {

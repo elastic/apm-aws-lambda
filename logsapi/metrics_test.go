@@ -19,11 +19,9 @@ package logsapi
 
 import (
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"github.com/elastic/apm-aws-lambda/extension"
 
 	"github.com/stretchr/testify/assert"
@@ -68,16 +66,10 @@ func TestProcessPlatformReport_Coldstart(t *testing.T) {
 
 	desiredOutputMetrics := fmt.Sprintf(`{"metricset":{"samples":{"faas.coldstart_duration":{"value":422.9700012207031},"faas.timeout":{"value":5000},"system.memory.total":{"value":1.34217728e+08},"system.memory.actual.free":{"value":5.4525952e+07},"faas.duration":{"value":182.42999267578125},"faas.billed_duration":{"value":183}},"timestamp":%d,"faas":{"coldstart":true,"execution":"6f7f0961f83442118a7af6fe80b88d56","id":"arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"}}}`, timestamp.UnixNano()/1e3)
 
-	apmData, err := ProcessPlatformReport(&event, logEvent)
+	data, err := ProcessPlatformReport(&event, logEvent)
 	require.NoError(t, err)
 
-	requestBytes, err := apmproxy.GetUncompressedBytes(apmData.Data, "")
-	require.NoError(t, err)
-
-	out := string(requestBytes)
-	log.Println(out)
-
-	assert.JSONEq(t, desiredOutputMetrics, string(requestBytes))
+	assert.JSONEq(t, desiredOutputMetrics, string(data))
 }
 
 func TestProcessPlatformReport_NoColdstart(t *testing.T) {
@@ -118,13 +110,10 @@ func TestProcessPlatformReport_NoColdstart(t *testing.T) {
 
 	desiredOutputMetrics := fmt.Sprintf(`{"metricset":{"samples":{"faas.coldstart_duration":{"value":0},"faas.timeout":{"value":5000},"system.memory.total":{"value":1.34217728e+08},"system.memory.actual.free":{"value":5.4525952e+07},"faas.duration":{"value":182.42999267578125},"faas.billed_duration":{"value":183}},"timestamp":%d,"faas":{"coldstart":false,"execution":"6f7f0961f83442118a7af6fe80b88d56","id":"arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"}}}`, timestamp.UnixNano()/1e3)
 
-	apmData, err := ProcessPlatformReport(&event, logEvent)
+	data, err := ProcessPlatformReport(&event, logEvent)
 	require.NoError(t, err)
 
-	requestBytes, err := apmproxy.GetUncompressedBytes(apmData.Data, "")
-	require.NoError(t, err)
-
-	assert.JSONEq(t, desiredOutputMetrics, string(requestBytes))
+	assert.JSONEq(t, desiredOutputMetrics, string(data))
 }
 
 func BenchmarkPlatformReport(b *testing.B) {
