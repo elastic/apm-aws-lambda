@@ -33,6 +33,7 @@ const (
 	PlatformRuntimeDone LogEventType = "platform.runtimeDone"
 	PlatformFault       LogEventType = "platform.fault"
 	PlatformReport      LogEventType = "platform.report"
+	PlatformLogsDropped LogEventType = "platform.logsDropped"
 	PlatformStart       LogEventType = "platform.start"
 	PlatformEnd         LogEventType = "platform.end"
 	FunctionLog         LogEventType = "function"
@@ -60,7 +61,6 @@ func (lc *Client) ProcessLogs(
 	requestID string,
 	invokedFnArn string,
 	apmClient *apmproxy.Client,
-	metadataContainer *apmproxy.MetadataContainer,
 	runtimeDoneSignal chan struct{},
 	prevEvent *extension.NextEventResponse,
 ) error {
@@ -89,22 +89,24 @@ func (lc *Client) ProcessLogs(
 			case PlatformReport:
 				if prevEvent != nil && logEvent.Record.RequestID == prevEvent.RequestID {
 					lc.logger.Debug("Received platform report for the previous function invocation")
-					processedMetrics, err := ProcessPlatformReport(metadataContainer, prevEvent, logEvent)
+					processedMetrics, err := ProcessPlatformReport(prevEvent, logEvent)
 					if err != nil {
-						lc.logger.Errorf("Error processing Lambda platform metrics : %v", err)
+						lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
 					} else {
-						apmClient.EnqueueAPMData(processedMetrics)
+						select {
+						case apmClient.LambdaDataChannel <- processedMetrics:
+						case <-ctx.Done():
+						}
 					}
 				} else {
 					lc.logger.Warn("report event request id didn't match the previous event id")
 					lc.logger.Debug("Log API runtimeDone event request id didn't match")
 				}
+			case PlatformLogsDropped:
+				lc.logger.Warnf("Logs dropped due to extension falling behind: %v", logEvent.Record)
 			case FunctionLog:
-				// TODO: @lahsivjar Buffer logs and send batches of data to APM-Server.
-				// Buffering should account for metadata being available before sending.
 				lc.logger.Debug("Received function log")
 				processedLog, err := ProcessFunctionLog(
-					metadataContainer,
 					platformStartReqID,
 					invokedFnArn,
 					logEvent,
@@ -112,7 +114,10 @@ func (lc *Client) ProcessLogs(
 				if err != nil {
 					lc.logger.Errorf("Error processing function log : %v", err)
 				} else {
-					apmClient.EnqueueAPMData(processedLog)
+					select {
+					case apmClient.LambdaDataChannel <- processedLog:
+					case <-ctx.Done():
+					}
 				}
 			}
 		case <-ctx.Done():

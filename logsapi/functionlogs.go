@@ -18,8 +18,6 @@
 package logsapi
 
 import (
-	"errors"
-
 	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"go.elastic.co/apm/v2/model"
 	"go.elastic.co/fastjson"
@@ -88,15 +86,10 @@ func (lc logContainer) MarshalFastJSON(json *fastjson.Writer) error {
 // ProcessFunctionLog consumes agent metadata and log event from Lambda
 // logs API to create a payload for APM server.
 func ProcessFunctionLog(
-	metadataContainer *apmproxy.MetadataContainer,
 	requestID string,
 	invokedFnArn string,
 	log LogEvent,
-) (apmproxy.AgentData, error) {
-	if metadataContainer == nil || len(metadataContainer.Metadata) == 0 {
-		return apmproxy.AgentData{}, errors.New("metadata is required")
-	}
-
+) (apmproxy.APMData, error) {
 	lc := logContainer{
 		Log: &logLine{
 			Timestamp: model.Time(log.Time),
@@ -111,14 +104,10 @@ func ProcessFunctionLog(
 
 	var jsonWriter fastjson.Writer
 	if err := lc.MarshalFastJSON(&jsonWriter); err != nil {
-		return apmproxy.AgentData{}, err
+		return apmproxy.APMData{}, err
 	}
 
-	capacity := len(metadataContainer.Metadata) + jsonWriter.Size() + 1
-	logData := make([]byte, len(metadataContainer.Metadata), capacity)
-	copy(logData, metadataContainer.Metadata)
-
-	logData = append(logData, '\n')
-	logData = append(logData, jsonWriter.Bytes()...)
-	return apmproxy.AgentData{Data: logData}, nil
+	return apmproxy.APMData{
+		Data: jsonWriter.Bytes(),
+	}, nil
 }

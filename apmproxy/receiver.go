@@ -29,12 +29,15 @@ import (
 	"time"
 )
 
-type AgentData struct {
+// APMData represents data to be sent to APMServer. `Agent` type
+// data will have `metadata` as ndjson whereas `lambda` type data
+// will be without metadata.
+type APMData struct {
 	Data            []byte
 	ContentEncoding string
 }
 
-// StartHttpServer starts the server listening for APM agent data.
+// StartReceiver starts the server listening for APM agent data.
 func (c *Client) StartReceiver() error {
 	mux := http.NewServeMux()
 
@@ -123,13 +126,17 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 
 		agentFlushed := r.URL.Query().Get("flushed") == "true"
 
-		agentData := AgentData{
+		agentData := APMData{
 			Data:            rawBytes,
 			ContentEncoding: r.Header.Get("Content-Encoding"),
 		}
 
 		if len(agentData.Data) != 0 {
-			c.EnqueueAPMData(agentData)
+			select {
+			case c.AgentDataChannel <- agentData:
+			default:
+				c.logger.Warnf("Channel full: dropping a subset of agent data")
+			}
 		}
 
 		if agentFlushed {

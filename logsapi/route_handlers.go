@@ -40,7 +40,13 @@ func handleLogEventsRequest(logger *zap.SugaredLogger, logsChannel chan LogEvent
 				w.WriteHeader(http.StatusInternalServerError)
 				continue
 			}
-			logsChannel <- logEvents[idx]
+			select {
+			case logsChannel <- logEvents[idx]:
+			case <-r.Context().Done():
+				logger.Warnf("Failed to enqueue event, signaling lambda to retry")
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
 		}
 	}
 }
