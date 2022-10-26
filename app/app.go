@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/elastic/apm-aws-lambda/accumulator"
 	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"github.com/elastic/apm-aws-lambda/extension"
 	"github.com/elastic/apm-aws-lambda/logger"
@@ -34,6 +35,11 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	defaultMaxBatchSize int           = 50
+	defaultMaxBatchAge  time.Duration = 2 * time.Second
+)
+
 // App is the main application.
 type App struct {
 	extensionName   string
@@ -41,6 +47,7 @@ type App struct {
 	logsClient      *logsapi.Client
 	apmClient       *apmproxy.Client
 	logger          *zap.SugaredLogger
+	batch           *accumulator.Batch
 }
 
 // New returns an App or an error if the
@@ -54,6 +61,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 
 	app := &App{
 		extensionName: c.extensionName,
+		batch:         accumulator.NewBatch(defaultMaxBatchSize, defaultMaxBatchAge),
 	}
 
 	var err error
@@ -86,6 +94,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 			logsapi.WithLogBuffer(100),
 			logsapi.WithLogger(app.logger),
 			logsapi.WithSubscriptionTypes(subscriptionLogStreams...),
+			logsapi.WithBatch(app.batch),
 		)
 		if err != nil {
 			return nil, err
@@ -132,6 +141,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		apmproxy.WithLogger(app.logger),
 		apmproxy.WithAPIKey(apmServerAPIKey),
 		apmproxy.WithSecretToken(apmServerSecretToken),
+		apmproxy.WithBatch(app.batch),
 	)
 
 	ac, err := apmproxy.NewClient(apmOpts...)

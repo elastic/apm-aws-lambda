@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/elastic/apm-aws-lambda/accumulator"
 	"go.uber.org/zap"
 )
 
@@ -47,15 +48,13 @@ const (
 	defaultReceiverAddr                       = ":8200"
 	defaultAgentBufferSize      int           = 100
 	defaultLambdaBufferSize     int           = 100
-	defaultMaxBatchSize         int           = 50
-	defaultMaxBatchAge          time.Duration = 2 * time.Second
 )
 
 // Client is the client used to communicate with the apm server.
 type Client struct {
 	mu                sync.RWMutex
 	bufferPool        sync.Pool
-	AgentDataChannel  chan APMData
+	AgentDataChannel  chan accumulator.APMData
 	LambdaDataChannel chan []byte
 	client            *http.Client
 	Status            Status
@@ -70,9 +69,7 @@ type Client struct {
 	flushMutex sync.Mutex
 	flushCh    chan struct{}
 
-	batch        *BatchData
-	maxBatchSize int
-	maxBatchAge  time.Duration
+	batch *accumulator.Batch
 }
 
 func NewClient(opts ...Option) (*Client, error) {
@@ -80,7 +77,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		bufferPool: sync.Pool{New: func() interface{} {
 			return &bytes.Buffer{}
 		}},
-		AgentDataChannel:  make(chan APMData, defaultAgentBufferSize),
+		AgentDataChannel:  make(chan accumulator.APMData, defaultAgentBufferSize),
 		LambdaDataChannel: make(chan []byte, defaultLambdaBufferSize),
 		client: &http.Client{
 			Transport: http.DefaultTransport.(*http.Transport).Clone(),
@@ -95,8 +92,6 @@ func NewClient(opts ...Option) (*Client, error) {
 		},
 		sendStrategy: SyncFlush,
 		flushCh:      make(chan struct{}),
-		maxBatchSize: defaultMaxBatchSize,
-		maxBatchAge:  defaultMaxBatchAge,
 	}
 
 	c.client.Timeout = defaultDataForwarderTimeout

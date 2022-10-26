@@ -27,15 +27,10 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"time"
-)
 
-// APMData represents data to be sent to APMServer. `Agent` type
-// data will have `metadata` as ndjson whereas `lambda` type data
-// will be without metadata.
-type APMData struct {
-	Data            []byte
-	ContentEncoding string
-}
+	"github.com/elastic/apm-aws-lambda/accumulator"
+	"github.com/tidwall/gjson"
+)
 
 // StartReceiver starts the server listening for APM agent data.
 func (c *Client) StartReceiver() error {
@@ -48,6 +43,7 @@ func (c *Client) StartReceiver() error {
 
 	mux.HandleFunc("/", handleInfoRequest)
 	mux.HandleFunc("/intake/v2/events", c.handleIntakeV2Events())
+	mux.HandleFunc("/register/transaction", c.handleTransactionRegistration())
 
 	c.receiver.Handler = mux
 
@@ -126,7 +122,7 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 
 		agentFlushed := r.URL.Query().Get("flushed") == "true"
 
-		agentData := APMData{
+		agentData := accumulator.APMData{
 			Data:            rawBytes,
 			ContentEncoding: r.Header.Get("Content-Encoding"),
 		}
@@ -161,6 +157,30 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 		w.WriteHeader(http.StatusAccepted)
 		if _, err = w.Write([]byte("ok")); err != nil {
 			c.logger.Errorf("Failed to send intake response to APM agent : %v", err)
+		}
+	}
+}
+
+// URL: http://server/register/transaction
+func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c.logger.Debug("Handling APM Data Intake")
+		rawBytes, err := io.ReadAll(r.Body)
+		defer r.Body.Close()
+		if err != nil {
+			c.logger.Errorf("Could not read transaction registration body: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		res := gjson.GetBytes(rawBytes, "transaction.id")
+		if res.Type == gjson.Null {
+			c.logger.Warn("Could not parse transaction id from transaction registration body")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if err := c.batch.UpdateInvocationForAgentInit(res.Str, rawBytes); err != nil {
+			c.logger.Warnf("Failed to update invocation for transaction ID %s", res.Str)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}
 }

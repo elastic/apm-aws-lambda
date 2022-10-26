@@ -17,6 +17,8 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.16.7
 	github.com/aws/aws-sdk-go-v2/config v1.15.14
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.15.13
+	github.com/tidwall/gjson v1.14.3
+	github.com/tidwall/sjson v1.2.5
 	go.elastic.co/apm/v2 v2.1.1-0.20220617022209-90f624fe11b0
 	go.elastic.co/fastjson v1.1.0
 )
@@ -36,5 +38,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/santhosh-tekuri/jsonschema v1.2.4 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

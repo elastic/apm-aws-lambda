@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package apmproxy
+package accumulator
 
 import (
 	"testing"
@@ -28,22 +28,31 @@ import (
 const metadata = `{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"1.1.0"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`
 
 func TestAdd(t *testing.T) {
-	t.Run("empty", func(t *testing.T) {
-		b := NewBatch(1, time.Hour, []byte(metadata))
-
-		assert.NoError(t, b.Add([]byte{}))
+	t.Run("empty-without-metadata", func(t *testing.T) {
+		b := NewBatch(1, time.Hour)
+		assert.Error(t, b.AddLambdaData([]byte{}), ErrMetadataUnavailable)
+	})
+	t.Run("empty-with-metadata", func(t *testing.T) {
+		b := NewBatch(1, time.Hour)
+		b.RegisterInvocation("test", "arn", 500, time.Now())
+		require.NoError(t, b.AddAgentData(APMData{Data: []byte(metadata)}))
+		assert.NoError(t, b.AddLambdaData([]byte{}))
 	})
 	t.Run("full", func(t *testing.T) {
-		b := NewBatch(1, time.Hour, []byte(metadata))
-		require.NoError(t, b.Add([]byte{}))
+		b := NewBatch(1, time.Hour)
+		b.RegisterInvocation("test", "arn", 500, time.Now())
+		require.NoError(t, b.AddAgentData(APMData{Data: []byte(metadata)}))
+		require.NoError(t, b.AddLambdaData([]byte{}))
 
-		assert.ErrorIs(t, ErrBatchFull, b.Add([]byte{}))
+		assert.ErrorIs(t, ErrBatchFull, b.AddLambdaData([]byte{}))
 	})
 }
 
 func TestReset(t *testing.T) {
-	b := NewBatch(1, time.Hour, []byte(metadata))
-	require.NoError(t, b.Add([]byte{}))
+	b := NewBatch(1, time.Hour)
+	b.RegisterInvocation("test", "arn", 500, time.Now())
+	require.NoError(t, b.AddAgentData(APMData{Data: []byte(metadata)}))
+	require.NoError(t, b.AddLambdaData([]byte{}))
 	require.Equal(t, 1, b.Count())
 	b.Reset()
 
@@ -52,12 +61,14 @@ func TestReset(t *testing.T) {
 }
 
 func TestShouldShip_ReasonSize(t *testing.T) {
-	b := NewBatch(10, time.Hour, []byte(metadata))
+	b := NewBatch(10, time.Hour)
+	b.RegisterInvocation("test", "arn", 500, time.Now())
+	require.NoError(t, b.AddAgentData(APMData{Data: []byte(metadata)}))
 
 	// Should flush at 90% full
 	for i := 0; i < 9; i++ {
 		assert.False(t, b.ShouldShip())
-		require.NoError(t, b.Add([]byte{}))
+		require.NoError(t, b.AddLambdaData([]byte{}))
 	}
 
 	require.Equal(t, 9, b.Count())
@@ -65,10 +76,12 @@ func TestShouldShip_ReasonSize(t *testing.T) {
 }
 
 func TestShouldShip_ReasonAge(t *testing.T) {
-	b := NewBatch(10, time.Second, []byte(metadata))
+	b := NewBatch(10, time.Second)
+	b.RegisterInvocation("test", "arn", 500, time.Now())
+	require.NoError(t, b.AddAgentData(APMData{Data: []byte(metadata)}))
 
 	assert.False(t, b.ShouldShip())
-	require.NoError(t, b.Add([]byte{}))
+	require.NoError(t, b.AddLambdaData([]byte{}))
 
 	time.Sleep(time.Second + time.Millisecond)
 

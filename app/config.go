@@ -17,7 +17,9 @@
 
 package app
 
-import "github.com/aws/aws-sdk-go-v2/aws"
+import (
+	"github.com/aws/aws-sdk-go-v2/aws"
+)
 
 type appConfig struct {
 	awsLambdaRuntimeAPI           string

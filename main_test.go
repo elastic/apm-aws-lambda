@@ -451,6 +451,8 @@ func TestStandardEventsChain(t *testing.T) {
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+		// Send another event so that the `platform.Report` metric is sent finalizing the previous req ID
+		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	select {
@@ -473,6 +475,8 @@ func TestFlush(t *testing.T) {
 
 	eventsChain := []MockEvent{
 		{Type: InvokeStandardFlush, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+		// Send another event so that the `platform.Report` metric is sent finalizing the previous req ID
+		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	select {
@@ -519,6 +523,7 @@ func TestWaitGroup(t *testing.T) {
 
 	eventsChain := []MockEvent{
 		{Type: InvokeWaitgroupsRace, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 500},
+		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 0, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	select {

@@ -29,6 +29,8 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
+
+	"github.com/elastic/apm-aws-lambda/accumulator"
 )
 
 type jsonResult struct {
@@ -70,7 +72,7 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 }
 
 // FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
-func (c *Client) FlushAPMData(ctx context.Context) {
+func (c *Client) FlushAPMData(ctx context.Context, shutdown bool) {
 	if c.IsUnhealthy() {
 		c.logger.Debug("Flush skipped - Transport failing")
 		return
@@ -82,6 +84,16 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 		data := <-c.AgentDataChannel
 		if err := c.forwardAgentData(ctx, data); err != nil {
 			c.logger.Errorf("Error sending to APM Server, skipping: %v", err)
+		}
+	}
+
+	if shutdown {
+		// For shutdown events, we can no longer enrich the remaining data with
+		// platform.report metrics since they will be reported in future invocations
+		// when the cached transaction will be lost. Flush any agent data in the batch
+		// waiting for platform.report metrics
+		if err := c.batch.FlushAgentData(); err != nil {
+			c.logger.Errorf("Error while flushing agent data from batch: %v", err)
 		}
 	}
 
@@ -118,7 +130,7 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 // The function compresses the APM agent data, if it's not already compressed.
 // It sets the APM transport status to failing upon errors, as part of the backoff
 // strategy.
-func (c *Client) PostToApmServer(ctx context.Context, apmData APMData) error {
+func (c *Client) PostToApmServer(ctx context.Context, apmData accumulator.APMData) error {
 	// todo: can this be a streaming or streaming style call that keeps the
 	//       connection open across invocations?
 	if c.IsUnhealthy() {
@@ -328,24 +340,12 @@ func (c *Client) WaitForFlush() <-chan struct{} {
 	return c.flushCh
 }
 
-func (c *Client) forwardAgentData(ctx context.Context, apmData APMData) error {
-	if c.batch == nil {
-		metadata, err := ProcessMetadata(apmData)
-		if err != nil {
-			return fmt.Errorf("failed to extract metadata from agent payload %w", err)
-		}
-		c.batch = NewBatch(c.maxBatchSize, c.maxBatchAge, metadata)
-	}
-	return c.PostToApmServer(ctx, apmData)
+func (c *Client) forwardAgentData(ctx context.Context, apmData accumulator.APMData) error {
+	return c.batch.AddAgentData(apmData)
 }
 
 func (c *Client) forwardLambdaData(ctx context.Context, data []byte) error {
-	if c.batch == nil {
-		// This state is not possible since we start processing lambda
-		// logs only after metadata is available and batch is created.
-		return errors.New("unexpected state, metadata not yet set")
-	}
-	if err := c.batch.Add(data); err != nil {
+	if err := c.batch.AddLambdaData(data); err != nil {
 		c.logger.Warnf("Dropping data due to error: %v", err)
 	}
 	if c.batch.ShouldShip() {

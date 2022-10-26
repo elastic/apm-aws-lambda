@@ -17,7 +17,10 @@
 
 package logsapi
 
-import "go.uber.org/zap"
+import (
+	"github.com/elastic/apm-aws-lambda/accumulator"
+	"go.uber.org/zap"
+)
 
 // WithListenerAddress sets the listener address of the
 // server listening for logs event.
@@ -53,5 +56,13 @@ func WithLogger(logger *zap.SugaredLogger) ClientOption {
 func WithSubscriptionTypes(types ...SubscriptionType) ClientOption {
 	return func(c *Client) {
 		c.logsAPISubscriptionTypes = types
+	}
+}
+
+// WithBatch configures a batch to be used for batching data
+// before sending to APM Server.
+func WithBatch(batch *accumulator.Batch) ClientOption {
+	return func(c *Client) {
+		c.batch = batch
 	}
 }

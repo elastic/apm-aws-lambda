@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/elastic/apm-aws-lambda/accumulator"
 	"go.uber.org/zap"
 )
 
@@ -55,6 +56,7 @@ type Client struct {
 	listenerAddr             string
 	server                   *http.Server
 	logger                   *zap.SugaredLogger
+	batch                    *accumulator.Batch
 }
 
 // NewClient returns a new Client with the given URL.
