@@ -172,7 +172,7 @@ func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		res := gjson.GetBytes(rawBytes, "transaction.id")
+		res := gjson.GetBytes(rawBytes, "id")
 		if res.Type == gjson.Null {
 			c.logger.Warn("Could not parse transaction id from transaction registration body")
 			w.WriteHeader(http.StatusBadRequest)
