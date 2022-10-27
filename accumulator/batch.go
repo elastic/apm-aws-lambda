@@ -100,15 +100,14 @@ func (b *Batch) RegisterInvocation(
 // the currently executing invocation. The payload and transactionID will be
 // used to create a new transaction in an event the actual transaction is not
 // reported by the agent due to unexpected termination.
-func (b *Batch) UpdateInvocationForAgentInit(transactionID string, payload []byte) error {
+func (b *Batch) UpdateInvocationForAgentInit(transactionID string, traceID string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	i, ok := b.invocations[b.currentlyExecutingRequestID]
 	if !ok {
 		return fmt.Errorf("invocation for requestID %s does not exist", b.currentlyExecutingRequestID)
 	}
-	i.TransactionID = transactionID
-	i.AgentPayload = payload
+	i.TransactionID, i.TraceID = transactionID, traceID
 	return nil
 }
 
@@ -178,10 +177,10 @@ func (b *Batch) FinalizeInvocation(
 		return err
 	}
 	for i := 0; i < len(inc.agentData); i++ {
-		if _, err := b.buf.Write(inc.agentData[i]); err != nil {
+		if err := b.buf.WriteByte('\n'); err != nil {
 			return err
 		}
-		if err := b.buf.WriteByte('\n'); err != nil {
+		if _, err := b.buf.Write(inc.agentData[i]); err != nil {
 			return err
 		}
 		b.count++
@@ -199,14 +198,15 @@ func (b *Batch) FlushAgentData() error {
 			return err
 		}
 		for i := 0; i < len(inc.agentData); i++ {
-			if _, err := b.buf.Write(inc.agentData[i]); err != nil {
+			if err := b.buf.WriteByte('\n'); err != nil {
 				return err
 			}
-			if err := b.buf.WriteByte('\n'); err != nil {
+			if _, err := b.buf.Write(inc.agentData[i]); err != nil {
 				return err
 			}
 			b.count++
 		}
+		delete(b.invocations, inc.RequestID)
 	}
 	return nil
 }

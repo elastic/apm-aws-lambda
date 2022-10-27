@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/elastic/apm-aws-lambda/accumulator"
-	"github.com/tidwall/gjson"
 )
 
 // StartReceiver starts the server listening for APM agent data.
@@ -164,22 +163,15 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 // URL: http://server/register/transaction
 func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c.logger.Debug("Handling APM Data Intake")
-		rawBytes, err := io.ReadAll(r.Body)
-		defer r.Body.Close()
-		if err != nil {
-			c.logger.Errorf("Could not read transaction registration body: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		res := gjson.GetBytes(rawBytes, "id")
-		if res.Type == gjson.Null {
+		txnID := r.Header.Get("x-elastic-transaction-id")
+		traceID := r.Header.Get("x-elastic-trace-id")
+		if txnID == "" {
 			c.logger.Warn("Could not parse transaction id from transaction registration body")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		if err := c.batch.UpdateInvocationForAgentInit(res.Str, rawBytes); err != nil {
-			c.logger.Warnf("Failed to update invocation for transaction ID %s", res.Str)
+		if err := c.batch.UpdateInvocationForAgentInit(txnID, traceID); err != nil {
+			c.logger.Warnf("Failed to update invocation for transaction ID %s", txnID)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}

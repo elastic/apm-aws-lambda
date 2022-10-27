@@ -30,7 +30,9 @@ import (
 // the data when `platform.report` type log is received for the
 // specific invocation identified by request ID.
 type Invocation struct {
+	// RequestID is the id to identify the invocation.
 	RequestID string
+	// Timestamp is the time of the invocation.
 	Timestamp time.Time
 	// DeadlineMs is the function execution deadline.
 	DeadlineMs int64
@@ -40,6 +42,9 @@ type Invocation struct {
 	// TransactionID is the ID generated for a transaction for the
 	// current invocation. It is populated by the request from agent.
 	TransactionID string
+	// TraceID is the ID generated for a trace for the current invocation.
+	// It is populated by the request from agent.
+	TraceID string
 	// AgentPayload for creating transaction.
 	AgentPayload []byte
 	// Status of the invocation, is available in the platform.runtimeDone
@@ -58,12 +63,8 @@ func (inc *Invocation) Finalize() error {
 		return nil
 	}
 	if rootTxnIdx := inc.findRootTxn(); rootTxnIdx == -1 {
-		// Create a new txn if not found
-		txn, err := sjson.SetRawBytes(nil, "transaction", inc.AgentPayload)
-		if err != nil {
-			return err
-		}
-		inc.agentData = append(inc.agentData, txn)
+		_, err := inc.createProxyTxn()
+		return err
 	}
 	return nil
 }
@@ -80,12 +81,11 @@ func (inc *Invocation) FinalizeAndEnrich(
 	rootTxnIdx := inc.findRootTxn()
 	if rootTxnIdx == -1 {
 		// Create a new txn if not found
-		txn, err := sjson.SetRawBytes(nil, "transaction", inc.AgentPayload)
+		var err error
+		rootTxnIdx, err = inc.createProxyTxn()
 		if err != nil {
 			return err
 		}
-		inc.agentData = append(inc.agentData, txn)
-		rootTxnIdx = len(inc.agentData) - 1
 	}
 	// Enrich the transaction with the platform metrics
 	txn, err := sjson.SetBytes(inc.agentData[rootTxnIdx], "faas", map[string]interface{}{
@@ -113,14 +113,26 @@ func (inc *Invocation) FinalizeAndEnrich(
 	return nil
 }
 
+func (inc *Invocation) createProxyTxn() (int, error) {
+	txn, err := sjson.SetBytes(nil, "transaction", map[string]string{
+		"id":       inc.TransactionID,
+		"trace_id": inc.TraceID,
+		"outcome":  inc.Status,
+	})
+	if err != nil {
+		return -1, err
+	}
+	inc.agentData = append(inc.agentData, txn)
+	return len(inc.agentData) - 1, nil
+}
+
 func (inc *Invocation) findRootTxn() int {
 	for i := range inc.agentData {
 		switch t := findEventType(inc.agentData[i]); string(t) {
 		case "transaction":
 			// Get transaction.id and check if it matches
-			var res gjson.Result
-			res = gjson.GetBytes(inc.agentData[i], "transaction.id")
-			if inc.TransactionID == res.Str {
+			res := gjson.GetBytes(inc.agentData[i], "transaction.id")
+			if res.Str != "" && inc.TransactionID == res.Str {
 				return i
 			}
 		}
