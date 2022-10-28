@@ -170,7 +170,7 @@ func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		if err := c.batch.UpdateInvocationForAgentInit(txnID, traceID); err != nil {
+		if err := c.batch.OnAgentInit(txnID, traceID); err != nil {
 			c.logger.Warnf("Failed to update invocation for transaction ID %s", txnID)
 			w.WriteHeader(http.StatusInternalServerError)
 		}

@@ -93,7 +93,7 @@ func (c *Client) FlushAPMData(ctx context.Context, shutdown bool) {
 		// from agents at this point then it is safe to assume that the function
 		// timed out. We will flush all the cached agent data with no transaction
 		// assuming the outcome of the transaction to be `timeout`.
-		if err := c.batch.FlushAgentData("timeout"); err != nil {
+		if err := c.batch.OnShutdown("timeout"); err != nil {
 			c.logger.Errorf("Error while flushing agent data from batch: %v", err)
 		}
 	}

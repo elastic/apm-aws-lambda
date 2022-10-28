@@ -94,7 +94,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 			logsapi.WithLogBuffer(100),
 			logsapi.WithLogger(app.logger),
 			logsapi.WithSubscriptionTypes(subscriptionLogStreams...),
-			logsapi.WithBatch(app.batch),
+			logsapi.WithInvocationLifecycler(app.batch),
 		)
 		if err != nil {
 			return nil, err

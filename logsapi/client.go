@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/elastic/apm-aws-lambda/accumulator"
 	"go.uber.org/zap"
 )
 
@@ -47,6 +46,10 @@ const (
 // ClientOption is a config option for a Client.
 type ClientOption func(*Client)
 
+type invocationLifecycler interface {
+	OnLambdaLogRuntimeDone(requestID, status string) error
+}
+
 // Client is the client used to subscribe to the Logs API.
 type Client struct {
 	httpClient               *http.Client
@@ -56,7 +59,7 @@ type Client struct {
 	listenerAddr             string
 	server                   *http.Server
 	logger                   *zap.SugaredLogger
-	batch                    *accumulator.Batch
+	invocationLifecycler     invocationLifecycler
 }
 
 // NewClient returns a new Client with the given URL.

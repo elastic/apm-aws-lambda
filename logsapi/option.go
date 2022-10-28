@@ -18,7 +18,6 @@
 package logsapi
 
 import (
-	"github.com/elastic/apm-aws-lambda/accumulator"
 	"go.uber.org/zap"
 )
 
@@ -59,10 +58,10 @@ func WithSubscriptionTypes(types ...SubscriptionType) ClientOption {
 	}
 }
 
-// WithBatch configures a batch to be used for batching data
-// before sending to APM Server.
-func WithBatch(batch *accumulator.Batch) ClientOption {
+// WithInvocationLifecycler configures a lifecycler for acting on certain
+// log events.
+func WithInvocationLifecycler(l invocationLifecycler) ClientOption {
 	return func(c *Client) {
-		c.batch = batch
+		c.invocationLifecycler = l
 	}
 }

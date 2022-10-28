@@ -96,11 +96,11 @@ func (b *Batch) RegisterInvocation(
 	b.currentlyExecutingRequestID = requestID
 }
 
-// UpdateInvocationForAgentInit caches the transactionID and the payload for
-// the currently executing invocation. The payload and transactionID will be
-// used to create a new transaction in an event the actual transaction is not
-// reported by the agent due to unexpected termination.
-func (b *Batch) UpdateInvocationForAgentInit(transactionID string, traceID string) error {
+// OnAgentInit caches the transactionID and the payload for the currently
+// executing invocation as reported by the agent. The traceID and transactionID
+// will be used to create a new transaction in an event the actual transaction
+// is not reported by the agent due to unexpected termination.
+func (b *Batch) OnAgentInit(transactionID string, traceID string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	i, ok := b.invocations[b.currentlyExecutingRequestID]
@@ -125,6 +125,8 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 	if err != nil {
 		return err
 	}
+	// A request body can either be empty or have a ndjson content with
+	// first line being metadata.
 	data := bytes.Split(raw, []byte("\n"))
 	if len(data) == 0 {
 		return nil
@@ -142,20 +144,20 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 	return nil
 }
 
-// FinalizeInvocation prepares the data for the invocation to be shipped to APM
-// Server. It accepts requestID and status of the invocation both of which can
-// be retrieved after parsing `platform.runtimeDone` event.
-func (b *Batch) FinalizeInvocation(reqID, status string) error {
+// OnLambdaLogRuntimeDone prepares the data for the invocation to be shipped
+// to APM Server. It accepts requestID and status of the invocation both of
+// which can be retrieved after parsing `platform.runtimeDone` event.
+func (b *Batch) OnLambdaLogRuntimeDone(reqID, status string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.finalizeInvocation(reqID, status)
 }
 
-// FlushAgentData flushes the data for shipping to APM Server by finalizing all
+// OnShutdown flushes the data for shipping to APM Server by finalizing all
 // the invocation in the batch. If we haven't received a platform.runtimeDone
 // event for an invocation so far we won't be able to recieve it in time thus
 // the status needs to be guessed based on the available information.
-func (b *Batch) FlushAgentData(status string) error {
+func (b *Batch) OnShutdown(status string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	for _, inc := range b.invocations {

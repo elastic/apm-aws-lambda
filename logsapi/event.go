@@ -75,7 +75,7 @@ func (lc *Client) ProcessLogs(
 			case PlatformStart:
 				platformStartReqID = logEvent.Record.RequestID
 			case PlatformRuntimeDone:
-				if err := lc.batch.FinalizeInvocation(logEvent.Record.RequestID, logEvent.Record.Status); err != nil {
+				if err := lc.invocationLifecycler.OnLambdaLogRuntimeDone(logEvent.Record.RequestID, logEvent.Record.Status); err != nil {
 					lc.logger.Warnf("Failed to finalize invocation with request ID %s", logEvent.Record.RequestID)
 				}
 				// For the current invocation the platform.runtimeDone would be the last event
