@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
+	"go.elastic.co/fastjson"
 )
 
 // Invocation holds data for each function invocation and finalizes
@@ -52,28 +52,26 @@ type Invocation struct {
 // Finalize searches the agent data for an invocation to find the root txn
 // for the invocation. If root txn is not found then a new txn is created
 // with the payload submitted by the agent.
-func (inc *Invocation) Finalize(status string) error {
+func (inc *Invocation) Finalize(status string) {
 	if inc.TransactionID == "" {
-		return nil
+		return
 	}
 	if rootTxnIdx := inc.findRootTxn(); rootTxnIdx == -1 {
-		_, err := inc.createProxyTxn(status)
-		return err
+		inc.createProxyTxn(status)
 	}
-	return nil
 }
 
-func (inc *Invocation) createProxyTxn(status string) (int, error) {
-	txn, err := sjson.SetBytes(nil, "transaction", map[string]string{
-		"id":       inc.TransactionID,
-		"trace_id": inc.TraceID,
-		"outcome":  status,
-	})
-	if err != nil {
-		return -1, err
-	}
-	inc.agentData = append(inc.agentData, txn)
-	return len(inc.agentData) - 1, nil
+func (inc *Invocation) createProxyTxn(status string) int {
+	var w fastjson.Writer
+	w.RawString(`{"transaction":{"id":`)
+	w.String(inc.TransactionID)
+	w.RawString(`,"trace_id":`)
+	w.String(inc.TraceID)
+	w.RawString(`,"outcome":`)
+	w.String(status)
+	w.RawString("}}")
+	inc.agentData = append(inc.agentData, w.Bytes())
+	return len(inc.agentData) - 1
 }
 
 func (inc *Invocation) findRootTxn() int {

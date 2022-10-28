@@ -18,7 +18,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.15.14
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.15.13
 	github.com/tidwall/gjson v1.14.3
-	github.com/tidwall/sjson v1.2.5
 	go.elastic.co/apm/v2 v2.1.1-0.20220617022209-90f624fe11b0
 	go.elastic.co/fastjson v1.1.0
 )

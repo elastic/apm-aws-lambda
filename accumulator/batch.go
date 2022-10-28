@@ -233,9 +233,7 @@ func (b *Batch) finalizeInvocation(reqID, status string) error {
 		return fmt.Errorf("invocation for requestID %s does not exist", reqID)
 	}
 	defer delete(b.invocations, reqID)
-	if err := inc.Finalize(status); err != nil {
-		return err
-	}
+	inc.Finalize(status)
 	for i := 0; i < len(inc.agentData); i++ {
 		if err := b.buf.WriteByte('\n'); err != nil {
 			return err

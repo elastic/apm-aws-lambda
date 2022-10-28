@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestFinalizeAndEnrich_TxnExists(t *testing.T) {
@@ -36,7 +35,7 @@ func TestFinalizeAndEnrich_TxnExists(t *testing.T) {
 		agentData:     [][]byte{[]byte(data)},
 	}
 
-	require.NoError(t, inc.Finalize("success")) // does nothing
+	inc.Finalize("success") // does nothing
 	assert.Equal(t, 1, len(inc.agentData))
 	assert.Equal(t, data, string(inc.agentData[0]))
 }
@@ -52,6 +51,23 @@ func TestFinalizeAndEnrich_TxnNotFound(t *testing.T) {
 	}
 
 	expected := `{"transaction":{"id":"txn-id","trace_id":"trace-id","outcome":"timeout"}}`
-	require.NoError(t, inc.Finalize("timeout"))
+	inc.Finalize("timeout")
 	assert.JSONEq(t, expected, string(inc.agentData[0]))
+}
+
+func BenchmarkCreateProxyTxn(b *testing.B) {
+	ts := time.Date(2022, time.October, 1, 1, 0, 0, 0, time.UTC)
+	inc := &Invocation{
+		Timestamp:     ts,
+		DeadlineMs:    ts.Add(time.Minute).UnixMilli(),
+		FunctionARN:   "test-fn-arn",
+		TransactionID: "txn-id",
+		TraceID:       "trace-id",
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		inc.createProxyTxn("success")
+	}
 }
