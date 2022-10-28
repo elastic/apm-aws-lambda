@@ -26,7 +26,7 @@ import (
 
 func TestFinalizeAndEnrich_TxnExists(t *testing.T) {
 	ts := time.Date(2022, time.October, 1, 1, 0, 0, 0, time.UTC)
-	data := `{"transaction":{"id":"txn-id","trace_id":"trace-id","outcome":"success"}}`
+	data := `{"transaction":{"id":"txn-id","trace_id":"trace-id","result":"success"}}`
 	inc := &Invocation{
 		Timestamp:     ts,
 		DeadlineMs:    ts.Add(time.Minute).UnixMilli(),
@@ -50,7 +50,7 @@ func TestFinalizeAndEnrich_TxnNotFound(t *testing.T) {
 		TraceID:       "trace-id",
 	}
 
-	expected := `{"transaction":{"id":"txn-id","trace_id":"trace-id","outcome":"timeout"}}`
+	expected := `{"transaction":{"id":"txn-id","trace_id":"trace-id","result":"timeout"}}`
 	inc.Finalize("timeout")
 	assert.JSONEq(t, expected, string(inc.agentData[0]))
 }

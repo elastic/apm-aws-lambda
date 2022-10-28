@@ -67,7 +67,7 @@ func (inc *Invocation) createProxyTxn(status string) int {
 	w.String(inc.TransactionID)
 	w.RawString(`,"trace_id":`)
 	w.String(inc.TraceID)
-	w.RawString(`,"outcome":`)
+	w.RawString(`,"result":`)
 	w.String(status)
 	w.RawString("}}")
 	inc.agentData = append(inc.agentData, w.Bytes())
