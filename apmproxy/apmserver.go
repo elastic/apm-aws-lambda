@@ -88,11 +88,12 @@ func (c *Client) FlushAPMData(ctx context.Context, shutdown bool) {
 	}
 
 	if shutdown {
-		// For shutdown events, we can no longer enrich the remaining data with
-		// platform.report metrics since they will be reported in future invocations
-		// when the cached transaction will be lost. Flush any agent data in the batch
-		// waiting for platform.report metrics
-		if err := c.batch.FlushAgentData(); err != nil {
+		// At shutdown we can not expect platform.runtimeDone events to be reported
+		// for the remaining invocations. If we haven't received the transaction
+		// from agents at this point then it is safe to assume that the function
+		// timed out. We will flush all the cached agent data with no transaction
+		// assuming the outcome of the transaction to be `timeout`.
+		if err := c.batch.FlushAgentData("timeout"); err != nil {
 			c.logger.Errorf("Error while flushing agent data from batch: %v", err)
 		}
 	}

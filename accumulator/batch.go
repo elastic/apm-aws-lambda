@@ -111,19 +111,6 @@ func (b *Batch) UpdateInvocationForAgentInit(transactionID string, traceID strin
 	return nil
 }
 
-// UpdateInvocationForRuntimeDone updates the status of an invocation based on the
-// platform.runtimeDone log line.
-func (b *Batch) UpdateInvocationForRuntimeDone(requestID, status string) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	i, ok := b.invocations[requestID]
-	if !ok {
-		return fmt.Errorf("invocation for requestID %s does not exist", requestID)
-	}
-	i.Status = status
-	return nil
-}
-
 // AddAgentData adds a data received from agent. For a specific invocation
 // agent data is always received in the same invocation.
 func (b *Batch) AddAgentData(apmData APMData) error {
@@ -156,57 +143,25 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 }
 
 // FinalizeInvocation prepares the data for the invocation to be shipped to APM
-// Server. It performs the following steps:
-// 1. Enriches the transaction event with platform metrics.
-// 2. Iterates through cached agent data to find a transaction; if transaction
-// is not reported and the invocation has a corresponding transactionID then
-// it creates a new transaction.
-func (b *Batch) FinalizeInvocation(
-	reqID string,
-	durationMs, initMs float32,
-	billDurationMs, memMB, maxMemMB int32,
-) error {
+// Server. It accepts requestID and status of the invocation both of which can
+// be retrieved after parsing `platform.runtimeDone` event.
+func (b *Batch) FinalizeInvocation(reqID, status string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	inc, ok := b.invocations[reqID]
-	if !ok {
-		return fmt.Errorf("invocation for requestID %s does not exist", reqID)
-	}
-	defer delete(b.invocations, reqID)
-	if err := inc.FinalizeAndEnrich(durationMs, initMs, billDurationMs, memMB, maxMemMB); err != nil {
-		return err
-	}
-	for i := 0; i < len(inc.agentData); i++ {
-		if err := b.buf.WriteByte('\n'); err != nil {
-			return err
-		}
-		if _, err := b.buf.Write(inc.agentData[i]); err != nil {
-			return err
-		}
-		b.count++
-	}
-	return nil
+	return b.finalizeInvocation(reqID, status)
 }
 
-// FlushAgentData flushes the data for shipping to APM Server without enriching
-// it with platform.report metrics.
-func (b *Batch) FlushAgentData() error {
+// FlushAgentData flushes the data for shipping to APM Server by finalizing all
+// the invocation in the batch. If we haven't received a platform.runtimeDone
+// event for an invocation so far we won't be able to recieve it in time thus
+// the status needs to be guessed based on the available information.
+func (b *Batch) FlushAgentData(status string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	for _, inc := range b.invocations {
-		if err := inc.Finalize(); err != nil {
+		if err := b.finalizeInvocation(inc.RequestID, status); err != nil {
 			return err
 		}
-		for i := 0; i < len(inc.agentData); i++ {
-			if err := b.buf.WriteByte('\n'); err != nil {
-				return err
-			}
-			if _, err := b.buf.Write(inc.agentData[i]); err != nil {
-				return err
-			}
-			b.count++
-		}
-		delete(b.invocations, inc.RequestID)
 	}
 	return nil
 }
@@ -270,4 +225,25 @@ func (b *Batch) ToAPMData() APMData {
 	return APMData{
 		Data: b.buf.Bytes(),
 	}
+}
+
+func (b *Batch) finalizeInvocation(reqID, status string) error {
+	inc, ok := b.invocations[reqID]
+	if !ok {
+		return fmt.Errorf("invocation for requestID %s does not exist", reqID)
+	}
+	defer delete(b.invocations, reqID)
+	if err := inc.Finalize(status); err != nil {
+		return err
+	}
+	for i := 0; i < len(inc.agentData); i++ {
+		if err := b.buf.WriteByte('\n'); err != nil {
+			return err
+		}
+		if _, err := b.buf.Write(inc.agentData[i]); err != nil {
+			return err
+		}
+		b.count++
+	}
+	return nil
 }

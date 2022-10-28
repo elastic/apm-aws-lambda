@@ -19,7 +19,6 @@ package accumulator
 
 import (
 	"bytes"
-	"math"
 	"time"
 
 	"github.com/tidwall/gjson"
@@ -45,11 +44,6 @@ type Invocation struct {
 	// TraceID is the ID generated for a trace for the current invocation.
 	// It is populated by the request from agent.
 	TraceID string
-	// AgentPayload for creating transaction.
-	AgentPayload []byte
-	// Status of the invocation, is available in the platform.runtimeDone
-	// log from the Lambda API.
-	Status string
 	// Metadata stripped data from the agent. Each line is represented as
 	// a seperate entry.
 	agentData [][]byte
@@ -58,66 +52,22 @@ type Invocation struct {
 // Finalize searches the agent data for an invocation to find the root txn
 // for the invocation. If root txn is not found then a new txn is created
 // with the payload submitted by the agent.
-func (inc *Invocation) Finalize() error {
+func (inc *Invocation) Finalize(status string) error {
 	if inc.TransactionID == "" {
 		return nil
 	}
 	if rootTxnIdx := inc.findRootTxn(); rootTxnIdx == -1 {
-		_, err := inc.createProxyTxn()
+		_, err := inc.createProxyTxn(status)
 		return err
 	}
 	return nil
 }
 
-// FinalizeAndEnrich finalizes the invocation and uses the data from
-// platform.report metrics to enrich the root txn.
-func (inc *Invocation) FinalizeAndEnrich(
-	durationMs, initMs float32,
-	billDurationMs, memMB, maxMemMB int32,
-) error {
-	if inc.TransactionID == "" {
-		return nil
-	}
-	rootTxnIdx := inc.findRootTxn()
-	if rootTxnIdx == -1 {
-		// Create a new txn if not found
-		var err error
-		rootTxnIdx, err = inc.createProxyTxn()
-		if err != nil {
-			return err
-		}
-	}
-	// Enrich the transaction with the platform metrics
-	txn, err := sjson.SetBytes(inc.agentData[rootTxnIdx], "faas", map[string]interface{}{
-		"execution":          inc.RequestID,
-		"id":                 inc.FunctionARN,
-		"timeout":            math.Ceil(float64(inc.DeadlineMs-inc.Timestamp.UnixMilli())/1e3) * 1e3,
-		"coldstart":          initMs > 0,
-		"duration":           durationMs,
-		"billed_duration":    billDurationMs,
-		"coldstart_duration": initMs,
-	})
-	if err != nil {
-		return err
-	}
-	txn, err = sjson.SetBytes(txn, "system.memory", map[string]interface{}{
-		"total": float64(memMB) * float64(1024*1024),
-		"actual": map[string]float64{
-			"free": float64(memMB-maxMemMB) * float64(1024*1024),
-		},
-	})
-	if err != nil {
-		return err
-	}
-	inc.agentData[rootTxnIdx] = txn
-	return nil
-}
-
-func (inc *Invocation) createProxyTxn() (int, error) {
+func (inc *Invocation) createProxyTxn(status string) (int, error) {
 	txn, err := sjson.SetBytes(nil, "transaction", map[string]string{
 		"id":       inc.TransactionID,
 		"trace_id": inc.TraceID,
-		"outcome":  inc.Status,
+		"outcome":  status,
 	})
 	if err != nil {
 		return -1, err

@@ -27,19 +27,18 @@ import (
 
 func TestFinalizeAndEnrich_TxnExists(t *testing.T) {
 	ts := time.Date(2022, time.October, 1, 1, 0, 0, 0, time.UTC)
+	data := `{"transaction":{"id":"txn-id","trace_id":"trace-id","outcome":"success"}}`
 	inc := &Invocation{
 		Timestamp:     ts,
 		DeadlineMs:    ts.Add(time.Minute).UnixMilli(),
 		FunctionARN:   "test-fn-arn",
-		TransactionID: "test",
-		agentData: [][]byte{
-			[]byte(`{"transaction":{"id":"test"}}`),
-		},
+		TransactionID: "txn-id",
+		agentData:     [][]byte{[]byte(data)},
 	}
 
-	expected := `{"transaction":{"id":"test"},"faas":{"billed_duration":11,"coldstart":true,"coldstart_duration":2,"duration":11.1,"execution":"","id":"test-fn-arn","timeout":60000},"system":{"memory":{"actual":{"free":1048576},"total":2097152}}}`
-	require.NoError(t, inc.FinalizeAndEnrich(11.1, 2.0, 11, 2, 1))
-	assert.Equal(t, expected, string(inc.agentData[0]))
+	require.NoError(t, inc.Finalize("success")) // does nothing
+	assert.Equal(t, 1, len(inc.agentData))
+	assert.Equal(t, data, string(inc.agentData[0]))
 }
 
 func TestFinalizeAndEnrich_TxnNotFound(t *testing.T) {
@@ -50,10 +49,9 @@ func TestFinalizeAndEnrich_TxnNotFound(t *testing.T) {
 		FunctionARN:   "test-fn-arn",
 		TransactionID: "txn-id",
 		TraceID:       "trace-id",
-		Status:        "timeout",
 	}
 
-	expected := `{"transaction":{"id":"txn-id","trace_id":"trace-id","outcome":"timeout"},"faas":{"billed_duration":11,"coldstart":true,"coldstart_duration":2,"duration":11.1,"execution":"","id":"test-fn-arn","timeout":60000},"system":{"memory":{"actual":{"free":1048576},"total":2097152}}}`
-	require.NoError(t, inc.FinalizeAndEnrich(11.1, 2.0, 11, 2, 1))
+	expected := `{"transaction":{"id":"txn-id","trace_id":"trace-id","outcome":"timeout"}}`
+	require.NoError(t, inc.Finalize("timeout"))
 	assert.JSONEq(t, expected, string(inc.agentData[0]))
 }
