@@ -47,9 +47,9 @@ type jsonError struct {
 // has completed, signaled via a channel.
 func (c *Client) ForwardApmData(ctx context.Context) error {
 	if c.IsUnhealthy() {
+		c.logger.Warn("Failed to start APM data forwarder due to client unhealthy")
 		return nil
 	}
-
 	var lambdaDataChan chan []byte
 	for {
 		select {

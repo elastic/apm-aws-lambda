@@ -104,8 +104,13 @@ func (app *App) Run(ctx context.Context) error {
 			app.logger.Debug("Waiting for background data send to end")
 			backgroundDataSendWg.Wait()
 			if app.apmClient.ShouldFlush() {
+				// Use a new cancellable context for flushing APM data to make sure
+				// that the underlying transport is reset for next invocation without
+				// waiting for grace period if it got to unhealthy state.
+				flushCtx, cancel := context.WithCancel(ctx)
 				// Flush APM data now that the function invocation has completed
-				app.apmClient.FlushAPMData(ctx, false)
+				app.apmClient.FlushAPMData(flushCtx, false)
+				cancel()
 			}
 			prevEvent = event
 		}

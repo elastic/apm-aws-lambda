@@ -102,29 +102,32 @@ func newMockApmServer(t *testing.T, l *zap.SugaredLogger) (*MockServerInternals,
 			return
 		}
 
-		// remove metadata from decompressed bytes to extract APMServerBehavior
-		var expectedBehavior APMServerBehavior
-		if sp := bytes.Split(decompressedBytes, []byte("\n")); len(sp) > 1 {
-			expectedBehavior = APMServerBehavior(sp[1])
-		}
-		l.Debugf("Event type received by mock APM server : %s", string(decompressedBytes))
-		switch expectedBehavior {
-		case TimelyResponse:
-			l.Debug("Timely response signal received")
-		case SlowResponse:
-			l.Debug("Slow response signal received")
-			time.Sleep(2 * time.Second)
-		case Hangs:
-			l.Debug("Hang signal received")
-			apmServerMutex.Lock()
-			if apmServerInternals.WaitForUnlockSignal {
-				<-apmServerInternals.UnlockSignalChannel
-				apmServerInternals.WaitForUnlockSignal = false
+		sp := bytes.Split(decompressedBytes, []byte("\n"))
+		for i := 0; i < len(sp); i++ {
+			// remove metadata from decompressed bytes to extract APMServerBehavior
+			if i == 0 && bytes.Contains(sp[i], []byte(`"metadata":`)) {
+				continue
 			}
-			apmServerMutex.Unlock()
-		case Crashes:
-			panic("Server crashed")
-		default:
+			expectedBehavior := APMServerBehavior(sp[i])
+			l.Debugf("Event type received by mock APM server : %s", string(expectedBehavior))
+			switch expectedBehavior {
+			case TimelyResponse:
+				l.Debug("Timely response signal received")
+			case SlowResponse:
+				l.Debug("Slow response signal received")
+				time.Sleep(2 * time.Second)
+			case Hangs:
+				l.Debug("Hang signal received")
+				apmServerMutex.Lock()
+				if apmServerInternals.WaitForUnlockSignal {
+					<-apmServerInternals.UnlockSignalChannel
+					apmServerInternals.WaitForUnlockSignal = false
+				}
+				apmServerMutex.Unlock()
+			case Crashes:
+				panic("Server crashed")
+			default:
+			}
 		}
 
 		if r.RequestURI == "/intake/v2/events" {
@@ -252,26 +255,27 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 	// float values were silently ignored (casted to int)
 	// Multiply before casting to support more values.
 	delay := time.Duration(event.ExecutionDuration * float64(time.Second))
-	metadata := `{"metadata":{"service":{"name":"1234_service-12a3","version":"5.1.3","environment":"staging","agent":{"name":"elastic-node","version":"3.14.0"},"framework":{"name":"Express","version":"1.2.3"},"language":{"name":"ecmascript","version":"8"},"runtime":{"name":"node","version":"8.0.0"},"node":{"configured_name":"node-123"}},"user":{"username":"bar","id":"123user","email":"bar@user.com"},"labels":{"tag0":null,"tag1":"one","tag2":2},"process":{"pid":1234,"ppid":6789,"title":"node","argv":["node","server.js"]},"system":{"architecture":"x64","hostname":"prod1.example.com","platform":"darwin","container":{"id":"container-id"},"kubernetes":{"namespace":"namespace1","node":{"name":"node-name"},"pod":{"name":"pod-name","uid":"pod-uid"}}},"cloud":{"provider":"cloud_provider","region":"cloud_region","availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"account":{"id":"account_id","name":"account_name"},"project":{"id":"project_id","name":"project_name"},"service":{"name":"lambda"}}}}`
-	intakeV2Body := []byte(fmt.Sprintf("%s\n%s", metadata, event.APMServerBehavior))
+	buf := bytes.NewBufferString(`{"metadata":{"service":{"name":"1234_service-12a3","version":"5.1.3","environment":"staging","agent":{"name":"elastic-node","version":"3.14.0"},"framework":{"name":"Express","version":"1.2.3"},"language":{"name":"ecmascript","version":"8"},"runtime":{"name":"node","version":"8.0.0"},"node":{"configured_name":"node-123"}},"user":{"username":"bar","id":"123user","email":"bar@user.com"},"labels":{"tag0":null,"tag1":"one","tag2":2},"process":{"pid":1234,"ppid":6789,"title":"node","argv":["node","server.js"]},"system":{"architecture":"x64","hostname":"prod1.example.com","platform":"darwin","container":{"id":"container-id"},"kubernetes":{"namespace":"namespace1","node":{"name":"node-name"},"pod":{"name":"pod-name","uid":"pod-uid"}}},"cloud":{"provider":"cloud_provider","region":"cloud_region","availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"account":{"id":"account_id","name":"account_name"},"project":{"id":"project_id","name":"project_name"},"service":{"name":"lambda"}}}}`)
+	buf.WriteByte('\n')
+	buf.WriteString(string(event.APMServerBehavior))
 
 	switch event.Type {
 	case InvokeHang:
 		time.Sleep(time.Duration(event.Timeout * float64(time.Second)))
 	case InvokeStandard:
 		time.Sleep(delay)
-		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer(intakeV2Body))
+		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), buf)
 		res, _ := client.Do(req)
 		l.Debugf("Response seen by the agent : %d", res.StatusCode)
 	case InvokeStandardFlush:
 		time.Sleep(delay)
-		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), bytes.NewBuffer(intakeV2Body))
+		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), buf)
 		if _, err := client.Do(reqData); err != nil {
 			l.Error(err.Error())
 		}
 	case InvokeLateFlush:
 		time.Sleep(delay)
-		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), bytes.NewBuffer(intakeV2Body))
+		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), buf)
 		internals.WaitGroup.Add(1)
 		go func() {
 			<-ch
@@ -284,8 +288,8 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 		sendMetrics = false
 	case InvokeWaitgroupsRace:
 		time.Sleep(delay)
-		reqData0, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer(intakeV2Body))
-		reqData1, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer(intakeV2Body))
+		reqData0, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), buf)
+		reqData1, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), buf)
 		if _, err := client.Do(reqData0); err != nil {
 			l.Error(err.Error())
 		}
@@ -299,7 +303,7 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 			wg.Add(1)
 			go func() {
 				time.Sleep(delay)
-				reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewBuffer(intakeV2Body))
+				reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), buf)
 				if _, err := client.Do(reqData); err != nil {
 					l.Error(err.Error())
 				}
@@ -519,7 +523,6 @@ func TestWaitGroup(t *testing.T) {
 
 	eventsChain := []MockEvent{
 		{Type: InvokeWaitgroupsRace, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 500},
-		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 0, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	select {
@@ -564,8 +567,6 @@ func TestAPMServerHangs(t *testing.T) {
 	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
-		// The first response sets the metadata so that the lambda logs handler is accepting requests
-		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
@@ -597,12 +598,18 @@ func TestAPMServerRecovery(t *testing.T) {
 		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		time.Sleep(2500 * time.Millisecond) // Cannot multiply time.Second by a float
 		apmServerInternals.UnlockSignalChannel <- struct{}{}
 	}()
 	select {
 	case <-runApp(t, logsapiAddr):
+		// Make sure mock APM Server processes the Hangs request
+		wg.Wait()
+		time.Sleep(10 * time.Millisecond)
 		assert.Contains(t, apmServerInternals.Data, Hangs)
 		assert.Contains(t, apmServerInternals.Data, TimelyResponse)
 	case <-time.After(10 * time.Second):
@@ -758,9 +765,8 @@ func TestInfoRequestHangs(t *testing.T) {
 	}
 }
 
-// TestMetricsWithMetadata checks if the extension sends metrics corresponding to invocation n during invocation
-// n+1, even if the metadata container was not populated
-func TestMetricsWithMetadata(t *testing.T) {
+// TestMetrics checks if the extension sends metrics corresponding to invocation n during invocation
+func TestMetrics(t *testing.T) {
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
 	require.NoError(t, err)
 
