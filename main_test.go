@@ -104,10 +104,6 @@ func newMockApmServer(t *testing.T, l *zap.SugaredLogger) (*MockServerInternals,
 
 		sp := bytes.Split(decompressedBytes, []byte("\n"))
 		for i := 0; i < len(sp); i++ {
-			// remove metadata from decompressed bytes to extract APMServerBehavior
-			if i == 0 && bytes.Contains(sp[i], []byte(`"metadata":`)) {
-				continue
-			}
 			expectedBehavior := APMServerBehavior(sp[i])
 			l.Debugf("Event type received by mock APM server : %s", string(expectedBehavior))
 			switch expectedBehavior {
