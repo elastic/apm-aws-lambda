@@ -164,15 +164,22 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		txnID := r.Header.Get("x-elastic-transaction-id")
-		traceID := r.Header.Get("x-elastic-trace-id")
 		if txnID == "" {
 			c.logger.Warn("Could not parse transaction id from transaction registration body")
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		if err := c.batch.OnAgentInit(txnID, traceID); err != nil {
+		rawBytes, err := io.ReadAll(r.Body)
+		defer r.Body.Close()
+		if err != nil {
+			c.logger.Warnf("Failed to read transaction registration body: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if err := c.batch.OnAgentInit(txnID, rawBytes); err != nil {
 			c.logger.Warnf("Failed to update invocation for transaction ID %s", txnID)
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 	}
 }

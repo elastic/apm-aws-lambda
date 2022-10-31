@@ -20,7 +20,7 @@ package accumulator
 import (
 	"time"
 
-	"go.elastic.co/fastjson"
+	"github.com/tidwall/sjson"
 )
 
 // Invocation holds data for each function invocation and finalizes
@@ -39,14 +39,18 @@ type Invocation struct {
 	// TransactionID is the ID generated for a transaction for the
 	// current invocation. It is populated by the request from agent.
 	TransactionID string
-	// TraceID is the ID generated for a trace for the current invocation.
-	// It is populated by the request from agent.
-	TraceID string
+	// AgentPayload is the partial transaction registered at agent init.
+	// It will be used to create a proxy transaction by enriching the
+	// payload with data from `platform.runtimeDone` event if agent fails
+	// to report the actual transaction.
+	AgentPayload []byte
 	// TransactionObserved is true if the root transaction ID for the
 	// invocation is observed by the extension.
 	TransactionObserved bool
 }
 
+// NeedProxyTransaction returns true if a proxy transaction needs to be
+// created based on the information available.
 func (inc *Invocation) NeedProxyTransaction() bool {
 	return inc.TransactionID != "" && !inc.TransactionObserved
 }
@@ -55,21 +59,17 @@ func (inc *Invocation) NeedProxyTransaction() bool {
 // A proxy transaction will be required to be created if the agent has
 // registered a transaction for the invocation but has not sent the
 // corresponding transaction to the extension.
-func (inc *Invocation) Finalize(status string) []byte {
+func (inc *Invocation) Finalize(status string) ([]byte, error) {
 	if !inc.NeedProxyTransaction() {
-		return nil
+		return nil, nil
 	}
 	return inc.createProxyTxn(status)
 }
 
-func (inc *Invocation) createProxyTxn(status string) []byte {
-	var w fastjson.Writer
-	w.RawString(`{"transaction":{"id":`)
-	w.String(inc.TransactionID)
-	w.RawString(`,"trace_id":`)
-	w.String(inc.TraceID)
-	w.RawString(`,"result":`)
-	w.String(status)
-	w.RawString("}}")
-	return w.Bytes()
+func (inc *Invocation) createProxyTxn(status string) (txn []byte, err error) {
+	txn, err = sjson.SetBytes(inc.AgentPayload, "transaction.result", status)
+	if status != "success" {
+		txn, err = sjson.SetBytes(txn, "transaction.outcome", "failure")
+	}
+	return
 }

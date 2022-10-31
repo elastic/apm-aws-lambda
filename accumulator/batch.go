@@ -50,6 +50,7 @@ var (
 // from all sources (logs API & APM Agents). As the batch gets the required
 // data it marks the data ready for shipping to APM Server.
 type Batch struct {
+	mu sync.RWMutex
 	// metadataBytes is the size of the metadata in bytes
 	metadataBytes int
 	// buf holds data that is ready to be shipped to APM-Server
@@ -62,12 +63,6 @@ type Batch struct {
 	maxSize                     int
 	maxAge                      time.Duration
 	currentlyExecutingRequestID string
-
-	// TODO: @lahsivjar remove requirements of a mutex; currently it is
-	// required because the invocations need to be accessed from logsapi
-	// as the processed log output of logsapi doesn't have the necessary
-	// information.
-	mu sync.RWMutex
 }
 
 // NewBatch creates a new BatchData which can accept a
@@ -102,14 +97,17 @@ func (b *Batch) RegisterInvocation(
 // executing invocation as reported by the agent. The traceID and transactionID
 // will be used to create a new transaction in an event the actual transaction
 // is not reported by the agent due to unexpected termination.
-func (b *Batch) OnAgentInit(transactionID string, traceID string) error {
+func (b *Batch) OnAgentInit(transactionID string, payload []byte) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	i, ok := b.invocations[b.currentlyExecutingRequestID]
 	if !ok {
 		return fmt.Errorf("invocation for requestID %s does not exist", b.currentlyExecutingRequestID)
 	}
-	i.TransactionID, i.TraceID = transactionID, traceID
+	if string(findEventType(payload)) != "transaction" {
+		return errors.New("invalid payload")
+	}
+	i.TransactionID, i.AgentPayload = transactionID, payload
 	return nil
 }
 
@@ -144,7 +142,6 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 				res := gjson.GetBytes(data[i], "transaction.id")
 				if res.Str != "" && inc.TransactionID == res.Str {
 					inc.TransactionObserved = true
-					continue
 				}
 			}
 		}
@@ -229,13 +226,17 @@ func (b *Batch) finalizeInvocation(reqID, status string) error {
 		return fmt.Errorf("invocation for requestID %s does not exist", reqID)
 	}
 	defer delete(b.invocations, reqID)
-	if proxyTxn := inc.Finalize(status); proxyTxn != nil {
-		return b.addData(proxyTxn)
+	proxyTxn, err := inc.Finalize(status)
+	if err != nil {
+		return err
 	}
-	return nil
+	return b.addData(proxyTxn)
 }
 
 func (b *Batch) addData(data []byte) error {
+	if data == nil || len(data) == 0 {
+		return nil
+	}
 	if b.metadataBytes == 0 {
 		return ErrMetadataUnavailable
 	}
