@@ -115,6 +115,21 @@ publish: validate-layer-name validate-aws-default-region
 		--license "Apache-2.0" \
 		--zip-file "fileb://./bin/extension.zip"
 
+# Delete the given LAYER in all the AWS regions
+delete-in-all-aws-regions: validate-layer-name get-all-aws-regions
+	@mkdir -p $(AWS_FOLDER)
+	@while read AWS_DEFAULT_REGION; do \
+		echo "delete '$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)' in $${AWS_DEFAULT_REGION}"; \
+		AWS_DEFAULT_REGION="$${AWS_DEFAULT_REGION}" ELASTIC_LAYER_NAME=$(ELASTIC_LAYER_NAME) $(MAKE) delete; \
+	done <.regions
+
+# Delete the given LAYER in the given AWS region, it won't fail
+delete: validate-layer-name validate-aws-default-region
+	@aws lambda \
+		delete-layer-version \
+		--layer-name "$(ELASTIC_LAYER_NAME)-$(ARCHITECTURE)" \
+		--version-number 1 || echo "delete-layer-version $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) for $${AWS_DEFAULT_REGION} could not be found"
+
 # Grant public access to the given LAYER in the given AWS region
 grant-public-layer-access: validate-layer-name validate-aws-default-region
 	@echo "[debug] $(ELASTIC_LAYER_NAME)-$(ARCHITECTURE) with version: $$($(MAKE) -s --no-print-directory get-version)"
