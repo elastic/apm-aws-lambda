@@ -1,5 +1,5 @@
 #!/usr/bin/env groovy
-@Library('apm@feature/aws-shared-credentials') _
+@Library('apm@current') _
 
 pipeline {
   agent none
