@@ -64,6 +64,7 @@ pipeline {
             TF_VAR_ENVIRONMENT= 'ci'
             TF_VAR_BRANCH = "${env.BRANCH_NAME.toLowerCase().replaceAll('[^a-z0-9-]', '-')}"
             TF_VAR_REPO = "${REPO}"
+            HOME = "${env.WORKSPACE}"
           }
           steps {
             dir ("${BASE_DIR}") {
