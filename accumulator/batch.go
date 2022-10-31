@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/tidwall/gjson"
 )
 
 var (
@@ -114,13 +116,6 @@ func (b *Batch) OnAgentInit(transactionID string, traceID string) error {
 // AddAgentData adds a data received from agent. For a specific invocation
 // agent data is always received in the same invocation.
 func (b *Batch) AddAgentData(apmData APMData) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	inc, ok := b.invocations[b.currentlyExecutingRequestID]
-	if !ok {
-		return fmt.Errorf("invocation for requestID %s does not exist", b.currentlyExecutingRequestID)
-	}
-
 	raw, err := GetUncompressedBytes(apmData.Data, apmData.ContentEncoding)
 	if err != nil {
 		return err
@@ -131,14 +126,30 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 	if len(data) == 0 {
 		return nil
 	}
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	inc, ok := b.invocations[b.currentlyExecutingRequestID]
+	if !ok {
+		return fmt.Errorf("invocation for requestID %s does not exist", b.currentlyExecutingRequestID)
+	}
 	// Set metadata if not already set
 	if b.metadataBytes == 0 {
 		b.metadataBytes, _ = b.buf.Write(data[0])
 	}
-	// Should we identify the target transaction and cache only that?
 	for i := 1; i < len(data); i++ {
-		if d := data[i]; len(d) > 0 {
-			inc.agentData = append(inc.agentData, d)
+		if inc.NeedProxyTransaction() {
+			switch t := findEventType(data[i]); string(t) {
+			case "transaction":
+				res := gjson.GetBytes(data[i], "transaction.id")
+				if res.Str != "" && inc.TransactionID == res.Str {
+					inc.TransactionObserved = true
+					continue
+				}
+			}
+		}
+		if err := b.addData(data[i]); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -173,24 +184,7 @@ func (b *Batch) OnShutdown(status string) error {
 func (b *Batch) AddLambdaData(d []byte) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	if b.metadataBytes == 0 {
-		return ErrMetadataUnavailable
-	}
-	if b.count == b.maxSize {
-		return ErrBatchFull
-	}
-	if err := b.buf.WriteByte('\n'); err != nil {
-		return err
-	}
-	if _, err := b.buf.Write(d); err != nil {
-		return err
-	}
-	if b.count == 0 {
-		// For first entry, set the age of the batch
-		b.age = time.Now()
-	}
-	b.count++
-	return nil
+	return b.addData(d)
 }
 
 // Count return the number of APMData entries in batch.
@@ -235,15 +229,46 @@ func (b *Batch) finalizeInvocation(reqID, status string) error {
 		return fmt.Errorf("invocation for requestID %s does not exist", reqID)
 	}
 	defer delete(b.invocations, reqID)
-	inc.Finalize(status)
-	for i := 0; i < len(inc.agentData); i++ {
-		if err := b.buf.WriteByte('\n'); err != nil {
-			return err
-		}
-		if _, err := b.buf.Write(inc.agentData[i]); err != nil {
-			return err
-		}
-		b.count++
+	if proxyTxn := inc.Finalize(status); proxyTxn != nil {
+		return b.addData(proxyTxn)
 	}
 	return nil
+}
+
+func (b *Batch) addData(data []byte) error {
+	if b.metadataBytes == 0 {
+		return ErrMetadataUnavailable
+	}
+	if b.count == b.maxSize {
+		return ErrBatchFull
+	}
+	if err := b.buf.WriteByte('\n'); err != nil {
+		return err
+	}
+	if _, err := b.buf.Write(data); err != nil {
+		return err
+	}
+	if b.count == 0 {
+		// For first entry, set the age of the batch
+		b.age = time.Now()
+	}
+	b.count++
+	return nil
+}
+
+func findEventType(body []byte) []byte {
+	var quote byte
+	var key []byte
+	for i, r := range body {
+		if r == '"' || r == '\'' {
+			quote = r
+			key = body[i+1:]
+			break
+		}
+	}
+	end := bytes.IndexByte(key, quote)
+	if end == -1 {
+		return nil
+	}
+	return key[:end]
 }

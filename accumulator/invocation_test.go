@@ -24,35 +24,47 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFinalizeAndEnrich_TxnExists(t *testing.T) {
-	ts := time.Date(2022, time.October, 1, 1, 0, 0, 0, time.UTC)
-	data := `{"transaction":{"id":"txn-id","trace_id":"trace-id","result":"success"}}`
-	inc := &Invocation{
-		Timestamp:     ts,
-		DeadlineMs:    ts.Add(time.Minute).UnixMilli(),
-		FunctionARN:   "test-fn-arn",
-		TransactionID: "txn-id",
-		agentData:     [][]byte{[]byte(data)},
+func TestFinalize(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		txnID       string
+		traceID     string
+		txnObserved bool
+		output      string
+	}{
+		{
+			name: "no_txn_registered",
+		},
+		{
+			name:        "txn_registered_observed",
+			txnID:       "test-txn-id",
+			traceID:     "test-trace-id",
+			txnObserved: true,
+		},
+		{
+			name:    "txn_registered_not_observed",
+			txnID:   "test-txn-id",
+			traceID: "test-trace-id",
+			output:  `{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id","result":"success"}}`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ts := time.Date(2022, time.October, 1, 1, 0, 0, 0, time.UTC)
+			inc := &Invocation{
+				Timestamp:           ts,
+				DeadlineMs:          ts.Add(time.Minute).UnixMilli(),
+				FunctionARN:         "test-fn-arn",
+				TransactionID:       tc.txnID,
+				TraceID:             tc.traceID,
+				TransactionObserved: tc.txnObserved,
+			}
+			if len(tc.output) > 0 {
+				assert.JSONEq(t, tc.output, string(inc.Finalize("success")))
+			} else {
+				assert.Nil(t, inc.Finalize("success"))
+			}
+		})
 	}
-
-	inc.Finalize("success") // does nothing
-	assert.Equal(t, 1, len(inc.agentData))
-	assert.Equal(t, data, string(inc.agentData[0]))
-}
-
-func TestFinalizeAndEnrich_TxnNotFound(t *testing.T) {
-	ts := time.Date(2022, time.October, 1, 1, 0, 0, 0, time.UTC)
-	inc := &Invocation{
-		Timestamp:     ts,
-		DeadlineMs:    ts.Add(time.Minute).UnixMilli(),
-		FunctionARN:   "test-fn-arn",
-		TransactionID: "txn-id",
-		TraceID:       "trace-id",
-	}
-
-	expected := `{"transaction":{"id":"txn-id","trace_id":"trace-id","result":"timeout"}}`
-	inc.Finalize("timeout")
-	assert.JSONEq(t, expected, string(inc.agentData[0]))
 }
 
 func BenchmarkCreateProxyTxn(b *testing.B) {

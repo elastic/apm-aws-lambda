@@ -89,3 +89,27 @@ func TestShouldShip_ReasonAge(t *testing.T) {
 	require.Equal(t, 1, b.Count())
 	assert.True(t, b.ShouldShip())
 }
+
+// func TestLifecycle(t *testing.T) {
+// 	reqID := "test-req-id"
+// 	funcARN := "test-func-arn"
+// 	txnID := "test-txn-id"
+// 	traceID := "test-trace-id"
+// 	ts := time.Date(2022, time.January, 31, 0, 0, 0, 0, time.UTC)
+// 	b := NewBatch(1, time.Hour)
+//
+// 	// On NEXT API response invocation will be registered
+// 	b.RegisterInvocation(reqID, funcARN, 1, ts)
+// 	assert.Equal(t, b.currentlyExecutingRequestID, reqID) //?
+// 	// Agent registers the created transacion
+// 	require.NoError(t, b.OnAgentInit(txnID, traceID))
+// 	// Agent data will be pushed to the extn
+// 	b.AddAgentData(APMData{
+// 		Data: []byte(fmt.Sprintf("%s\n{\"transaction\":{}}", metadata)),
+// 	})
+// 	// `platform.start` log event will be received by the extn.
+// 	// The event can be received in:
+// 	// - Same invocation
+// 	// - Separate invocation but same instance
+// 	// - Separate invocation and different instance
+// }

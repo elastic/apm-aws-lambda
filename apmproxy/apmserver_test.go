@@ -613,7 +613,7 @@ func TestForwardApmData(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expected, string(out))
 	}
-	agentData := fmt.Sprintf("%s\n%s", metadata, `{"log": {"message": "test"}}`)
+	agentData := fmt.Sprintf("%s\n%s", metadata, `{"transaction":{"id":"0102030405060708","trace_id":"0102030405060708090a0b0c0d0e0f10"}}`)
 	lambdaData := `{"log": {"message": "test"}}`
 	maxBatchAge := 1 * time.Second
 	apmClient, err := apmproxy.NewClient(
@@ -639,9 +639,10 @@ func TestForwardApmData(t *testing.T) {
 		Data: []byte(agentData),
 	}
 
-	// Send lambda logs API data
+	// Send lambda logs API data; the expected data will contain metadata
+	// and agent data both.
 	var expected bytes.Buffer
-	expected.WriteString(metadata)
+	expected.WriteString(agentData)
 	// Send multiple lambda logs to batch data
 	for i := 0; i < 5; i++ {
 		if i == 4 {
@@ -678,6 +679,7 @@ func BenchmarkFlushAPMData(b *testing.B) {
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithLogger(zaptest.NewLogger(b).Sugar()),
+		apmproxy.WithBatch(accumulator.NewBatch(100, time.Minute)),
 	)
 	require.NoError(b, err)
 

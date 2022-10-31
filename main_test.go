@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -501,7 +502,11 @@ func TestLateFlush(t *testing.T) {
 	eventQueueGenerator(eventsChain, eventsChannel)
 	select {
 	case <-runApp(t, logsapiAddr):
-		assert.Contains(t, apmServerInternals.Data, fmt.Sprintf("%s\n%s", TimelyResponse, TimelyResponse))
+		assert.Regexp(
+			t,
+			regexp.MustCompile(fmt.Sprintf(".*\n%s.*\n%s", TimelyResponse, TimelyResponse)), // metadata followed by TimelyResponsex2
+			apmServerInternals.Data,
+		)
 	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}

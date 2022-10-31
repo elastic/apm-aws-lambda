@@ -18,10 +18,8 @@
 package accumulator
 
 import (
-	"bytes"
 	"time"
 
-	"github.com/tidwall/gjson"
 	"go.elastic.co/fastjson"
 )
 
@@ -44,24 +42,27 @@ type Invocation struct {
 	// TraceID is the ID generated for a trace for the current invocation.
 	// It is populated by the request from agent.
 	TraceID string
-	// Metadata stripped data from the agent. Each line is represented as
-	// a seperate entry.
-	agentData [][]byte
+	// TransactionObserved is true if the root transaction ID for the
+	// invocation is observed by the extension.
+	TransactionObserved bool
 }
 
-// Finalize searches the agent data for an invocation to find the root txn
-// for the invocation. If root txn is not found then a new txn is created
-// with the payload submitted by the agent.
-func (inc *Invocation) Finalize(status string) {
-	if inc.TransactionID == "" {
-		return
-	}
-	if rootTxnIdx := inc.findRootTxn(); rootTxnIdx == -1 {
-		inc.createProxyTxn(status)
-	}
+func (inc *Invocation) NeedProxyTransaction() bool {
+	return inc.TransactionID != "" && !inc.TransactionObserved
 }
 
-func (inc *Invocation) createProxyTxn(status string) int {
+// Finalize creates a proxy transaction for an invocation if required.
+// A proxy transaction will be required to be created if the agent has
+// registered a transaction for the invocation but has not sent the
+// corresponding transaction to the extension.
+func (inc *Invocation) Finalize(status string) []byte {
+	if !inc.NeedProxyTransaction() {
+		return nil
+	}
+	return inc.createProxyTxn(status)
+}
+
+func (inc *Invocation) createProxyTxn(status string) []byte {
 	var w fastjson.Writer
 	w.RawString(`{"transaction":{"id":`)
 	w.String(inc.TransactionID)
@@ -70,37 +71,5 @@ func (inc *Invocation) createProxyTxn(status string) int {
 	w.RawString(`,"result":`)
 	w.String(status)
 	w.RawString("}}")
-	inc.agentData = append(inc.agentData, w.Bytes())
-	return len(inc.agentData) - 1
-}
-
-func (inc *Invocation) findRootTxn() int {
-	for i := range inc.agentData {
-		switch t := findEventType(inc.agentData[i]); string(t) {
-		case "transaction":
-			// Get transaction.id and check if it matches
-			res := gjson.GetBytes(inc.agentData[i], "transaction.id")
-			if res.Str != "" && inc.TransactionID == res.Str {
-				return i
-			}
-		}
-	}
-	return -1
-}
-
-func findEventType(body []byte) []byte {
-	var quote byte
-	var key []byte
-	for i, r := range body {
-		if r == '"' || r == '\'' {
-			quote = r
-			key = body[i+1:]
-			break
-		}
-	}
-	end := bytes.IndexByte(key, quote)
-	if end == -1 {
-		return nil
-	}
-	return key[:end]
+	return w.Bytes()
 }
