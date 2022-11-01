@@ -21,9 +21,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"io"
 	"testing"
+
+	"github.com/elastic/apm-aws-lambda/apmproxy"
 
 	"github.com/stretchr/testify/require"
 )
@@ -133,7 +134,7 @@ func Test_processMetadata(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			agentData := apmproxy.AgentData{Data: tc.data(), ContentEncoding: tc.encodingType}
+			agentData := apmproxy.APMData{Data: tc.data(), ContentEncoding: tc.encodingType}
 			extractedMetadata, err := apmproxy.ProcessMetadata(agentData)
 
 			if tc.expectError != nil {
@@ -167,7 +168,7 @@ func BenchmarkProcessMetadata(b *testing.B) {
 	}
 
 	for _, bench := range benchmarks {
-		agentData := apmproxy.AgentData{Data: bench.body, ContentEncoding: ""}
+		agentData := apmproxy.APMData{Data: bench.body, ContentEncoding: ""}
 
 		b.Run(bench.name, func(b *testing.B) {
 			b.ReportAllocs()

@@ -6,7 +6,7 @@ export TF_IN_AUTOMATION=1
 export TF_CLI_ARGS=-no-color
 
 cleanup() {
-  terraform destroy -auto-approve >> tf.log
+  [ "$SKIP_DESTROY" != "1" ]; terraform destroy -auto-approve >> tf.log
 }
 
 trap "cleanup" EXIT

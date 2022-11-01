@@ -22,15 +22,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestProcessFunctionLog(t *testing.T) {
-	metadataContainer := &apmproxy.MetadataContainer{
-		Metadata: []byte(`{"metadata":{"service":{"agent":{"name":"apm-lambda-extension","version":"1.1.0"},"framework":{"name":"AWS Lambda","version":""},"language":{"name":"python","version":"3.9.8"},"runtime":{"name":"","version":""},"node":{}},"user":{},"process":{"pid":0},"system":{"container":{"id":""},"kubernetes":{"node":{},"pod":{}}},"cloud":{"provider":"","instance":{},"machine":{},"account":{},"project":{},"service":{}}}}`),
-	}
 	event := LogEvent{
 		Time:         time.Date(2022, 11, 12, 0, 0, 0, 0, time.UTC),
 		Type:         FunctionLog,
@@ -39,16 +35,15 @@ func TestProcessFunctionLog(t *testing.T) {
 	reqID := "8476a536-e9f4-11e8-9739-2dfe598c3fcd"
 	invokedFnArn := "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"
 	expectedData := fmt.Sprintf(
-		"%s\n{\"log\":{\"message\":\"%s\",\"@timestamp\":%d,\"faas\":{\"id\":\"%s\",\"execution\":\"%s\"}}}",
-		metadataContainer.Metadata,
+		"{\"log\":{\"message\":\"%s\",\"@timestamp\":%d,\"faas\":{\"id\":\"%s\",\"execution\":\"%s\"}}}",
 		event.StringRecord,
 		event.Time.UnixNano()/int64(time.Microsecond),
 		invokedFnArn,
 		reqID,
 	)
 
-	apmData, err := ProcessFunctionLog(metadataContainer, reqID, invokedFnArn, event)
+	data, err := ProcessFunctionLog(reqID, invokedFnArn, event)
 
 	require.NoError(t, err)
-	assert.Equal(t, expectedData, string(apmData.Data))
+	assert.Equal(t, expectedData, string(data))
 }

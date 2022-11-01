@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"github.com/elastic/apm-aws-lambda/extension"
 )
 
@@ -82,9 +81,6 @@ func (app *App) Run(ctx context.Context) error {
 
 	// The previous event id is used to validate the received Lambda metrics
 	var prevEvent *extension.NextEventResponse
-	// This data structure contains metadata tied to the current Lambda instance. If empty, it is populated once for each
-	// active Lambda environment
-	metadataContainer := apmproxy.MetadataContainer{}
 
 	for {
 		select {
@@ -96,7 +92,7 @@ func (app *App) Run(ctx context.Context) error {
 			// Use a wait group to ensure the background go routine sending to the APM server
 			// completes before signaling that the extension is ready for the next invocation.
 			var backgroundDataSendWg sync.WaitGroup
-			event, err := app.processEvent(ctx, &backgroundDataSendWg, prevEvent, &metadataContainer)
+			event, err := app.processEvent(ctx, &backgroundDataSendWg, prevEvent)
 			if err != nil {
 				return err
 			}
@@ -120,7 +116,6 @@ func (app *App) processEvent(
 	ctx context.Context,
 	backgroundDataSendWg *sync.WaitGroup,
 	prevEvent *extension.NextEventResponse,
-	metadataContainer *apmproxy.MetadataContainer,
 ) (*extension.NextEventResponse, error) {
 	// Reset flush state for future events.
 	defer app.apmClient.ResetFlush()
@@ -159,7 +154,7 @@ func (app *App) processEvent(
 	backgroundDataSendWg.Add(1)
 	go func() {
 		defer backgroundDataSendWg.Done()
-		if err := app.apmClient.ForwardApmData(invocationCtx, metadataContainer); err != nil {
+		if err := app.apmClient.ForwardApmData(invocationCtx); err != nil {
 			app.logger.Error(err)
 		}
 	}()
@@ -173,8 +168,7 @@ func (app *App) processEvent(
 				invocationCtx,
 				event.RequestID,
 				event.InvokedFunctionArn,
-				app.apmClient,
-				metadataContainer,
+				app.apmClient.LambdaDataChannel,
 				runtimeDone,
 				prevEvent,
 			); err != nil {

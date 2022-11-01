@@ -19,7 +19,6 @@ package apmproxy_test
 
 import (
 	"bytes"
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"io"
 	"net"
 	"net/http"
@@ -27,6 +26,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/elastic/apm-aws-lambda/apmproxy"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -243,7 +244,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 	resp, err := client.Do(req)
 	require.NoError(t, err)
 	select {
-	case <-apmClient.DataChannel:
+	case <-apmClient.AgentDataChannel:
 	case <-time.After(1 * time.Second):
 		t.Log("Timed out waiting for server to send FuncDone signal")
 		t.Fail()

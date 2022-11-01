@@ -86,8 +86,8 @@ func (lc *Client) subscribe(types []SubscriptionType, extensionID string, uri st
 		LogTypes:      types,
 		BufferingCfg: BufferingCfg{
 			MaxItems:  10000,
-			MaxBytes:  262144,
-			TimeoutMS: 25,
+			MaxBytes:  1024 * 1024,
+			TimeoutMS: 100,
 		},
 		Destination: Destination{
 			Protocol:   "HTTP",

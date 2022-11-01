@@ -18,10 +18,8 @@
 package logsapi
 
 import (
-	"errors"
 	"math"
 
-	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"github.com/elastic/apm-aws-lambda/extension"
 	"go.elastic.co/apm/v2/model"
 	"go.elastic.co/fastjson"
@@ -63,12 +61,10 @@ func (mc MetricsContainer) MarshalFastJSON(json *fastjson.Writer) error {
 	return nil
 }
 
-func ProcessPlatformReport(metadataContainer *apmproxy.MetadataContainer, functionData *extension.NextEventResponse, platformReport LogEvent) (apmproxy.AgentData, error) {
-
-	if metadataContainer == nil || len(metadataContainer.Metadata) == 0 {
-		return apmproxy.AgentData{}, errors.New("metadata is not populated")
-	}
-
+// ProcessPlatformReport processes the `platform.report` log line from lambda logs API and
+// returns a byte array containing the JSON body for the extracted platform metrics. A non
+// nil error is returned when marshaling of platform metrics into JSON fails.
+func ProcessPlatformReport(functionData *extension.NextEventResponse, platformReport LogEvent) ([]byte, error) {
 	metricsContainer := MetricsContainer{
 		Metrics: &model.Metrics{},
 	}
@@ -103,14 +99,8 @@ func ProcessPlatformReport(metadataContainer *apmproxy.MetadataContainer, functi
 
 	var jsonWriter fastjson.Writer
 	if err := metricsContainer.MarshalFastJSON(&jsonWriter); err != nil {
-		return apmproxy.AgentData{}, err
+		return nil, err
 	}
 
-	capacity := len(metadataContainer.Metadata) + jsonWriter.Size() + 1 // 1 for newline
-	metricsData := make([]byte, len(metadataContainer.Metadata), capacity)
-	copy(metricsData, metadataContainer.Metadata)
-
-	metricsData = append(metricsData, []byte("\n")...)
-	metricsData = append(metricsData, jsonWriter.Bytes()...)
-	return apmproxy.AgentData{Data: metricsData}, nil
+	return jsonWriter.Bytes(), nil
 }

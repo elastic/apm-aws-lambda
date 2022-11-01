@@ -46,13 +46,17 @@ const (
 	defaultDataForwarderTimeout time.Duration = 3 * time.Second
 	defaultReceiverAddr                       = ":8200"
 	defaultAgentBufferSize      int           = 100
+	defaultLambdaBufferSize     int           = 100
+	defaultMaxBatchSize         int           = 50
+	defaultMaxBatchAge          time.Duration = 2 * time.Second
 )
 
 // Client is the client used to communicate with the apm server.
 type Client struct {
 	mu                sync.RWMutex
 	bufferPool        sync.Pool
-	DataChannel       chan AgentData
+	AgentDataChannel  chan APMData
+	LambdaDataChannel chan []byte
 	client            *http.Client
 	Status            Status
 	ReconnectionCount int
@@ -65,6 +69,10 @@ type Client struct {
 
 	flushMutex sync.Mutex
 	flushCh    chan struct{}
+
+	batch        *BatchData
+	maxBatchSize int
+	maxBatchAge  time.Duration
 }
 
 func NewClient(opts ...Option) (*Client, error) {
@@ -72,7 +80,8 @@ func NewClient(opts ...Option) (*Client, error) {
 		bufferPool: sync.Pool{New: func() interface{} {
 			return &bytes.Buffer{}
 		}},
-		DataChannel: make(chan AgentData, defaultAgentBufferSize),
+		AgentDataChannel:  make(chan APMData, defaultAgentBufferSize),
+		LambdaDataChannel: make(chan []byte, defaultLambdaBufferSize),
 		client: &http.Client{
 			Transport: http.DefaultTransport.(*http.Transport).Clone(),
 		},
@@ -86,6 +95,8 @@ func NewClient(opts ...Option) (*Client, error) {
 		},
 		sendStrategy: SyncFlush,
 		flushCh:      make(chan struct{}),
+		maxBatchSize: defaultMaxBatchSize,
+		maxBatchAge:  defaultMaxBatchAge,
 	}
 
 	c.client.Timeout = defaultDataForwarderTimeout

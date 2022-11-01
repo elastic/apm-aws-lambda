@@ -156,6 +156,21 @@ func newMockApmServer(t *testing.T, l *zap.SugaredLogger) (*MockServerInternals,
 
 func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan MockEvent, l *zap.SugaredLogger) *MockServerInternals {
 	var lambdaServerInternals MockServerInternals
+	// A big queue that can hold all the events required for a test
+	mockLogEventQ := make(chan logsapi.LogEvent, 100)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		startLogSender(ctx, mockLogEventQ, logsapiAddr, l)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		wg.Wait()
+	})
+
 	lambdaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.RequestURI {
 		// Extension registration request
@@ -171,19 +186,19 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 			}
 		case "/2020-01-01/extension/event/next":
 			lambdaServerInternals.WaitGroup.Wait()
-			currId := uuid.New().String()
+			currID := uuid.New().String()
 			select {
 			case nextEvent := <-eventsChannel:
-				sendNextEventInfo(w, currId, nextEvent, l)
-				go processMockEvent(currId, nextEvent, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), logsapiAddr, &lambdaServerInternals, l)
+				sendNextEventInfo(w, currID, nextEvent.Timeout, nextEvent.Type == Shutdown, l)
+				go processMockEvent(mockLogEventQ, currID, nextEvent, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals, l)
 			default:
 				finalShutDown := MockEvent{
 					Type:              Shutdown,
 					ExecutionDuration: 0,
 					Timeout:           0,
 				}
-				sendNextEventInfo(w, currId, finalShutDown, l)
-				go processMockEvent(currId, finalShutDown, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), logsapiAddr, &lambdaServerInternals, l)
+				sendNextEventInfo(w, currID, finalShutDown.Timeout, true, l)
+				go processMockEvent(mockLogEventQ, currID, finalShutDown, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals, l)
 			}
 		// Logs API subscription request
 		case "/2020-08-15/logs":
@@ -209,14 +224,12 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 
 func newTestStructs(t *testing.T) chan MockEvent {
 	http.DefaultServeMux = new(http.ServeMux)
-	_, cancel := context.WithCancel(context.Background())
-	t.Cleanup(func() { cancel() })
 	eventsChannel := make(chan MockEvent, 100)
 	return eventsChannel
 }
 
-func processMockEvent(currId string, event MockEvent, extensionPort string, logsapiAddr string, internals *MockServerInternals, l *zap.SugaredLogger) {
-	sendLogEvent(logsapiAddr, currId, logsapi.PlatformStart, l)
+func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent, extensionPort string, internals *MockServerInternals, l *zap.SugaredLogger) {
+	queueLogEvent(q, currID, logsapi.PlatformStart, l)
 	client := http.Client{}
 
 	// Use a custom transport with a low timeout
@@ -311,22 +324,22 @@ func processMockEvent(currId string, event MockEvent, extensionPort string, logs
 	case Shutdown:
 	}
 	if sendRuntimeDone {
-		sendLogEvent(logsapiAddr, currId, logsapi.PlatformRuntimeDone, l)
+		queueLogEvent(q, currID, logsapi.PlatformRuntimeDone, l)
 	}
 	if sendMetrics {
-		sendLogEvent(logsapiAddr, currId, logsapi.PlatformReport, l)
+		queueLogEvent(q, currID, logsapi.PlatformReport, l)
 	}
 }
 
-func sendNextEventInfo(w http.ResponseWriter, id string, event MockEvent, l *zap.SugaredLogger) {
+func sendNextEventInfo(w http.ResponseWriter, id string, timeoutSec float64, shutdown bool, l *zap.SugaredLogger) {
 	nextEventInfo := extension.NextEventResponse{
 		EventType:          "INVOKE",
-		DeadlineMs:         time.Now().UnixNano()/int64(time.Millisecond) + int64(event.Timeout*1000),
+		DeadlineMs:         time.Now().UnixNano()/int64(time.Millisecond) + int64(timeoutSec*1000),
 		RequestID:          id,
 		InvokedFunctionArn: "arn:aws:lambda:eu-central-1:627286350134:function:main_unit_test",
 		Tracing:            extension.Tracing{},
 	}
-	if event.Type == Shutdown {
+	if shutdown {
 		nextEventInfo.EventType = "SHUTDOWN"
 	}
 
@@ -335,9 +348,9 @@ func sendNextEventInfo(w http.ResponseWriter, id string, event MockEvent, l *zap
 	}
 }
 
-func sendLogEvent(logsapiAddr string, requestId string, logEventType logsapi.LogEventType, l *zap.SugaredLogger) {
+func queueLogEvent(q chan<- logsapi.LogEvent, requestID string, logEventType logsapi.LogEventType, l *zap.SugaredLogger) {
 	record := logsapi.LogEventRecord{
-		RequestID: requestId,
+		RequestID: requestID,
 	}
 	if logEventType == logsapi.PlatformReport {
 		record.Metrics = logsapi.PlatformMetrics{
@@ -359,27 +372,64 @@ func sendLogEvent(logsapiAddr string, requestId string, logEventType logsapi.Log
 	bufRecord := new(bytes.Buffer)
 	if err := json.NewEncoder(bufRecord).Encode(record); err != nil {
 		l.Errorf("Could not encode record : %v", err)
-		return
 	}
 	logEvent.StringRecord = bufRecord.String()
+	q <- logEvent
+}
 
-	// Convert full log event to JSON
-	bufLogEvent := new(bytes.Buffer)
-	if err := json.NewEncoder(bufLogEvent).Encode([]logsapi.LogEvent{logEvent}); err != nil {
-		l.Errorf("Could not encode record : %v", err)
-		return
+func startLogSender(ctx context.Context, q <-chan logsapi.LogEvent, logsapiAddr string, l *zap.SugaredLogger) {
+	client := http.Client{
+		Timeout: 10 * time.Millisecond,
+	}
+	doSend := func(events []logsapi.LogEvent) error {
+		var buf bytes.Buffer
+		if err := json.NewEncoder(&buf).Encode(events); err != nil {
+			return err
+		}
+
+		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s", logsapiAddr), &buf)
+		if err != nil {
+			return err
+		}
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode/100 != 2 {
+			return fmt.Errorf("received a non 2xx status code: %d", resp.StatusCode)
+		}
+		return nil
 	}
 
-	req, err := http.NewRequest(http.MethodPost, "http://"+logsapiAddr, bufLogEvent)
-	if err != nil {
-		l.Errorf("Could not create logs api request: %v", err)
-		return
-	}
-
-	client := http.Client{}
-	if _, err := client.Do(req); err != nil {
-		l.Errorf("Could not send log event : %v", err)
-		return
+	var batch []logsapi.LogEvent
+	flushInterval := time.NewTicker(100 * time.Millisecond)
+	defer flushInterval.Stop()
+	for {
+		select {
+		case <-flushInterval.C:
+			var trySend bool
+			for !trySend {
+				// TODO: @lahsivjar mock dropping of logs, batch age and batch size
+				// TODO: @lahsivjar is it possible for one batch to have platform.runtimeDone
+				// event in middle of the batch?
+				select {
+				case e := <-q:
+					batch = append(batch, e)
+				default:
+					trySend = true
+					if len(batch) > 0 {
+						if err := doSend(batch); err != nil {
+							l.Warnf("mock lambda API failed to send logs to the extension: %v", err)
+						} else {
+							batch = batch[:0]
+						}
+					}
+				}
+			}
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
@@ -513,6 +563,8 @@ func TestAPMServerHangs(t *testing.T) {
 	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
+		// The first response sets the metadata so that the lambda logs handler is accepting requests
+		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
 		{Type: InvokeStandard, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
@@ -692,7 +744,7 @@ func TestInfoRequestHangs(t *testing.T) {
 	lambdaServerInternals := newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
 
 	eventsChain := []MockEvent{
-		{Type: InvokeStandardInfo, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 500},
+		{Type: InvokeStandardInfo, APMServerBehavior: Hangs, ExecutionDuration: 1, Timeout: 5},
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	select {
@@ -772,7 +824,6 @@ func TestMetricsWithMetadata(t *testing.T) {
 
 func runApp(t *testing.T, logsapiAddr string) <-chan struct{} {
 	ctx, cancel := context.WithCancel(context.Background())
-
 	app, err := app.New(ctx,
 		app.WithExtensionName("apm-lambda-extension"),
 		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),

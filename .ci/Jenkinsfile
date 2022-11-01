@@ -154,6 +154,19 @@ pipeline {
                   }
                 }
               }
+              stage('DeletePreviousLayer') {
+                steps {
+                  withGithubNotify(context: "Delete-Layer-${PLATFORM}") {
+                    withGoEnv(){
+                      withAWSEnv(secret: 'secret/observability-team/ci/service-account/apm-aws-lambda', forceInstallation: true, version: '2.4.10') {
+                        dir("${BASE_DIR}"){
+                          cmd(label: 'make delete-in-all-aws-regions', script: 'make delete-in-all-aws-regions', returnStatus: true)
+                        }
+                      }
+                    }
+                  }
+                }
+              }
               stage('PublishLayer') {
                 steps {
                   withGithubNotify(context: "Publish-Layer-${PLATFORM}") {
