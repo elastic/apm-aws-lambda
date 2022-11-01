@@ -35,6 +35,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest"
 )
 
@@ -676,10 +677,11 @@ func BenchmarkFlushAPMData(b *testing.B) {
 	}))
 	b.Cleanup(apmServer.Close)
 
+	batch := accumulator.NewBatch(100, time.Minute)
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
-		apmproxy.WithLogger(zaptest.NewLogger(b).Sugar()),
-		apmproxy.WithBatch(accumulator.NewBatch(100, time.Minute)),
+		apmproxy.WithLogger(zaptest.NewLogger(b, zaptest.Level(zapcore.WarnLevel)).Sugar()),
+		apmproxy.WithBatch(batch),
 	)
 	require.NoError(b, err)
 
@@ -692,13 +694,15 @@ func BenchmarkFlushAPMData(b *testing.B) {
 {"transaction": { "name": "july-2021-delete-after-july-31", "type": "lambda", "result": "success", "id": "142e61450efb8574", "trace_id": "eb56529a1f461c5e7e2f66ecb075e983", "subtype": null, "action": null, "duration": 38.853, "timestamp": 1631736666365048, "sampled": true, "context": { "cloud": { "origin": { "account": { "id": "abc123" }, "provider": "aws", "region": "us-east-1", "service": { "name": "serviceName" } } }, "service": { "origin": { "id": "abc123", "name": "service-name", "version": "1.0" } }, "user": {}, "tags": {}, "custom": { } }, "sync": true, "span_count": { "started": 0 }, "outcome": "unknown", "faas": { "coldstart": false, "execution": "2e13b309-23e1-417f-8bf7-074fc96bc683", "trigger": { "request_id": "FuH2Cir_vHcEMUA=", "type": "http" } }, "sample_rate": 1 } }
 `)
 	agentAPMData := accumulator.APMData{Data: agentData}
+	ts := time.Date(2022, time.October, 1, 0, 0, 0, 0, time.UTC)
+	batch.RegisterInvocation("test-req-id", "test-arn", ts.Add(time.Minute).UnixMilli(), ts)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		apmClient.AgentDataChannel <- agentAPMData
 		for j := 0; j < 99; j++ {
-			apmClient.LambdaDataChannel <- []byte("this is test log")
+			apmClient.LambdaDataChannel <- []byte(`{"log":{"message":this is test log"}}`)
 		}
 		apmClient.FlushAPMData(context.Background(), false)
 	}
@@ -722,7 +726,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
-		apmproxy.WithLogger(zaptest.NewLogger(b).Sugar()),
+		apmproxy.WithLogger(zaptest.NewLogger(b, zaptest.Level(zapcore.WarnLevel)).Sugar()),
 	)
 	require.NoError(b, err)
 

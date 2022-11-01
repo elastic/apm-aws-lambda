@@ -127,9 +127,12 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.currentlyExecutingRequestID == "" {
+		return fmt.Errorf("lifecycle error, currently executing requestID is not set")
+	}
 	inc, ok := b.invocations[b.currentlyExecutingRequestID]
 	if !ok {
-		return fmt.Errorf("invocation for requestID %s does not exist", b.currentlyExecutingRequestID)
+		return fmt.Errorf("invocation for current requestID %s does not exist", b.currentlyExecutingRequestID)
 	}
 	// Set metadata if not already set
 	if b.metadataBytes == 0 {
