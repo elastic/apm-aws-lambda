@@ -20,15 +20,18 @@
 [[lambda-unreleased]]
 === Unreleased
 
-https://github.com/elastic/apm-aws-lambda/compare/v1.1.0...main[View commits]
-
+https://github.com/elastic/apm-aws-lambda/compare/v1.2.0...main[View commits]
 
 [float]
-===== Breaking changes
+[[lambda-1.2.0]]
+=== 1.2.0 - 2022/11/01
 
 [float]
 ===== Features
+- Parse and log APM Server error responses, and backoff on critical errors {lambda-pull}281[281]
 - Disable CGO to prevent libc/ABI compatibility issues {lambda-pull}292[292]
+- Deprecate `ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS` in favour of `ELASTIC_APM_DATA_RECEIVER_TIMEOUT` {lambda-pull}294[294]
+- Log shutdown reason on exit {lambda-pull}297[297]
 - Add support for collecting and shipping function logs to APM Server {lambda-pull}303[303]
 - Batch data collected from lambda logs API before sending to APM Server {lambda-pull}314[314]
 
