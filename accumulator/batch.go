@@ -42,6 +42,7 @@ var (
 var (
 	maxSizeThreshold = 0.9
 	zeroTime         = time.Time{}
+	newLineSep       = []byte("\n")
 )
 
 // Batch manages the data that needs to be shipped to APM Server. It holds
@@ -114,15 +115,12 @@ func (b *Batch) OnAgentInit(transactionID string, payload []byte) error {
 // AddAgentData adds a data received from agent. For a specific invocation
 // agent data is always received in the same invocation.
 func (b *Batch) AddAgentData(apmData APMData) error {
+	if len(apmData.Data) == 0 {
+		return nil
+	}
 	raw, err := GetUncompressedBytes(apmData.Data, apmData.ContentEncoding)
 	if err != nil {
 		return err
-	}
-	// A request body can either be empty or have a ndjson content with
-	// first line being metadata.
-	data := bytes.Split(raw, []byte("\n"))
-	if len(data) == 0 {
-		return nil
 	}
 
 	b.mu.Lock()
@@ -134,22 +132,29 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 	if !ok {
 		return fmt.Errorf("invocation for current requestID %s does not exist", b.currentlyExecutingRequestID)
 	}
-	// Set metadata if not already set
+
+	// A request body can either be empty or have a ndjson content with
+	// first line being metadata.
+	data, after, _ := bytes.Cut(raw, newLineSep)
 	if b.metadataBytes == 0 {
-		b.metadataBytes, _ = b.buf.Write(data[0])
+		b.metadataBytes, _ = b.buf.Write(data)
 	}
-	for i := 1; i < len(data); i++ {
+	for {
+		data, after, _ = bytes.Cut(after, newLineSep)
 		if inc.NeedProxyTransaction() {
-			switch t := findEventType(data[i]); string(t) {
+			switch t := findEventType(data); string(t) {
 			case "transaction":
-				res := gjson.GetBytes(data[i], "transaction.id")
+				res := gjson.GetBytes(data, "transaction.id")
 				if res.Str != "" && inc.TransactionID == res.Str {
 					inc.TransactionObserved = true
 				}
 			}
 		}
-		if err := b.addData(data[i]); err != nil {
+		if err := b.addData(data); err != nil {
 			return err
+		}
+		if len(after) == 0 {
+			break
 		}
 	}
 	return nil
