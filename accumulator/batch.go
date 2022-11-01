@@ -234,7 +234,7 @@ func (b *Batch) finalizeInvocation(reqID, status string) error {
 }
 
 func (b *Batch) addData(data []byte) error {
-	if data == nil || len(data) == 0 {
+	if len(data) == 0 {
 		return nil
 	}
 	if b.metadataBytes == 0 {

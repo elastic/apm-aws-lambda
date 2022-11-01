@@ -102,6 +102,9 @@ func BenchmarkCreateProxyTxn(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		inc.createProxyTxn("success")
+		_, err := inc.createProxyTxn("success")
+		if err != nil {
+			b.Fail()
+		}
 	}
 }
