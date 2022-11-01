@@ -37,15 +37,13 @@ var (
 	// ErrInvalidEncoding is returned for any APMData that is encoded
 	// with any encoding format
 	ErrInvalidEncoding = errors.New("encoded data not supported")
-
-	// transactionKey is used to find if a ndjson line is a transaction.
-	transactionKey = []byte("transaction")
 )
 
 var (
 	maxSizeThreshold = 0.9
 	zeroTime         = time.Time{}
 	newLineSep       = []byte("\n")
+	transactionKey   = []byte("transaction")
 )
 
 // Batch manages the data that needs to be shipped to APM Server. It holds
