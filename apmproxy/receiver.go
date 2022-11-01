@@ -32,6 +32,8 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+const txnRegistrationContentType = "application/vnd.elastic.apm.transaction+json"
+
 // StartReceiver starts the server listening for APM agent data.
 func (c *Client) StartReceiver() error {
 	mux := http.NewServeMux()
@@ -164,6 +166,10 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 // URL: http://server/register/transaction
 func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != txnRegistrationContentType {
+			w.WriteHeader(http.StatusUnsupportedMediaType)
+			return
+		}
 		rawBytes, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {
@@ -174,12 +180,12 @@ func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *
 		txnID := gjson.GetBytes(rawBytes, "transaction.id").String()
 		if txnID == "" {
 			c.logger.Warn("Could not parse transaction id from transaction registration body")
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusUnprocessableEntity)
 			return
 		}
 		if err := c.batch.OnAgentInit(txnID, rawBytes); err != nil {
 			c.logger.Warnf("Failed to update invocation for transaction ID %s", txnID)
-			w.WriteHeader(http.StatusBadRequest)
+			w.WriteHeader(http.StatusUnprocessableEntity)
 			return
 		}
 	}
