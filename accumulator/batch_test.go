@@ -208,6 +208,20 @@ func TestLifecycle(t *testing.T) {
 	}
 }
 
+func TestIsTransactionEvent(t *testing.T) {
+	for _, tc := range []struct {
+		body     []byte
+		expected bool
+	}{
+		{body: []byte(`{}`), expected: false},
+		{body: []byte(`{"tran":{}}`), expected: false},
+		{body: []byte(`{"span":{}}`), expected: false},
+		{body: []byte(`{"transaction":{}}`), expected: true},
+	} {
+		assert.Equal(t, tc.expected, isTransactionEvent(tc.body))
+	}
+}
+
 func generateCompleteTxn(t *testing.T, src, result, outcome string) string {
 	t.Helper()
 	tmp, err := sjson.SetBytes([]byte(src), "transaction.result", result)

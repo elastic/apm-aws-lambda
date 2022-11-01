@@ -37,6 +37,9 @@ var (
 	// ErrInvalidEncoding is returned for any APMData that is encoded
 	// with any encoding format
 	ErrInvalidEncoding = errors.New("encoded data not supported")
+
+	// transactionKey is used to find if a ndjson line is a transaction.
+	transactionKey = []byte("transaction")
 )
 
 var (
@@ -105,7 +108,7 @@ func (b *Batch) OnAgentInit(transactionID string, payload []byte) error {
 	if !ok {
 		return fmt.Errorf("invocation for requestID %s does not exist", b.currentlyExecutingRequestID)
 	}
-	if string(findEventType(payload)) != "transaction" {
+	if !isTransactionEvent(payload) {
 		return errors.New("invalid payload")
 	}
 	i.TransactionID, i.AgentPayload = transactionID, payload
@@ -141,13 +144,10 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 	}
 	for {
 		data, after, _ = bytes.Cut(after, newLineSep)
-		if inc.NeedProxyTransaction() {
-			switch t := findEventType(data); string(t) {
-			case "transaction":
-				res := gjson.GetBytes(data, "transaction.id")
-				if res.Str != "" && inc.TransactionID == res.Str {
-					inc.TransactionObserved = true
-				}
+		if inc.NeedProxyTransaction() && isTransactionEvent(data) {
+			res := gjson.GetBytes(data, "transaction.id")
+			if res.Str != "" && inc.TransactionID == res.Str {
+				inc.TransactionObserved = true
 			}
 		}
 		if err := b.addData(data); err != nil {
@@ -265,19 +265,21 @@ func (b *Batch) addData(data []byte) error {
 	return nil
 }
 
-func findEventType(body []byte) []byte {
-	var quote byte
+func isTransactionEvent(body []byte) bool {
 	var key []byte
 	for i, r := range body {
 		if r == '"' || r == '\'' {
-			quote = r
 			key = body[i+1:]
 			break
 		}
 	}
-	end := bytes.IndexByte(key, quote)
-	if end == -1 {
-		return nil
+	if len(key) < len(transactionKey) {
+		return false
 	}
-	return key[:end]
+	for i := 0; i < len(transactionKey); i++ {
+		if transactionKey[i] != key[i] {
+			return false
+		}
+	}
+	return true
 }
