@@ -114,7 +114,10 @@ func (b *Batch) OnAgentInit(transactionID string, payload []byte) error {
 }
 
 // AddAgentData adds a data received from agent. For a specific invocation
-// agent data is always received in the same invocation.
+// agent data is always received in the same invocation. All the events
+// extracted from the payload are added to the batch even though the batch
+// might exceed the max size limit, however, if the batch is already full
+// before adding any events then ErrBatchFull is returned.
 func (b *Batch) AddAgentData(apmData APMData) error {
 	if len(apmData.Data) == 0 {
 		return nil
@@ -126,6 +129,9 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.count >= b.maxSize {
+		return ErrBatchFull
+	}
 	if b.currentlyExecutingRequestID == "" {
 		return fmt.Errorf("lifecycle error, currently executing requestID is not set")
 	}
@@ -187,6 +193,9 @@ func (b *Batch) OnShutdown(status string) error {
 func (b *Batch) AddLambdaData(d []byte) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.count >= b.maxSize {
+		return ErrBatchFull
+	}
 	return b.addData(d)
 }
 
@@ -245,9 +254,6 @@ func (b *Batch) addData(data []byte) error {
 	}
 	if b.metadataBytes == 0 {
 		return ErrMetadataUnavailable
-	}
-	if b.count == b.maxSize {
-		return ErrBatchFull
 	}
 	if err := b.buf.WriteByte('\n'); err != nil {
 		return err
