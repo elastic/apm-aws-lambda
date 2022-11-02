@@ -342,12 +342,18 @@ func (c *Client) WaitForFlush() <-chan struct{} {
 }
 
 func (c *Client) forwardAgentData(ctx context.Context, apmData accumulator.APMData) error {
-	return c.batch.AddAgentData(apmData)
+	if err := c.batch.AddAgentData(apmData); err != nil {
+		c.logger.Warnf("Dropping agent data due to error: %v", err)
+	}
+	if c.batch.ShouldShip() {
+		return c.sendBatch(ctx)
+	}
+	return nil
 }
 
 func (c *Client) forwardLambdaData(ctx context.Context, data []byte) error {
 	if err := c.batch.AddLambdaData(data); err != nil {
-		c.logger.Warnf("Dropping data due to error: %v", err)
+		c.logger.Warnf("Dropping lambda data due to error: %v", err)
 	}
 	if c.batch.ShouldShip() {
 		return c.sendBatch(ctx)
