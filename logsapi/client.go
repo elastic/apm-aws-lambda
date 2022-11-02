@@ -46,6 +46,10 @@ const (
 // ClientOption is a config option for a Client.
 type ClientOption func(*Client)
 
+type invocationLifecycler interface {
+	OnLambdaLogRuntimeDone(requestID, status string) error
+}
+
 // Client is the client used to subscribe to the Logs API.
 type Client struct {
 	httpClient               *http.Client
@@ -55,6 +59,7 @@ type Client struct {
 	listenerAddr             string
 	server                   *http.Server
 	logger                   *zap.SugaredLogger
+	invocationLifecycler     invocationLifecycler
 }
 
 // NewClient returns a new Client with the given URL.

@@ -76,7 +76,7 @@ func (app *App) Run(ctx context.Context) error {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		app.apmClient.FlushAPMData(ctx)
+		app.apmClient.FlushAPMData(ctx, true)
 	}()
 
 	// The previous event id is used to validate the received Lambda metrics
@@ -104,8 +104,13 @@ func (app *App) Run(ctx context.Context) error {
 			app.logger.Debug("Waiting for background data send to end")
 			backgroundDataSendWg.Wait()
 			if app.apmClient.ShouldFlush() {
+				// Use a new cancellable context for flushing APM data to make sure
+				// that the underlying transport is reset for next invocation without
+				// waiting for grace period if it got to unhealthy state.
+				flushCtx, cancel := context.WithCancel(ctx)
 				// Flush APM data now that the function invocation has completed
-				app.apmClient.FlushAPMData(ctx)
+				app.apmClient.FlushAPMData(flushCtx, false)
+				cancel()
 			}
 			prevEvent = event
 		}
@@ -140,7 +145,12 @@ func (app *App) processEvent(
 		app.logger.Infof("Exiting")
 		return nil, err
 	}
-
+	app.batch.RegisterInvocation(
+		event.RequestID,
+		event.InvokedFunctionArn,
+		event.DeadlineMs,
+		event.Timestamp,
+	)
 	// Used to compute Lambda Timeout
 	event.Timestamp = time.Now()
 	app.logger.Debug("Received event.")

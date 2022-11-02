@@ -20,6 +20,7 @@ package apmproxy
 import (
 	"time"
 
+	"github.com/elastic/apm-aws-lambda/accumulator"
 	"go.uber.org/zap"
 )
 
@@ -74,7 +75,7 @@ func WithSendStrategy(strategy SendStrategy) Option {
 // WithAgentDataBufferSize sets the agent data buffer size.
 func WithAgentDataBufferSize(size int) Option {
 	return func(c *Client) {
-		c.AgentDataChannel = make(chan APMData, size)
+		c.AgentDataChannel = make(chan accumulator.APMData, size)
 	}
 }
 
@@ -86,24 +87,10 @@ func WithLogger(logger *zap.SugaredLogger) Option {
 	}
 }
 
-// WithMaxBatchSize configures the maximum batch size for
-// the payload sent to the APMServer
-func WithMaxBatchSize(size int) Option {
+// WithBatch configures a batch to be used for batching data
+// before sending to APM Server.
+func WithBatch(batch *accumulator.Batch) Option {
 	return func(c *Client) {
-		c.maxBatchSize = size
-	}
-}
-
-// WithMaxBatchAge configures the maximum age of the batch
-// before it is sent to APMServer. Age is measured from the
-// time the first entry is added in the batch.
-//
-// It is possible for batch age to be greater than the
-// configured max batch age when sending since a send is
-// triggered by a new log event and log events can be delayed
-// due to various factors.
-func WithMaxBatchAge(age time.Duration) Option {
-	return func(c *Client) {
-		c.maxBatchAge = age
+		c.batch = batch
 	}
 }

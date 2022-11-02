@@ -74,18 +74,20 @@ func (lc *Client) ProcessLogs(
 			switch logEvent.Type {
 			case PlatformStart:
 				platformStartReqID = logEvent.Record.RequestID
-			// Check the logEvent for runtimeDone and compare the RequestID
-			// to the id that came in via the Next API
 			case PlatformRuntimeDone:
+				if err := lc.invocationLifecycler.OnLambdaLogRuntimeDone(logEvent.Record.RequestID, logEvent.Record.Status); err != nil {
+					lc.logger.Warnf("Failed to finalize invocation with request ID %s", logEvent.Record.RequestID)
+				}
+				// For the current invocation the platform.runtimeDone would be the last event
 				if logEvent.Record.RequestID == requestID {
 					lc.logger.Info("Received runtimeDone event for this function invocation")
 					runtimeDoneSignal <- struct{}{}
 					return nil
 				}
-
 				lc.logger.Debug("Log API runtimeDone event request id didn't match")
 			// Check if the logEvent contains metrics and verify that they can be linked to the previous invocation
 			case PlatformReport:
+				// TODO: @lahsivjar Refactor usage of prevEvent.RequestID (should now query the batch?)
 				if prevEvent != nil && logEvent.Record.RequestID == prevEvent.RequestID {
 					lc.logger.Debug("Received platform report for the previous function invocation")
 					processedMetrics, err := ProcessPlatformReport(prevEvent, logEvent)

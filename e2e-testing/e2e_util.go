@@ -29,8 +29,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/elastic/apm-aws-lambda/apmproxy"
-
+	"github.com/elastic/apm-aws-lambda/accumulator"
 	"go.uber.org/zap"
 )
 
@@ -156,7 +155,7 @@ func GetDecompressedBytesFromRequest(req *http.Request) ([]byte, error) {
 	if req.Body != nil {
 		rawBytes, _ = io.ReadAll(req.Body)
 	}
-	return apmproxy.GetUncompressedBytes(rawBytes, req.Header.Get("Content-Encoding"))
+	return accumulator.GetUncompressedBytes(rawBytes, req.Header.Get("Content-Encoding"))
 }
 
 // GetFreePort is a function that queries the kernel and obtains an unused port.

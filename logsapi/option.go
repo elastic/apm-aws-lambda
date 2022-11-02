@@ -17,7 +17,9 @@
 
 package logsapi
 
-import "go.uber.org/zap"
+import (
+	"go.uber.org/zap"
+)
 
 // WithListenerAddress sets the listener address of the
 // server listening for logs event.
@@ -53,5 +55,13 @@ func WithLogger(logger *zap.SugaredLogger) ClientOption {
 func WithSubscriptionTypes(types ...SubscriptionType) ClientOption {
 	return func(c *Client) {
 		c.logsAPISubscriptionTypes = types
+	}
+}
+
+// WithInvocationLifecycler configures a lifecycler for acting on certain
+// log events.
+func WithInvocationLifecycler(l invocationLifecycler) ClientOption {
+	return func(c *Client) {
+		c.invocationLifecycler = l
 	}
 }
