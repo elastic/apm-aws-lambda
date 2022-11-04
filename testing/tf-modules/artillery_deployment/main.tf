@@ -98,6 +98,10 @@ resource "aws_instance" "artillery" {
   subnet_id              = aws_subnet.artillery.id
   vpc_security_group_ids = [aws_security_group.artillery.id]
 
+  lifecycle {
+    ignore_changes = [ami]
+  }
+
   connection {
     type        = "ssh"
     host        = self.public_ip

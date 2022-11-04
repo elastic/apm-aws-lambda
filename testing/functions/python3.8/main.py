@@ -10,9 +10,9 @@ def handler(event, context):
         "statusCode": 200,
         "body": json.dumps("Hello from Lambda!"+context.aws_request_id),
         "headers": {
-            "coldstart": isColdstart,
+            "coldstart": coldstart,
         }
     }
-    coldstart = false
+    coldstart = False
     return resp
 

@@ -6,5 +6,5 @@
 set -e
 
 pip install -t ./package -r requirements.txt
-zip -r ../../build/python3_8.zip .
+(cd package && zip -r ../../../build/python3_8.zip .)
 zip -g ../../build/python3_8.zip main.py

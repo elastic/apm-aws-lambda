@@ -4,11 +4,11 @@ MACHINE_TYPE?=t2.medium
 LOAD_DURATION?=10
 LAMBDA_RUNTIME?=python3.8
 LAMBDA_TIMEOUT?=15
-LAMBDA_RUNTIME_NORM=$(subst .,_,$(LAMBDA_RUNTIME))
+LAMBDA_RUNTIME_NORM=$(subst '.','_',$(LAMBDA_RUNTIME))
 
 # TODO: @lahsivjar Add automation for terraform fmt and docs
 
-build/$(LAMBDA_RUNTIME_FINAL).zip:
+build/$(LAMBDA_RUNTIME_NORM).zip:
 	@mkdir -p build
 	@cd functions/$(LAMBDA_RUNTIME_NORM) && ./build.sh
 
