@@ -2,6 +2,7 @@ USER_NAME?=$(USER)
 AWS_REGION?=us-west-2
 MACHINE_TYPE?=t2.medium
 LOAD_DURATION?=10
+LOAD_ARRIVAL_RATE?=50
 LAMBDA_RUNTIME?=python3.8
 LAMBDA_TIMEOUT?=15
 LAMBDA_RUNTIME_NORM=$(subst '.','_',$(LAMBDA_RUNTIME))
@@ -37,5 +38,6 @@ terraform-init:
 		-var 'aws_region=$(AWS_REGION)' \
 		-var 'machine_type=$(MACHINE_TYPE)' \
 		-var 'load_duration=$(LOAD_DURATION)' \
+		-var 'load_arrival_rate=$(LOAD_ARRIVAL_RATE)' \
 		-var 'lambda_runtime=$(LAMBDA_RUNTIME)' \
 		-var 'lambda_timeout=$(LAMBDA_TIMEOUT)'
