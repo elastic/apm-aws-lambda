@@ -39,13 +39,32 @@ variable "lambda_timeout" {
   default     = 15
 }
 
-variable "apm_server_url" {
+variable "ess_region" {
   type        = string
-  description = "APM Server URL for sending the generated load"
+  description = "Optional ESS region where the deployment will be created. Defaults to gcp-us-west2"
+  default     = "gcp-us-west2"
 }
 
-variable "apm_secret_token" {
+variable "deployment_template" {
   type        = string
-  description = "Secret token for auth against the given server URL"
-  sensitive   = true
+  description = "Optional deployment template. Defaults to the CPU optimized template for GCP"
+  default     = "gcp-compute-optimized-v2"
+}
+
+variable "stack_version" {
+  type        = string
+  description = "Optional stack version"
+  default     = "latest"
+}
+
+variable "elasticsearch_size" {
+  type        = string
+  description = "Optional Elasticsearch instance size"
+  default     = "8g"
+}
+
+variable "elasticsearch_zone_count" {
+  type        = number
+  description = "Optional Elasticsearch zone count"
+  default     = 2
 }
