@@ -34,7 +34,7 @@ resource "aws_lambda_function" "test_fn" {
   filename         = local.lambda_function_path
   function_name    = local.lambda_function_name
   role             = aws_iam_role.iam_for_lambda.arn
-  handler          = "main.handler"
+  handler          = var.lambda_handler
   runtime          = var.lambda_runtime
   source_code_hash = filebase64sha256(local.lambda_function_path)
   layers           = [aws_lambda_layer_version.extn_layer.arn]
