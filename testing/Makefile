@@ -15,6 +15,7 @@ build/$(LAMBDA_RUNTIME).zip:
 clean:
 	@rm -rf build/
 	@rm -rf functions/python3.8/package/
+	@rm -rf functions/go1.x/main
 
 .PHONY: bench
 bench: TF_CMD=apply
