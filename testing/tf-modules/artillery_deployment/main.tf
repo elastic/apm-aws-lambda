@@ -1,7 +1,3 @@
-provider "aws" {
-  region = var.aws_region
-}
-
 resource "tls_private_key" "artillery" {
   algorithm = "RSA"
   rsa_bits  = "4096"

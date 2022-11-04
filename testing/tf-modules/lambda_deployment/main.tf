@@ -1,7 +1,3 @@
-provider "aws" {
-  region = var.aws_region
-}
-
 locals {
   name_from_runtime    = replace(var.lambda_runtime, ".", "_")
   lambda_function_path = "${var.build_dir}/${local.name_from_runtime}.zip"

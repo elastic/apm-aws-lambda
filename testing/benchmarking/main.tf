@@ -26,6 +26,11 @@ locals {
 
 provider "ec" {}
 
+provider "aws" {
+  region = var.aws_region
+}
+
+
 module "ec_deployment" {
   source = "github.com/elastic/apm-server/testing/infra/terraform/modules/ec_deployment"
 
@@ -47,7 +52,6 @@ module "lambda_deployment" {
   source = "../tf-modules/lambda_deployment"
 
   resource_prefix = var.resource_prefix
-  aws_region      = var.aws_region
 
   build_dir              = "../build"
   apm_aws_extension_path = "../../bin/extension.zip"
@@ -63,8 +67,12 @@ module "lambda_deployment" {
 module "artillery_deployment" {
   source = "../tf-modules/artillery_deployment"
 
+  depends_on = [
+    module.ec_deployment,
+    module.lambda_deployment,
+  ]
+
   resource_prefix = var.resource_prefix
-  aws_region      = var.aws_region
   machine_type    = var.machine_type
 
   load_duration     = var.load_duration

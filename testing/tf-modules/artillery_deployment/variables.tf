@@ -3,12 +3,6 @@ variable "resource_prefix" {
   description = "Prefix to add to all created resource"
 }
 
-variable "aws_region" {
-  type        = string
-  description = "AWS region to deploy lambda function"
-  default     = "us-west-2"
-}
-
 variable "machine_type" {
   type        = string
   description = "Machine type for artillery nodes"
