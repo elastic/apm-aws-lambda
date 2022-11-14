@@ -73,6 +73,12 @@ func (c *Client) Shutdown() error {
 	return c.receiver.Shutdown(ctx)
 }
 
+type unexpectedStatusError int
+
+func (e unexpectedStatusError) Error() string {
+	return fmt.Sprintf("unexpected status code: %d", int(e))
+}
+
 // URL: http://server/
 func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Request), error) {
 	// Init reverse proxy
@@ -87,9 +93,39 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 	customTransport.ResponseHeaderTimeout = c.client.Timeout
 	reverseProxy.Transport = customTransport
 
+	reverseProxy.ModifyResponse = func(rsp *http.Response) error {
+		if rsp.StatusCode != http.StatusOK {
+			b, err := io.ReadAll(rsp.Body)
+			if err != nil {
+				c.logger.Warnf("failed to read version response body: %v", err)
+				b = []byte{}
+			}
+
+			c.logger.Debugf("failed to query version from the APM server: response body: %s", string(b))
+
+			// Return an error to the ErrorHandler that will proxy the status code back to the agent.
+			return fmt.Errorf("failed to query version from the APM server: response status: %w", unexpectedStatusError(rsp.StatusCode))
+		}
+
+		return nil
+	}
+
 	reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		c.UpdateStatus(r.Context(), Failing)
 		c.logger.Errorf("Error querying version from the APM server: %v", err)
+
+		uErr := new(unexpectedStatusError)
+		if errors.As(err, uErr) {
+			status := int(*uErr)
+
+			// Proxy the status code to the agent.
+			w.WriteHeader(status)
+			return
+		}
+
+		// Server is unreachable, return StatusBadGateway (default behaviour) to avoid
+		// returning a Status OK.
+		w.WriteHeader(http.StatusBadGateway)
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
