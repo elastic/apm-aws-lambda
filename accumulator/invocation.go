@@ -66,15 +66,24 @@ func (inc *Invocation) Finalize(status string, time time.Time) ([]byte, error) {
 	return inc.createProxyTxn(status, time)
 }
 
-func (inc *Invocation) createProxyTxn(status string, time time.Time) (txn []byte, err error) {
-	txn, err = sjson.SetBytes(inc.AgentPayload, "transaction.result", status)
+func (inc *Invocation) createProxyTxn(status string, time time.Time) ([]byte, error) {
+	txn, err := sjson.SetBytes(inc.AgentPayload, "transaction.result", status)
+	if err != nil {
+		return nil, err
+	}
 	// Transaction duration cannot be known in partial transaction payload. Estimate
 	// the duration based on the time provided. Time can be based on the runtimeDone
 	// log record or function deadline.
 	duration := time.Sub(inc.Timestamp)
 	txn, err = sjson.SetBytes(txn, "transaction.duration", duration.Milliseconds())
+	if err != nil {
+		return nil, err
+	}
 	if status != "success" {
 		txn, err = sjson.SetBytes(txn, "transaction.outcome", "failure")
+		if err != nil {
+			return nil, err
+		}
 	}
-	return
+	return txn, nil
 }
