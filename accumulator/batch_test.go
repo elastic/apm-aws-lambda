@@ -99,6 +99,7 @@ func TestLifecycle(t *testing.T) {
 	lambdaData := `{"log":{"message":"this is log"}}`
 	txnData := fmt.Sprintf(`{"transaction":{"id":"%s"}}`, txnID)
 	ts := time.Date(2022, time.October, 1, 1, 1, 1, 0, time.UTC)
+	txnDur := time.Second
 
 	for _, tc := range []struct {
 		name                    string
@@ -127,7 +128,7 @@ func TestLifecycle(t *testing.T) {
 			expected: fmt.Sprintf(
 				"%s\n%s\n%s",
 				metadata,
-				generateCompleteTxn(t, txnData, "success", ""),
+				generateCompleteTxn(t, txnData, "success", "", txnDur),
 				lambdaData,
 			),
 		},
@@ -139,7 +140,7 @@ func TestLifecycle(t *testing.T) {
 			expected: fmt.Sprintf(
 				"%s\n%s\n%s",
 				metadata,
-				generateCompleteTxn(t, txnData, "success", ""),
+				generateCompleteTxn(t, txnData, "success", "", txnDur),
 				lambdaData,
 			),
 		},
@@ -154,7 +155,7 @@ func TestLifecycle(t *testing.T) {
 				"%s\n%s\n%s",
 				metadata,
 				lambdaData,
-				generateCompleteTxn(t, txnData, "failure", "failure"),
+				generateCompleteTxn(t, txnData, "failure", "failure", txnDur),
 			),
 		},
 		{
@@ -169,14 +170,14 @@ func TestLifecycle(t *testing.T) {
 				"%s\n%s\n%s",
 				metadata,
 				lambdaData,
-				generateCompleteTxn(t, txnData, "timeout", "failure"),
+				generateCompleteTxn(t, txnData, "timeout", "failure", txnDur),
 			),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			b := NewBatch(100, time.Hour)
 			// NEXT API response creates a new invocation cache
-			b.RegisterInvocation(reqID, fnARN, 100, ts)
+			b.RegisterInvocation(reqID, fnARN, ts.Add(txnDur).UnixMilli(), ts)
 			// Agent creates and registers a partial transaction in the extn
 			if tc.agentInit {
 				require.NoError(t, b.OnAgentInit(txnID, []byte(txnData)))
@@ -190,7 +191,7 @@ func TestLifecycle(t *testing.T) {
 					Data: []byte(fmt.Sprintf(
 						"%s\n%s",
 						metadata,
-						generateCompleteTxn(t, txnData, "success", "")),
+						generateCompleteTxn(t, txnData, "success", "", txnDur)),
 					),
 				}))
 			}
@@ -199,7 +200,7 @@ func TestLifecycle(t *testing.T) {
 			require.NoError(t, b.AddLambdaData([]byte(lambdaData)))
 			if tc.receiveLambdaLogRuntime {
 				// Lambda API receives a platform.runtimeDone event
-				require.NoError(t, b.OnLambdaLogRuntimeDone(reqID, "failure"))
+				require.NoError(t, b.OnLambdaLogRuntimeDone(reqID, "failure", ts.Add(txnDur)))
 			}
 			// Instance shutdown
 			require.NoError(t, b.OnShutdown("timeout"))
@@ -222,9 +223,11 @@ func TestIsTransactionEvent(t *testing.T) {
 	}
 }
 
-func generateCompleteTxn(t *testing.T, src, result, outcome string) string {
+func generateCompleteTxn(t *testing.T, src, result, outcome string, d time.Duration) string {
 	t.Helper()
 	tmp, err := sjson.SetBytes([]byte(src), "transaction.result", result)
+	assert.NoError(t, err)
+	tmp, err = sjson.SetBytes(tmp, "transaction.duration", d.Milliseconds())
 	assert.NoError(t, err)
 	if outcome != "" {
 		tmp, err = sjson.SetBytes(tmp, "transaction.outcome", outcome)

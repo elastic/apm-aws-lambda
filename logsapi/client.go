@@ -47,7 +47,7 @@ const (
 type ClientOption func(*Client)
 
 type invocationLifecycler interface {
-	OnLambdaLogRuntimeDone(requestID, status string) error
+	OnLambdaLogRuntimeDone(requestID, status string, time time.Time) error
 }
 
 // Client is the client used to subscribe to the Logs API.

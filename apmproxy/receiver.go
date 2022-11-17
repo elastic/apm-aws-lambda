@@ -184,7 +184,7 @@ func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *
 			return
 		}
 		if err := c.batch.OnAgentInit(txnID, rawBytes); err != nil {
-			c.logger.Warnf("Failed to update invocation for transaction ID %s", txnID)
+			c.logger.Warnf("Failed to update invocation for transaction ID %s: %v", txnID, err)
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			return
 		}

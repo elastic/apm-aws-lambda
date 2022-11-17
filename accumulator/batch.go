@@ -40,10 +40,11 @@ var (
 )
 
 var (
-	maxSizeThreshold = 0.9
-	zeroTime         = time.Time{}
-	newLineSep       = []byte("\n")
-	transactionKey   = []byte("transaction")
+	maxSizeThreshold     = 0.9
+	zeroTime             = time.Time{}
+	newLineSep           = []byte("\n")
+	transactionKey       = []byte("transaction")
+	waitingInvocationKey = "waiting"
 )
 
 // Batch manages the data that needs to be shipped to APM Server. It holds
@@ -86,28 +87,43 @@ func (b *Batch) RegisterInvocation(
 ) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.invocations[requestID] = &Invocation{
+	inc := &Invocation{
 		RequestID:   requestID,
 		FunctionARN: functionARN,
 		DeadlineMs:  deadlineMs,
 		Timestamp:   timestamp,
 	}
+	if w, ok := b.invocations[waitingInvocationKey]; ok {
+		// If the agent payload is cached before the invocation is registered
+		// then associate the agent payload with the invocation.
+		inc.AgentPayload = w.AgentPayload
+		inc.TransactionID = w.TransactionID
+		delete(b.invocations, waitingInvocationKey)
+	}
+	b.invocations[requestID] = inc
 	b.currentlyExecutingRequestID = requestID
 }
 
 // OnAgentInit caches the transactionID and the payload for the currently
 // executing invocation as reported by the agent. The traceID and transactionID
 // will be used to create a new transaction in an event the actual transaction
-// is not reported by the agent due to unexpected termination.
+// is not reported by the agent due to unexpected termination. If the current
+// invocation is not registered yet then the payload is cached temporarily and
+// associated with the invocation when it is registered.
 func (b *Batch) OnAgentInit(transactionID string, payload []byte) error {
+	if !isTransactionEvent(payload) {
+		return errors.New("invalid payload")
+	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	i, ok := b.invocations[b.currentlyExecutingRequestID]
 	if !ok {
-		return fmt.Errorf("invocation for requestID %s does not exist", b.currentlyExecutingRequestID)
-	}
-	if !isTransactionEvent(payload) {
-		return errors.New("invalid payload")
+		// It is possible that the invocation is registered at a later time
+		b.invocations[waitingInvocationKey] = &Invocation{
+			TransactionID: transactionID,
+			AgentPayload:  payload,
+		}
+		return nil
 	}
 	i.TransactionID, i.AgentPayload = transactionID, payload
 	return nil
@@ -167,10 +183,10 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 // OnLambdaLogRuntimeDone prepares the data for the invocation to be shipped
 // to APM Server. It accepts requestID and status of the invocation both of
 // which can be retrieved after parsing `platform.runtimeDone` event.
-func (b *Batch) OnLambdaLogRuntimeDone(reqID, status string) error {
+func (b *Batch) OnLambdaLogRuntimeDone(reqID, status string, time time.Time) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return b.finalizeInvocation(reqID, status)
+	return b.finalizeInvocation(reqID, status, time)
 }
 
 // OnShutdown flushes the data for shipping to APM Server by finalizing all
@@ -181,7 +197,12 @@ func (b *Batch) OnShutdown(status string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	for _, inc := range b.invocations {
-		if err := b.finalizeInvocation(inc.RequestID, status); err != nil {
+		// Assume that the transaction took all the function time.
+		// TODO: @lahsivjar Is it possible to tweak the extension lifecycle in
+		// a way that we receive the platform.report metric for a invocation
+		// consistently and enrich the metrics with reported values?
+		time := time.Unix(0, inc.DeadlineMs*int64(time.Millisecond))
+		if err := b.finalizeInvocation(inc.RequestID, status, time); err != nil {
 			return err
 		}
 	}
@@ -235,13 +256,13 @@ func (b *Batch) ToAPMData() APMData {
 	}
 }
 
-func (b *Batch) finalizeInvocation(reqID, status string) error {
+func (b *Batch) finalizeInvocation(reqID, status string, time time.Time) error {
 	inc, ok := b.invocations[reqID]
 	if !ok {
 		return fmt.Errorf("invocation for requestID %s does not exist", reqID)
 	}
 	defer delete(b.invocations, reqID)
-	proxyTxn, err := inc.Finalize(status)
+	proxyTxn, err := inc.Finalize(status, time)
 	if err != nil {
 		return err
 	}

@@ -18,6 +18,7 @@
 package accumulator
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 )
 
 func TestFinalize(t *testing.T) {
+	txnDur := time.Second
 	for _, tc := range []struct {
 		name              string
 		txnID             string
@@ -39,33 +41,42 @@ func TestFinalize(t *testing.T) {
 		{
 			name:              "txn_registered_observed",
 			txnID:             "test-txn-id",
-			payload:           `{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id"}}`,
+			payload:           `{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id","duration":-1}}`,
 			txnObserved:       true,
 			runtimeDoneStatus: "success",
 		},
 		{
 			name:              "txn_registered_not_observed_runtime_failure",
 			txnID:             "test-txn-id",
-			payload:           `{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id"}}`,
+			payload:           `{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id","duration":-1}}`,
 			txnObserved:       false,
 			runtimeDoneStatus: "failure",
-			output:            `{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id","result":"failure","outcome":"failure"}}`,
+			output: fmt.Sprintf(
+				`{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id","result":"failure","outcome":"failure","duration":%d}}`,
+				txnDur.Milliseconds(),
+			),
 		},
 		{
 			name:              "txn_registered_not_observed_runtime_timeout",
 			txnID:             "test-txn-id",
-			payload:           `{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id"}}`,
+			payload:           `{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id","duration":-1}}`,
 			txnObserved:       false,
 			runtimeDoneStatus: "timeout",
-			output:            `{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id","result":"timeout","outcome":"failure"}}`,
+			output: fmt.Sprintf(
+				`{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id","result":"timeout","outcome":"failure","duration":%d}}`,
+				txnDur.Milliseconds(),
+			),
 		},
 		{
 			name:              "txn_registered_not_observed_runtime_success",
 			txnID:             "test-txn-id",
-			payload:           `{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id"}}`,
+			payload:           `{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id","duration":-1}}`,
 			txnObserved:       false,
 			runtimeDoneStatus: "success",
-			output:            `{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id","result":"success"}}`,
+			output: fmt.Sprintf(
+				`{"transaction":{"id":"test-txn-id","trace_id":"test-trace-id","result":"success","duration":%d}}`,
+				txnDur.Milliseconds(),
+			),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -78,7 +89,7 @@ func TestFinalize(t *testing.T) {
 				AgentPayload:        []byte(tc.payload),
 				TransactionObserved: tc.txnObserved,
 			}
-			result, err := inc.Finalize(tc.runtimeDoneStatus)
+			result, err := inc.Finalize(tc.runtimeDoneStatus, ts.Add(txnDur))
 			assert.Nil(t, err)
 			if len(tc.output) > 0 {
 				assert.JSONEq(t, tc.output, string(result))
@@ -91,6 +102,7 @@ func TestFinalize(t *testing.T) {
 
 func BenchmarkCreateProxyTxn(b *testing.B) {
 	ts := time.Date(2022, time.October, 1, 1, 0, 0, 0, time.UTC)
+	txnDur := ts.Add(time.Second)
 	inc := &Invocation{
 		Timestamp:     ts,
 		DeadlineMs:    ts.Add(time.Minute).UnixMilli(),
@@ -102,7 +114,7 @@ func BenchmarkCreateProxyTxn(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := inc.createProxyTxn("success")
+		_, err := inc.createProxyTxn("success", txnDur)
 		if err != nil {
 			b.Fail()
 		}

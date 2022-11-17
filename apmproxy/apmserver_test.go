@@ -702,7 +702,7 @@ func BenchmarkFlushAPMData(b *testing.B) {
 		for j := 0; j < 99; j++ {
 			apmClient.LambdaDataChannel <- []byte(`{"log":{"message":this is test log"}}`)
 		}
-		apmClient.FlushAPMData(context.Background(), false)
+		apmClient.FlushAPMData(context.Background())
 	}
 }
 
