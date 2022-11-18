@@ -180,7 +180,7 @@ func TestLifecycle(t *testing.T) {
 			b.RegisterInvocation(reqID, fnARN, ts.Add(txnDur).UnixMilli(), ts)
 			// Agent creates and registers a partial transaction in the extn
 			if tc.agentInit {
-				require.NoError(t, b.OnAgentInit(txnID, []byte(txnData)))
+				require.NoError(t, b.OnAgentInit(reqID, txnID, []byte(txnData)))
 			}
 			// Agent sends a request with metadata
 			require.NoError(t, b.AddAgentData(APMData{

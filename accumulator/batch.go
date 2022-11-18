@@ -60,11 +60,16 @@ type Batch struct {
 	buf bytes.Buffer
 	// invocations holds the data for a specific invocation with
 	// request ID as the key.
-	invocations                 map[string]*Invocation
-	count                       int
-	age                         time.Time
-	maxSize                     int
-	maxAge                      time.Duration
+	invocations map[string]*Invocation
+	count       int
+	age         time.Time
+	maxSize     int
+	maxAge      time.Duration
+	// currentlyExecutingRequestID represents the request ID of the currently
+	// executing lambda invocation. The ID can be set either on agent init or
+	// when extension receives the invoke event. If the agent hooks into the
+	// invoke lifecycle then it is possible to receive the agent init request
+	// before extension invoke is registered.
 	currentlyExecutingRequestID string
 }
 
@@ -81,14 +86,14 @@ func NewBatch(maxSize int, maxAge time.Duration) *Batch {
 // RegisterInvocation registers a new function invocation against its request
 // ID. It also updates the caches for currently executing request ID.
 func (b *Batch) RegisterInvocation(
-	requestID, functionARN string,
+	reqID, functionARN string,
 	deadlineMs int64,
 	timestamp time.Time,
 ) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	inc := &Invocation{
-		RequestID:   requestID,
+		RequestID:   reqID,
 		FunctionARN: functionARN,
 		DeadlineMs:  deadlineMs,
 		Timestamp:   timestamp,
@@ -100,32 +105,28 @@ func (b *Batch) RegisterInvocation(
 		inc.TransactionID = w.TransactionID
 		delete(b.invocations, waitingInvocationKey)
 	}
-	b.invocations[requestID] = inc
-	b.currentlyExecutingRequestID = requestID
+	b.invocations[reqID] = inc
+	b.currentlyExecutingRequestID = reqID
 }
 
-// OnAgentInit caches the transactionID and the payload for the currently
-// executing invocation as reported by the agent. The traceID and transactionID
-// will be used to create a new transaction in an event the actual transaction
-// is not reported by the agent due to unexpected termination. If the current
-// invocation is not registered yet then the payload is cached temporarily and
-// associated with the invocation when it is registered.
-func (b *Batch) OnAgentInit(transactionID string, payload []byte) error {
+// OnAgentInit caches the transaction ID and the payload for the currently
+// executing invocation as reported by the agent. The agent payload will be
+// used to create a new transaction in an event the actual transaction is
+// not reported by the agent due to unexpected termination.
+func (b *Batch) OnAgentInit(reqID, txnID string, payload []byte) error {
 	if !isTransactionEvent(payload) {
 		return errors.New("invalid payload")
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	i, ok := b.invocations[b.currentlyExecutingRequestID]
+	i, ok := b.invocations[reqID]
 	if !ok {
 		// It is possible that the invocation is registered at a later time
-		b.invocations[waitingInvocationKey] = &Invocation{
-			TransactionID: transactionID,
-			AgentPayload:  payload,
-		}
-		return nil
+		i = &Invocation{}
+		b.invocations[reqID] = i
 	}
-	i.TransactionID, i.AgentPayload = transactionID, payload
+	i.TransactionID, i.AgentPayload = txnID, payload
+	b.currentlyExecutingRequestID = reqID
 	return nil
 }
 
