@@ -76,7 +76,7 @@ func (app *App) Run(ctx context.Context) error {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		app.apmClient.FlushAPMData(ctx, true)
+		app.apmClient.FlushAPMData(ctx)
 	}()
 
 	// The previous event id is used to validate the received Lambda metrics
@@ -109,7 +109,7 @@ func (app *App) Run(ctx context.Context) error {
 				// waiting for grace period if it got to unhealthy state.
 				flushCtx, cancel := context.WithCancel(ctx)
 				// Flush APM data now that the function invocation has completed
-				app.apmClient.FlushAPMData(flushCtx, false)
+				app.apmClient.FlushAPMData(flushCtx)
 				cancel()
 			}
 			prevEvent = event
@@ -131,7 +131,7 @@ func (app *App) processEvent(
 
 	// call Next method of extension API.  This long polling HTTP method
 	// will block until there's an invocation of the function
-	app.logger.Infof("Waiting for next event...")
+	app.logger.Info("Waiting for next event...")
 	event, err := app.extensionClient.NextEvent(ctx)
 	if err != nil {
 		app.logger.Errorf("Error: %s", err)
@@ -142,21 +142,35 @@ func (app *App) processEvent(
 		}
 
 		app.logger.Infof("Exit signal sent to runtime : %s", status)
-		app.logger.Infof("Exiting")
+		app.logger.Info("Exiting")
 		return nil, err
 	}
-	app.batch.RegisterInvocation(
-		event.RequestID,
-		event.InvokedFunctionArn,
-		event.DeadlineMs,
-		event.Timestamp,
-	)
+
 	// Used to compute Lambda Timeout
 	event.Timestamp = time.Now()
 	app.logger.Debug("Received event.")
 	app.logger.Debugf("%v", extension.PrettyPrint(event))
 
-	if event.EventType == extension.Shutdown {
+	switch event.EventType {
+	case extension.Invoke:
+		app.batch.RegisterInvocation(
+			event.RequestID,
+			event.InvokedFunctionArn,
+			event.DeadlineMs,
+			event.Timestamp,
+		)
+	case extension.Shutdown:
+		// At shutdown we can not expect platform.runtimeDone events to be reported
+		// for the remaining invocations. If we haven't received the transaction
+		// from agents at this point then it is safe to assume that the function
+		// timed out. We will create proxy transaction for all invocations that
+		// haven't received a full transaction from the agent yet. If extension
+		// doesn't have enough CPU time it is possible that the extension might
+		// not receive the shutdown signal for timeouts or runtime crashes. In
+		// these cases we will miss the transaction.
+		if err := app.batch.OnShutdown("timeout"); err != nil {
+			app.logger.Errorf("Error finalizing invocation on shutdown: %v", err)
+		}
 		return event, nil
 	}
 
@@ -193,7 +207,7 @@ func (app *App) processEvent(
 	}
 
 	// Calculate how long to wait for a runtimeDoneSignal or AgentDoneSignal signal
-	flushDeadlineMs := event.DeadlineMs - 100
+	flushDeadlineMs := event.DeadlineMs - 200
 	durationUntilFlushDeadline := time.Until(time.Unix(flushDeadlineMs/1000, 0))
 
 	// Create a timer that expires after durationUntilFlushDeadline
@@ -204,12 +218,12 @@ func (app *App) processEvent(
 	// the lambda function and the end of the execution of processEvent()
 	// 1) AgentDoneSignal is triggered upon reception of a `flushed=true` query from the agent
 	// 2) [Backup 1] RuntimeDone is triggered upon reception of a Lambda log entry certifying the end of the execution of the current function
-	// 3) [Backup 2] If all else fails, the extension relies of the timeout of the Lambda function to interrupt itself 100 ms before the specified deadline.
+	// 3) [Backup 2] If all else fails, the extension relies of the timeout of the Lambda function to interrupt itself 200 ms before the specified deadline.
 	// This time interval is large enough to attempt a last flush attempt (if SendStrategy == syncFlush) before the environment gets shut down.
 
 	select {
 	case <-app.apmClient.WaitForFlush():
-		app.logger.Debug("APM client has pending flush signals")
+		app.logger.Debug("APM client has sent flush signal")
 	case <-runtimeDone:
 		app.logger.Debug("Received runtimeDone signal")
 	case <-timer.C:

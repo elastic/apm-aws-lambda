@@ -170,6 +170,11 @@ func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *
 			w.WriteHeader(http.StatusUnsupportedMediaType)
 			return
 		}
+		reqID := r.Header.Get("x-elastic-aws-request-id")
+		if reqID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		rawBytes, err := io.ReadAll(r.Body)
 		defer r.Body.Close()
 		if err != nil {
@@ -183,8 +188,8 @@ func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			return
 		}
-		if err := c.batch.OnAgentInit(txnID, rawBytes); err != nil {
-			c.logger.Warnf("Failed to update invocation for transaction ID %s", txnID)
+		if err := c.batch.OnAgentInit(reqID, txnID, rawBytes); err != nil {
+			c.logger.Warnf("Failed to update invocation for transaction ID %s: %v", txnID, err)
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			return
 		}
