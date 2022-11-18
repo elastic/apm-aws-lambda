@@ -7,6 +7,7 @@ LOAD_ARRIVAL_RATE?=50
 LAMBDA_RUNTIME?=python3.8
 LAMBDA_TIMEOUT?=15
 LAMBDA_MEMORY_SIZE?=128
+CUSTOM_LAMBDA_EXTENSION_ARN?=
 LAMBDA_RUNTIME_NORM=$(subst '.','_',$(LAMBDA_RUNTIME))
 
 # TODO: @lahsivjar Add automation for terraform fmt and docs
@@ -44,4 +45,5 @@ terraform-init:
 		-var 'lambda_runtime=$(LAMBDA_RUNTIME)' \
 		-var 'lambda_timeout=$(LAMBDA_TIMEOUT)' \
 		-var 'lambda_memory_size=$(LAMBDA_MEMORY_SIZE)' \
-		-var 'stack_version=$(STACK_VERSION)'
+		-var 'stack_version=$(STACK_VERSION)' \
+		-var 'custom_lambda_extension_arn=$(CUSTOM_LAMBDA_EXTENSION_ARN)'

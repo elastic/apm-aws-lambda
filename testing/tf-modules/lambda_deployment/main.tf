@@ -25,6 +25,7 @@ EOF
 }
 
 resource "aws_lambda_layer_version" "extn_layer" {
+  count      = var.custom_lambda_extension_arn == "" ? 1 : 0
   filename   = var.apm_aws_extension_path
   layer_name = "${var.resource_prefix}_apm_aws_lambda_extn"
 }
@@ -37,7 +38,7 @@ resource "aws_lambda_function" "test_fn" {
   handler          = var.lambda_handler
   runtime          = var.lambda_runtime
   source_code_hash = filebase64sha256(local.lambda_function_path)
-  layers           = [aws_lambda_layer_version.extn_layer.arn]
+  layers           = [var.custom_lambda_extension_arn == "" ? aws_lambda_layer_version.extn_layer[0].arn : var.custom_lambda_extension_arn]
   timeout          = var.lambda_timeout
   memory_size      = var.lambda_memory_size
 

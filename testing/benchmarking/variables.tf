@@ -45,6 +45,12 @@ variable "lambda_memory_size" {
   default     = 128
 }
 
+variable "custom_lambda_extension_arn" {
+  type        = string
+  description = "Specific lambda extension to use, will use the latest build if not specified"
+  default     = ""
+}
+
 variable "ess_region" {
   type        = string
   description = "Optional ESS region where the deployment will be created. Defaults to gcp-us-west2"

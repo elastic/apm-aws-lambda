@@ -56,10 +56,11 @@ module "lambda_deployment" {
   build_dir              = "../build"
   apm_aws_extension_path = "../../bin/extension.zip"
 
-  lambda_runtime     = var.lambda_runtime
-  lambda_handler     = local.runtimeToHandler[var.lambda_runtime]
-  lambda_invoke_path = local.load_req_path
-  lambda_memory_size = var.lambda_memory_size
+  lambda_runtime              = var.lambda_runtime
+  lambda_handler              = local.runtimeToHandler[var.lambda_runtime]
+  lambda_invoke_path          = local.load_req_path
+  lambda_memory_size          = var.lambda_memory_size
+  custom_lambda_extension_arn = var.custom_lambda_extension_arn
 
   apm_server_url   = module.ec_deployment.apm_url
   apm_secret_token = module.ec_deployment.apm_secret_token
