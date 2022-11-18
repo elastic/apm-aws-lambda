@@ -39,6 +39,12 @@ variable "lambda_timeout" {
   default     = 15
 }
 
+variable "lambda_memory_size" {
+  type        = number
+  description = "Amount of memory (in MB) the lambda function can use"
+  default     = 128
+}
+
 variable "ess_region" {
   type        = string
   description = "Optional ESS region where the deployment will be created. Defaults to gcp-us-west2"

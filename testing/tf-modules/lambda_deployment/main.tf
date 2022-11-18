@@ -39,6 +39,7 @@ resource "aws_lambda_function" "test_fn" {
   source_code_hash = filebase64sha256(local.lambda_function_path)
   layers           = [aws_lambda_layer_version.extn_layer.arn]
   timeout          = var.lambda_timeout
+  memory_size      = var.lambda_memory_size
 
   environment {
     variables = {

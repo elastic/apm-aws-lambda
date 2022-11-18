@@ -59,6 +59,7 @@ module "lambda_deployment" {
   lambda_runtime     = var.lambda_runtime
   lambda_handler     = local.runtimeToHandler[var.lambda_runtime]
   lambda_invoke_path = local.load_req_path
+  lambda_memory_size = var.lambda_memory_size
 
   apm_server_url   = module.ec_deployment.apm_url
   apm_secret_token = module.ec_deployment.apm_secret_token
