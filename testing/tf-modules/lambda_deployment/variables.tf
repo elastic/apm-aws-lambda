@@ -37,6 +37,18 @@ variable "lambda_invoke_path" {
   default     = "/test"
 }
 
+variable "lambda_memory_size" {
+  type        = number
+  description = "Amount of memory (in MB) the lambda function can use"
+  default     = 128
+}
+
+variable "custom_lambda_extension_arn" {
+  type        = string
+  description = "Specific lambda extension to use, will use the latest build if not specified"
+  default     = ""
+}
+
 variable "apm_server_url" {
   type        = string
   description = "APM Server URL for sending the generated load"
