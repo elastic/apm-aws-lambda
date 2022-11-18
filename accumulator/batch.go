@@ -40,11 +40,10 @@ var (
 )
 
 var (
-	maxSizeThreshold     = 0.9
-	zeroTime             = time.Time{}
-	newLineSep           = []byte("\n")
-	transactionKey       = []byte("transaction")
-	waitingInvocationKey = "waiting"
+	maxSizeThreshold = 0.9
+	zeroTime         = time.Time{}
+	newLineSep       = []byte("\n")
+	transactionKey   = []byte("transaction")
 )
 
 // Batch manages the data that needs to be shipped to APM Server. It holds
@@ -92,20 +91,16 @@ func (b *Batch) RegisterInvocation(
 ) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	inc := &Invocation{
-		RequestID:   reqID,
-		FunctionARN: functionARN,
-		DeadlineMs:  deadlineMs,
-		Timestamp:   timestamp,
+
+	i, ok := b.invocations[reqID]
+	if !ok {
+		i = &Invocation{}
+		b.invocations[reqID] = i
 	}
-	if w, ok := b.invocations[waitingInvocationKey]; ok {
-		// If the agent payload is cached before the invocation is registered
-		// then associate the agent payload with the invocation.
-		inc.AgentPayload = w.AgentPayload
-		inc.TransactionID = w.TransactionID
-		delete(b.invocations, waitingInvocationKey)
-	}
-	b.invocations[reqID] = inc
+	i.RequestID = reqID
+	i.FunctionARN = functionARN
+	i.DeadlineMs = deadlineMs
+	i.Timestamp = timestamp
 	b.currentlyExecutingRequestID = reqID
 }
 
