@@ -1,9 +1,3 @@
-locals {
-  name_from_runtime    = replace(var.lambda_runtime, ".", "_")
-  lambda_function_path = "${var.build_dir}/${local.name_from_runtime}.zip"
-  lambda_function_name = "${var.resource_prefix}_${local.name_from_runtime}_apm_aws_lambda"
-}
-
 resource "aws_iam_role" "iam_for_lambda" {
   name = "${var.resource_prefix}_apm_aws_lambda_iam"
 
@@ -32,12 +26,12 @@ resource "aws_lambda_layer_version" "extn_layer" {
 
 # TODO: @lahsivjar Add in cloudwatch integration for visualizing logs
 resource "aws_lambda_function" "test_fn" {
-  filename         = local.lambda_function_path
-  function_name    = local.lambda_function_name
+  filename         = var.lambda_function_zip
+  function_name    = var.lambda_function_name
   role             = aws_iam_role.iam_for_lambda.arn
   handler          = var.lambda_handler
   runtime          = var.lambda_runtime
-  source_code_hash = filebase64sha256(local.lambda_function_path)
+  source_code_hash = filebase64sha256(var.lambda_function_zip)
   layers           = [var.custom_lambda_extension_arn == "" ? aws_lambda_layer_version.extn_layer[0].arn : var.custom_lambda_extension_arn]
   timeout          = var.lambda_timeout
   memory_size      = var.lambda_memory_size
@@ -52,7 +46,7 @@ resource "aws_lambda_function" "test_fn" {
 }
 
 resource "aws_apigatewayv2_api" "trigger" {
-  name          = local.lambda_function_name
+  name          = var.lambda_function_name
   protocol_type = "HTTP"
   description   = "API Gateway to trigger lambda for testing apm-aws-lambda"
 }
