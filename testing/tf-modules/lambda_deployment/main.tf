@@ -24,7 +24,16 @@ resource "aws_lambda_layer_version" "extn_layer" {
   layer_name = "${var.resource_prefix}_apm_aws_lambda_extn"
 }
 
-# TODO: @lahsivjar Add in cloudwatch integration for visualizing logs
+resource "aws_iam_role_policy_attachment" "cw" {
+  role       = aws_iam_role.iam_for_lambda.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_cloudwatch_log_group" "cw_log_group" {
+  name              = "/aws/lambda/${var.lambda_function_name}"
+  retention_in_days = 1
+}
+
 resource "aws_lambda_function" "test_fn" {
   filename         = var.lambda_function_zip
   function_name    = var.lambda_function_name
@@ -35,6 +44,10 @@ resource "aws_lambda_function" "test_fn" {
   layers           = [var.custom_lambda_extension_arn == "" ? aws_lambda_layer_version.extn_layer[0].arn : var.custom_lambda_extension_arn]
   timeout          = var.lambda_timeout
   memory_size      = var.lambda_memory_size
+
+  depends_on = [
+    aws_cloudwatch_log_group.cw_log_group,
+  ]
 
   environment {
     variables = {
