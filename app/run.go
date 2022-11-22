@@ -55,6 +55,14 @@ func (app *App) Run(ctx context.Context) error {
 		}
 	}()
 
+	// Flush all data before shutting down.
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		app.apmClient.FlushAPMData(ctx)
+	}()
+
 	if app.logsClient != nil {
 		if err := app.logsClient.StartService(app.extensionClient.ExtensionID); err != nil {
 			app.logger.Warnf("Error while subscribing to the Logs API: %v", err)
@@ -71,14 +79,6 @@ func (app *App) Run(ctx context.Context) error {
 		}
 	}
 
-	// Flush all data before shutting down.
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		app.apmClient.FlushAPMData(ctx)
-	}()
-
 	// The previous event id is used to validate the received Lambda metrics
 	var prevEvent *extension.NextEventResponse
 
@@ -86,7 +86,6 @@ func (app *App) Run(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			app.logger.Info("Received a signal, exiting...")
-
 			return nil
 		default:
 			// Use a wait group to ensure the background go routine sending to the APM server
@@ -96,13 +95,12 @@ func (app *App) Run(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-
-			if event.EventType == extension.Shutdown {
-				app.logger.Infof("Received shutdown event: %s. Exiting...", event.ShutdownReason)
-				return nil
-			}
 			app.logger.Debug("Waiting for background data send to end")
 			backgroundDataSendWg.Wait()
+			if event.EventType == extension.Shutdown {
+				app.logger.Infof("Exiting due to shutdown event with reason %s", event.ShutdownReason)
+				return nil
+			}
 			if app.apmClient.ShouldFlush() {
 				// Use a new cancellable context for flushing APM data to make sure
 				// that the underlying transport is reset for next invocation without
@@ -163,15 +161,27 @@ func (app *App) processEvent(
 		// At shutdown we can not expect platform.runtimeDone events to be reported
 		// for the remaining invocations. If we haven't received the transaction
 		// from agents at this point then it is safe to assume that the function
-		// timed out. We will create proxy transaction for all invocations that
+		// failed. We will create proxy transaction for all invocations that
 		// haven't received a full transaction from the agent yet. If extension
 		// doesn't have enough CPU time it is possible that the extension might
 		// not receive the shutdown signal for timeouts or runtime crashes. In
 		// these cases we will miss the transaction.
-		if err := app.batch.OnShutdown("timeout"); err != nil {
-			app.logger.Errorf("Error finalizing invocation on shutdown: %v", err)
+		app.logger.Debugf("Received shutdown event with reason %s", event.ShutdownReason)
+		defer func() {
+			if err := app.batch.OnShutdown(event.ShutdownReason); err != nil {
+				app.logger.Errorf("Error finalizing invocation on shutdown: %v", err)
+			}
+		}()
+
+		// platform.report metric (and some other metrics) might not have been
+		// reported by the logs API even till shutdown. At shutdown we will make
+		// a last attempt to collect and report these metrics. However, it is
+		// also possible that lambda has init a few execution env preemptively,
+		// for such cases the extension will see only a SHUTDOWN event and
+		// there is no need to wait for any log event.
+		if prevEvent == nil {
+			return event, nil
 		}
-		return event, nil
 	}
 
 	// APM Data Processing
@@ -185,50 +195,49 @@ func (app *App) processEvent(
 
 	// Lambda Service Logs Processing, also used to extract metrics from APM logs
 	// This goroutine should not be started if subscription failed
-	runtimeDone := make(chan struct{})
+	logProcessingDone := make(chan struct{})
 	if app.logsClient != nil {
 		go func() {
+			defer close(logProcessingDone)
 			if err := app.logsClient.ProcessLogs(
 				invocationCtx,
 				event.RequestID,
 				event.InvokedFunctionArn,
 				app.apmClient.LambdaDataChannel,
-				runtimeDone,
 				prevEvent,
+				event.EventType == extension.Shutdown,
 			); err != nil {
 				app.logger.Errorf("Error while processing Lambda Logs ; %v", err)
-			} else {
-				close(runtimeDone)
 			}
 		}()
 	} else {
 		app.logger.Warn("Logs collection not started due to earlier subscription failure")
-		close(runtimeDone)
+		close(logProcessingDone)
 	}
 
 	// Calculate how long to wait for a runtimeDoneSignal or AgentDoneSignal signal
-	flushDeadlineMs := event.DeadlineMs - 200
+	flushDeadlineMs := event.DeadlineMs - 50
 	durationUntilFlushDeadline := time.Until(time.Unix(flushDeadlineMs/1000, 0))
 
 	// Create a timer that expires after durationUntilFlushDeadline
 	timer := time.NewTimer(durationUntilFlushDeadline)
 	defer timer.Stop()
 
-	// The extension relies on 3 independent mechanisms to minimize the time interval between the end of the execution of
-	// the lambda function and the end of the execution of processEvent()
-	// 1) AgentDoneSignal is triggered upon reception of a `flushed=true` query from the agent
-	// 2) [Backup 1] RuntimeDone is triggered upon reception of a Lambda log entry certifying the end of the execution of the current function
-	// 3) [Backup 2] If all else fails, the extension relies of the timeout of the Lambda function to interrupt itself 200 ms before the specified deadline.
-	// This time interval is large enough to attempt a last flush attempt (if SendStrategy == syncFlush) before the environment gets shut down.
-
+	// The extension relies on 3 independent mechanisms to minimize the time interval
+	// between the end of the execution of the lambda function and the end of the
+	// execution of processEvent():
+	// 1) AgentDoneSignal triggered upon reception of a `flushed=true` query from the agent
+	// 2) [Backup 1] All expected log events are processed.
+	// 3) [Backup 2] If all else fails, the extension relies of the timeout of the Lambda
+	// function to interrupt itself 200ms before the specified deadline to give the extension
+	// time to flush data before shutdown.
 	select {
 	case <-app.apmClient.WaitForFlush():
 		app.logger.Debug("APM client has sent flush signal")
-	case <-runtimeDone:
+	case <-logProcessingDone:
 		app.logger.Debug("Received runtimeDone signal")
 	case <-timer.C:
-		app.logger.Info("Time expired waiting for agent signal or runtimeDone event")
+		app.logger.Info("Time expired while waiting for final log event")
 	}
-
 	return event, nil
 }
