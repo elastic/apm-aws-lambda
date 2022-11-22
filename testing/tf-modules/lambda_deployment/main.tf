@@ -19,9 +19,10 @@ EOF
 }
 
 resource "aws_lambda_layer_version" "extn_layer" {
-  count      = var.custom_lambda_extension_arn == "" ? 1 : 0
-  filename   = var.apm_aws_extension_path
-  layer_name = "${var.resource_prefix}_apm_aws_lambda_extn"
+  count            = var.custom_lambda_extension_arn == "" ? 1 : 0
+  filename         = var.apm_aws_extension_path
+  layer_name       = "${var.resource_prefix}_apm_aws_lambda_extn"
+  source_code_hash = filebase64sha256(var.apm_aws_extension_path)
 }
 
 resource "aws_iam_role_policy_attachment" "cw" {
