@@ -237,7 +237,7 @@ func (app *App) processEvent(
 	case <-logProcessingDone:
 		app.logger.Debug("Received runtimeDone signal")
 	case <-timer.C:
-		app.logger.Info("Time expired while waiting for final log event")
+		app.logger.Info("Time expired while waiting for agent done signal or final log event")
 	}
 	return event, nil
 }
