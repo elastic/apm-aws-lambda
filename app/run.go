@@ -216,7 +216,7 @@ func (app *App) processEvent(
 	}
 
 	// Calculate how long to wait for a runtimeDoneSignal or AgentDoneSignal signal
-	flushDeadlineMs := event.DeadlineMs - 50
+	flushDeadlineMs := event.DeadlineMs - 200
 	durationUntilFlushDeadline := time.Until(time.Unix(flushDeadlineMs/1000, 0))
 
 	// Create a timer that expires after durationUntilFlushDeadline
