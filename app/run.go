@@ -199,16 +199,14 @@ func (app *App) processEvent(
 	if app.logsClient != nil {
 		go func() {
 			defer close(logProcessingDone)
-			if err := app.logsClient.ProcessLogs(
+			app.logsClient.ProcessLogs(
 				invocationCtx,
 				event.RequestID,
 				event.InvokedFunctionArn,
 				app.apmClient.LambdaDataChannel,
 				prevEvent,
 				event.EventType == extension.Shutdown,
-			); err != nil {
-				app.logger.Errorf("Error while processing Lambda Logs ; %v", err)
-			}
+			)
 		}()
 	} else {
 		app.logger.Warn("Logs collection not started due to earlier subscription failure")

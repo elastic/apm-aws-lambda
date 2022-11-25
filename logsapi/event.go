@@ -19,7 +19,6 @@ package logsapi
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/elastic/apm-aws-lambda/extension"
@@ -66,7 +65,7 @@ func (lc *Client) ProcessLogs(
 	dataChan chan []byte,
 	prevEvent *extension.NextEventResponse,
 	isShutdown bool,
-) error {
+) {
 	// platformStartReqID is to identify the requestID for the function
 	// logs under the assumption that function logs for a specific request
 	// ID will be bounded by PlatformStart and PlatformEnd events.
@@ -92,7 +91,7 @@ func (lc *Client) ProcessLogs(
 						"Processed runtime done event for reqID %s as the last log event for the invocation",
 						logEvent.Record.RequestID,
 					)
-					return nil
+					return
 				}
 			case PlatformReport:
 				// TODO: @lahsivjar Refactor usage of prevEvent.RequestID (should now query the batch?)
@@ -100,11 +99,12 @@ func (lc *Client) ProcessLogs(
 					lc.logger.Debugf("Received platform report for %s", logEvent.Record.RequestID)
 					processedMetrics, err := ProcessPlatformReport(prevEvent, logEvent)
 					if err != nil {
-						return fmt.Errorf("Error processing Lambda platform metrics: %v", err)
-					}
-					select {
-					case dataChan <- processedMetrics:
-					case <-ctx.Done():
+						lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
+					} else {
+						select {
+						case dataChan <- processedMetrics:
+						case <-ctx.Done():
+						}
 					}
 					// For shutdown event the platform report metrics for the previous log event
 					// would be the last possible log event.
@@ -113,7 +113,7 @@ func (lc *Client) ProcessLogs(
 							"Processed platform report event for reqID %s as the last log event before shutdown",
 							logEvent.Record.RequestID,
 						)
-						return nil
+						return
 					}
 				} else {
 					lc.logger.Warn("Report event request id didn't match the previous event id")
@@ -127,16 +127,17 @@ func (lc *Client) ProcessLogs(
 					logEvent,
 				)
 				if err != nil {
-					return fmt.Errorf("Error processing function log : %v", err)
-				}
-				select {
-				case dataChan <- processedLog:
-				case <-ctx.Done():
+					lc.logger.Warnf("Error processing function log : %v", err)
+				} else {
+					select {
+					case dataChan <- processedLog:
+					case <-ctx.Done():
+					}
 				}
 			}
 		case <-ctx.Done():
 			lc.logger.Debug("Current invocation over. Interrupting logs processing goroutine")
-			return nil
+			return
 		}
 	}
 }
