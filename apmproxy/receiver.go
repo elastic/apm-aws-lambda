@@ -88,7 +88,8 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 	reverseProxy.Transport = customTransport
 
 	reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
-		c.UpdateStatus(r.Context(), Failing)
+		// Don't update the status of the transport as it is possible that the extension
+		// is frozen while processing the request and context is canceled due to timeout.
 		c.logger.Errorf("Error querying version from the APM server: %v", err)
 	}
 
