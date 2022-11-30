@@ -3,14 +3,19 @@ variable "resource_prefix" {
   description = "Prefix to add to all created resource"
 }
 
-variable "build_dir" {
-  type        = string
-  description = "Prefix to add to all created resource"
-}
-
 variable "apm_aws_extension_path" {
   type        = string
   description = "Path to the zip file containing extension code"
+}
+
+variable "lambda_function_zip" {
+  type        = string
+  description = "Path to the zip package containing the lambda function to deploy"
+}
+
+variable "lambda_function_name" {
+  type        = string
+  description = "The name of the lambda function"
 }
 
 variable "lambda_runtime" {

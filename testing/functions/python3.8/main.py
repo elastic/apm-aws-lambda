@@ -1,7 +1,7 @@
 import json
 from elasticapm import capture_serverless
 
-coldstart = True
+coldstart = "true"
 @capture_serverless()
 def handler(event, context):
     global coldstart
@@ -13,6 +13,6 @@ def handler(event, context):
             "coldstart": coldstart,
         }
     }
-    coldstart = False
+    coldstart = "false"
     return resp
 
