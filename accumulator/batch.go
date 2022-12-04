@@ -59,11 +59,16 @@ type Batch struct {
 	buf bytes.Buffer
 	// invocations holds the data for a specific invocation with
 	// request ID as the key.
-	invocations                 map[string]*Invocation
-	count                       int
-	age                         time.Time
-	maxSize                     int
-	maxAge                      time.Duration
+	invocations map[string]*Invocation
+	count       int
+	age         time.Time
+	maxSize     int
+	maxAge      time.Duration
+	// currentlyExecutingRequestID represents the request ID of the currently
+	// executing lambda invocation. The ID can be set either on agent init or
+	// when extension receives the invoke event. If the agent hooks into the
+	// invoke lifecycle then it is possible to receive the agent init request
+	// before extension invoke is registered.
 	currentlyExecutingRequestID string
 }
 
@@ -80,36 +85,43 @@ func NewBatch(maxSize int, maxAge time.Duration) *Batch {
 // RegisterInvocation registers a new function invocation against its request
 // ID. It also updates the caches for currently executing request ID.
 func (b *Batch) RegisterInvocation(
-	requestID, functionARN string,
+	reqID, functionARN string,
 	deadlineMs int64,
 	timestamp time.Time,
 ) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.invocations[requestID] = &Invocation{
-		RequestID:   requestID,
-		FunctionARN: functionARN,
-		DeadlineMs:  deadlineMs,
-		Timestamp:   timestamp,
+
+	i, ok := b.invocations[reqID]
+	if !ok {
+		i = &Invocation{}
+		b.invocations[reqID] = i
 	}
-	b.currentlyExecutingRequestID = requestID
+	i.RequestID = reqID
+	i.FunctionARN = functionARN
+	i.DeadlineMs = deadlineMs
+	i.Timestamp = timestamp
+	b.currentlyExecutingRequestID = reqID
 }
 
-// OnAgentInit caches the transactionID and the payload for the currently
-// executing invocation as reported by the agent. The traceID and transactionID
-// will be used to create a new transaction in an event the actual transaction
-// is not reported by the agent due to unexpected termination.
-func (b *Batch) OnAgentInit(transactionID string, payload []byte) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	i, ok := b.invocations[b.currentlyExecutingRequestID]
-	if !ok {
-		return fmt.Errorf("invocation for requestID %s does not exist", b.currentlyExecutingRequestID)
-	}
+// OnAgentInit caches the transaction ID and the payload for the currently
+// executing invocation as reported by the agent. The agent payload will be
+// used to create a new transaction in an event the actual transaction is
+// not reported by the agent due to unexpected termination.
+func (b *Batch) OnAgentInit(reqID, txnID string, payload []byte) error {
 	if !isTransactionEvent(payload) {
 		return errors.New("invalid payload")
 	}
-	i.TransactionID, i.AgentPayload = transactionID, payload
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	i, ok := b.invocations[reqID]
+	if !ok {
+		// It is possible that the invocation is registered at a later time
+		i = &Invocation{}
+		b.invocations[reqID] = i
+	}
+	i.TransactionID, i.AgentPayload = txnID, payload
+	b.currentlyExecutingRequestID = reqID
 	return nil
 }
 
@@ -167,10 +179,10 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 // OnLambdaLogRuntimeDone prepares the data for the invocation to be shipped
 // to APM Server. It accepts requestID and status of the invocation both of
 // which can be retrieved after parsing `platform.runtimeDone` event.
-func (b *Batch) OnLambdaLogRuntimeDone(reqID, status string) error {
+func (b *Batch) OnLambdaLogRuntimeDone(reqID, status string, time time.Time) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return b.finalizeInvocation(reqID, status)
+	return b.finalizeInvocation(reqID, status, time)
 }
 
 // OnShutdown flushes the data for shipping to APM Server by finalizing all
@@ -181,7 +193,12 @@ func (b *Batch) OnShutdown(status string) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	for _, inc := range b.invocations {
-		if err := b.finalizeInvocation(inc.RequestID, status); err != nil {
+		// Assume that the transaction took all the function time.
+		// TODO: @lahsivjar Is it possible to tweak the extension lifecycle in
+		// a way that we receive the platform.report metric for a invocation
+		// consistently and enrich the metrics with reported values?
+		time := time.Unix(0, inc.DeadlineMs*int64(time.Millisecond))
+		if err := b.finalizeInvocation(inc.RequestID, status, time); err != nil {
 			return err
 		}
 	}
@@ -235,13 +252,13 @@ func (b *Batch) ToAPMData() APMData {
 	}
 }
 
-func (b *Batch) finalizeInvocation(reqID, status string) error {
+func (b *Batch) finalizeInvocation(reqID, status string, time time.Time) error {
 	inc, ok := b.invocations[reqID]
 	if !ok {
 		return fmt.Errorf("invocation for requestID %s does not exist", reqID)
 	}
 	defer delete(b.invocations, reqID)
-	proxyTxn, err := inc.Finalize(status)
+	proxyTxn, err := inc.Finalize(status, time)
 	if err != nil {
 		return err
 	}

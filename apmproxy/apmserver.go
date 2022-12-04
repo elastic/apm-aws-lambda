@@ -72,7 +72,7 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 }
 
 // FlushAPMData reads all the apm data in the apm data channel and sends it to the APM server.
-func (c *Client) FlushAPMData(ctx context.Context, shutdown bool) {
+func (c *Client) FlushAPMData(ctx context.Context) {
 	if c.IsUnhealthy() {
 		c.logger.Debug("Flush skipped - Transport failing")
 		return
@@ -84,17 +84,6 @@ func (c *Client) FlushAPMData(ctx context.Context, shutdown bool) {
 		data := <-c.AgentDataChannel
 		if err := c.forwardAgentData(ctx, data); err != nil {
 			c.logger.Errorf("Error sending to APM Server, skipping: %v", err)
-		}
-	}
-
-	if shutdown {
-		// At shutdown we can not expect platform.runtimeDone events to be reported
-		// for the remaining invocations. If we haven't received the transaction
-		// from agents at this point then it is safe to assume that the function
-		// timed out. We will flush all the cached agent data with no transaction
-		// assuming the outcome of the transaction to be `timeout`.
-		if err := c.batch.OnShutdown("timeout"); err != nil {
-			c.logger.Errorf("Error while flushing agent data from batch: %v", err)
 		}
 	}
 
@@ -113,7 +102,7 @@ func (c *Client) FlushAPMData(ctx context.Context, shutdown bool) {
 				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		case <-ctx.Done():
-			c.logger.Debugf("Failed to flush completely, may result in data drop")
+			c.logger.Debug("Failed to flush completely, may result in data drop")
 			return
 		default:
 			// Flush any remaining data in batch

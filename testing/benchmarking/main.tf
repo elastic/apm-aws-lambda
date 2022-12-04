@@ -17,7 +17,10 @@ terraform {
 }
 
 locals {
-  load_req_path = "/test"
+  load_req_path        = "/test"
+  name_from_runtime    = replace(var.lambda_runtime, ".", "_")
+  lambda_function_zip  = "../build/${local.name_from_runtime}.zip"
+  lambda_function_name = "${var.resource_prefix}_${local.name_from_runtime}_apm_aws_lambda"
   runtimeToHandler = {
     "python3.8" = "main.handler"
     "go1.x"     = "main"
@@ -53,12 +56,15 @@ module "lambda_deployment" {
 
   resource_prefix = var.resource_prefix
 
-  build_dir              = "../build"
   apm_aws_extension_path = "../../bin/extension.zip"
 
-  lambda_runtime     = var.lambda_runtime
-  lambda_handler     = local.runtimeToHandler[var.lambda_runtime]
-  lambda_invoke_path = local.load_req_path
+  lambda_runtime              = var.lambda_runtime
+  lambda_function_zip         = local.lambda_function_zip
+  lambda_function_name        = local.lambda_function_name
+  lambda_handler              = local.runtimeToHandler[var.lambda_runtime]
+  lambda_invoke_path          = local.load_req_path
+  lambda_memory_size          = var.lambda_memory_size
+  custom_lambda_extension_arn = var.custom_lambda_extension_arn
 
   apm_server_url   = module.ec_deployment.apm_url
   apm_secret_token = module.ec_deployment.apm_secret_token

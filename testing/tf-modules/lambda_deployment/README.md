@@ -8,15 +8,13 @@ triggered with an no auth API gateway endpoint.
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
-| Name | Version |
-|------|---------|
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 4.0 |
+No requirements.
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | 4.37.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | n/a |
 
 ## Modules
 
@@ -42,10 +40,11 @@ No modules.
 | <a name="input_apm_aws_extension_path"></a> [apm\_aws\_extension\_path](#input\_apm\_aws\_extension\_path) | Path to the zip file containing extension code | `string` | n/a | yes |
 | <a name="input_apm_secret_token"></a> [apm\_secret\_token](#input\_apm\_secret\_token) | Secret token for auth against the given server URL | `string` | n/a | yes |
 | <a name="input_apm_server_url"></a> [apm\_server\_url](#input\_apm\_server\_url) | APM Server URL for sending the generated load | `string` | n/a | yes |
-| <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS region to deploy lambda function | `string` | `"us-west-2"` | no |
 | <a name="input_build_dir"></a> [build\_dir](#input\_build\_dir) | Prefix to add to all created resource | `string` | n/a | yes |
+| <a name="input_custom_lambda_extension_arn"></a> [custom\_lambda\_extension\_arn](#input\_custom\_lambda\_extension\_arn) | Specific lambda extension to use, will use the latest build if not specified | `string` | `""` | no |
 | <a name="input_lambda_handler"></a> [lambda\_handler](#input\_lambda\_handler) | Entrypoint for the lambda function | `string` | `"main.handler"` | no |
 | <a name="input_lambda_invoke_path"></a> [lambda\_invoke\_path](#input\_lambda\_invoke\_path) | Request path to invoke the test lambda function | `string` | `"/test"` | no |
+| <a name="input_lambda_memory_size"></a> [lambda\_memory\_size](#input\_lambda\_memory\_size) | Amount of memory (in MB) the lambda function can use | `number` | `128` | no |
 | <a name="input_lambda_runtime"></a> [lambda\_runtime](#input\_lambda\_runtime) | The language-specific lambda runtime | `string` | `"python3.8"` | no |
 | <a name="input_lambda_timeout"></a> [lambda\_timeout](#input\_lambda\_timeout) | Timeout of the lambda function in seconds | `number` | `15` | no |
 | <a name="input_resource_prefix"></a> [resource\_prefix](#input\_resource\_prefix) | Prefix to add to all created resource | `string` | n/a | yes |

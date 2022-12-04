@@ -24,7 +24,8 @@ https://github.com/elastic/apm-aws-lambda/compare/v1.2.0...main[View commits]
 
 [float]
 ===== Features
-- Create proxy transaction with error results if not reported by agent {lambda-pull}315[315]
+- experimental:[] Create proxy transaction with error results if not reported by agent {lambda-pull}315[315]
+- Wait for the final platform report metrics on shutdown {lambda-pull}347[347]
 
 [float]
 [[lambda-1.2.0]]
