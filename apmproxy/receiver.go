@@ -93,23 +93,6 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 	customTransport.ResponseHeaderTimeout = c.client.Timeout
 	reverseProxy.Transport = customTransport
 
-	reverseProxy.ModifyResponse = func(rsp *http.Response) error {
-		if rsp.StatusCode != http.StatusOK {
-			b, err := io.ReadAll(rsp.Body)
-			if err != nil {
-				c.logger.Warnf("failed to read version response body: %v", err)
-				b = []byte{}
-			}
-
-			c.logger.Debugf("failed to query version from the APM server: response body: %s", string(b))
-
-			// Return an error to the ErrorHandler that will proxy the status code back to the agent.
-			return fmt.Errorf("failed to query version from the APM server: response status: %w", unexpectedStatusError(rsp.StatusCode))
-		}
-
-		return nil
-	}
-
 	reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		c.UpdateStatus(r.Context(), Failing)
 		c.logger.Errorf("Error querying version from the APM server: %v", err)
