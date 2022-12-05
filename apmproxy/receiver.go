@@ -73,12 +73,6 @@ func (c *Client) Shutdown() error {
 	return c.receiver.Shutdown(ctx)
 }
 
-type unexpectedStatusError int
-
-func (e unexpectedStatusError) Error() string {
-	return fmt.Sprintf("unexpected status code: %d", int(e))
-}
-
 // URL: http://server/
 func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Request), error) {
 	// Init reverse proxy
@@ -98,14 +92,6 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 		// is frozen while processing the request and context is canceled due to timeout.
 		c.logger.Errorf("Error querying version from the APM server: %v", err)
 
-		uErr := new(unexpectedStatusError)
-		if errors.As(err, uErr) {
-			status := int(*uErr)
-
-			// Proxy the status code to the agent.
-			w.WriteHeader(status)
-			return
-		}
 
 		// Server is unreachable, return StatusBadGateway (default behaviour) to avoid
 		// returning a Status OK.
