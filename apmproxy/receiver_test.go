@@ -125,6 +125,44 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
+func TestInfoProxyUnreachable(t *testing.T) {
+	// Create apm server and handler
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	// Shutdown
+	apmServer.Close()
+
+	// Create extension config and start the server
+	apmClient, err := apmproxy.NewClient(
+		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithSecretToken("foo"),
+		apmproxy.WithAPIKey("bar"),
+		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverTimeout(15*time.Second),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, apmClient.StartReceiver())
+	defer func() {
+		require.NoError(t, apmClient.Shutdown())
+	}()
+
+	hosts, _ := net.LookupHost("localhost")
+	url := "http://" + hosts[0] + ":1234"
+
+	// Create a request to send to the extension
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	require.NoError(t, err)
+
+	// Send the request to the extension
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+
+	// Make sure we don't get a 200 OK
+	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+}
+
 func Test_handleInfoRequest(t *testing.T) {
 	headers := map[string]string{"Authorization": "test-value"}
 	// Copied from https://github.com/elastic/apm-server/blob/master/testdata/intake-v2/transactions.ndjson.
