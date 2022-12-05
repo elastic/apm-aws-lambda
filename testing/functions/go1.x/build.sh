@@ -5,5 +5,5 @@
 
 set -e
 
-GOARCH=amd64 GOOS=linux go build main.go
+CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build main.go
 zip ../../build/go1_x.zip main
