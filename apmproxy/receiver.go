@@ -83,15 +83,12 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 
 	reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
 
-	customTransport := http.DefaultTransport.(*http.Transport).Clone()
-	customTransport.ResponseHeaderTimeout = c.client.Timeout
-	reverseProxy.Transport = customTransport
+	reverseProxy.Transport = c.client.Transport.(*http.Transport).Clone()
 
 	reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		// Don't update the status of the transport as it is possible that the extension
 		// is frozen while processing the request and context is canceled due to timeout.
 		c.logger.Errorf("Error querying version from the APM server: %v", err)
-
 
 		// Server is unreachable, return StatusBadGateway (default behaviour) to avoid
 		// returning a Status OK.
