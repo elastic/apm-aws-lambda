@@ -24,6 +24,7 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"go.uber.org/zap"
 )
@@ -77,6 +78,19 @@ func loadSecret(ctx context.Context, manager *secretsmanager.Client, secretID st
 	}
 
 	return string(decodedBinarySecretBytes), nil
+}
+
+func loadAcmCertificate(arn string, cfg aws.Config, ctx context.Context) (*string, error) {
+	acmClient := acm.NewFromConfig(cfg)
+	getCertificateInput := acm.GetCertificateInput{
+		CertificateArn: &arn,
+	}
+	response, err := acmClient.GetCertificate(ctx, &getCertificateInput)
+	if err != nil {
+		return nil, err
+	}
+
+	return response.Certificate, nil
 }
 
 func ptrFromString(v string) *string {

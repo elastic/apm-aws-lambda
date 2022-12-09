@@ -162,6 +162,15 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		apmOpts = append(apmOpts, apmproxy.WithRootCerts(string(cert)))
 	}
 
+	if acmCertArn := os.Getenv("ELASTIC_APM_LAMBDA_SERVER_CERT_ID"); acmCertArn != "" {
+		cert, err := loadAcmCertificate(acmCertArn, c.awsConfig, ctx)
+		if err != nil {
+			return nil, err
+		}
+		app.logger.Infof("Using CA certificate %s", acmCertArn)
+		apmOpts = append(apmOpts, apmproxy.WithRootCerts(*cert))
+	}
+
 	apmOpts = append(apmOpts,
 		apmproxy.WithURL(os.Getenv("ELASTIC_APM_LAMBDA_APM_SERVER")),
 		apmproxy.WithLogger(app.logger),
