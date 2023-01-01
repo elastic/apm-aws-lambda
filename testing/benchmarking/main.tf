@@ -33,6 +33,10 @@ provider "aws" {
   region = var.aws_region
 }
 
+module "tags" {
+  source  = "github.com/elastic/apm-server//testing/infra/terraform/modules/tags?depth=1"
+  project = "lambda-extension-benchmarks"
+}
 
 module "ec_deployment" {
   source = "github.com/elastic/apm-server/testing/infra/terraform/modules/ec_deployment"
@@ -49,6 +53,8 @@ module "ec_deployment" {
   integrations_server = true
   apm_server_expvar   = false
   apm_server_pprof    = false
+
+  tags = module.tags.tags
 }
 
 module "lambda_deployment" {
@@ -68,6 +74,8 @@ module "lambda_deployment" {
 
   apm_server_url   = module.ec_deployment.apm_url
   apm_secret_token = module.ec_deployment.apm_secret_token
+
+  tags = module.tags.tags
 }
 
 module "artillery_deployment" {
@@ -85,4 +93,6 @@ module "artillery_deployment" {
   load_arrival_rate = var.load_arrival_rate
   load_base_url     = module.lambda_deployment.base_url
   load_req_path     = local.load_req_path
+
+  tags = module.tags.tags
 }

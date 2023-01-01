@@ -9,6 +9,12 @@ variable "machine_type" {
   default     = "t2.medium"
 }
 
+variable "tags" {
+  type        = map(string)
+  default     = {}
+  description = "Optional set of tags to use for all deployments"
+}
+
 variable "load_duration" {
   type        = number
   description = "Duration over which to generate new virtual users"

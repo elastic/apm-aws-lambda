@@ -54,6 +54,12 @@ variable "custom_lambda_extension_arn" {
   default     = ""
 }
 
+variable "tags" {
+  type        = map(string)
+  default     = {}
+  description = "Optional set of tags to use for all deployments"
+}
+
 variable "apm_server_url" {
   type        = string
   description = "APM Server URL for sending the generated load"
