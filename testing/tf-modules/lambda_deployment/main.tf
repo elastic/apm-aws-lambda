@@ -1,6 +1,5 @@
 resource "aws_iam_role" "iam_for_lambda" {
   name = "${var.resource_prefix}_apm_aws_lambda_iam"
-  tags = var.tags
 
   assume_role_policy = <<EOF
 {
@@ -34,7 +33,6 @@ resource "aws_iam_role_policy_attachment" "cw" {
 resource "aws_cloudwatch_log_group" "cw_log_group" {
   name              = "/aws/lambda/${var.lambda_function_name}"
   retention_in_days = 1
-  tags              = var.tags
 }
 
 resource "aws_lambda_function" "test_fn" {
@@ -47,7 +45,6 @@ resource "aws_lambda_function" "test_fn" {
   layers           = [var.custom_lambda_extension_arn == "" ? aws_lambda_layer_version.extn_layer[0].arn : var.custom_lambda_extension_arn]
   timeout          = var.lambda_timeout
   memory_size      = var.lambda_memory_size
-  tags             = var.tags
 
   depends_on = [
     aws_cloudwatch_log_group.cw_log_group,
@@ -66,7 +63,6 @@ resource "aws_apigatewayv2_api" "trigger" {
   name          = var.lambda_function_name
   protocol_type = "HTTP"
   description   = "API Gateway to trigger lambda for testing apm-aws-lambda"
-  tags          = var.tags
 }
 
 resource "aws_apigatewayv2_stage" "trigger" {
@@ -74,7 +70,6 @@ resource "aws_apigatewayv2_stage" "trigger" {
 
   name        = "${var.resource_prefix}_apm-aws-lambda-test-tf"
   auto_deploy = true
-  tags        = var.tags
 }
 
 resource "aws_apigatewayv2_integration" "trigger" {

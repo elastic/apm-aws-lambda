@@ -26,9 +26,9 @@ data "aws_ami" "ubuntu" {
 resource "aws_vpc" "artillery" {
   cidr_block = "172.16.0.0/28"
 
-  tags = merge(var.tags, {
+  tags = {
     Name = "${var.resource_prefix}_apm_aws_lambda_artillery"
-  })
+  }
 }
 
 resource "aws_subnet" "artillery" {
@@ -36,17 +36,17 @@ resource "aws_subnet" "artillery" {
   cidr_block              = "172.16.0.0/28"
   map_public_ip_on_launch = true
 
-  tags = merge(var.tags, {
+  tags = {
     Name = "${var.resource_prefix}_apm_aws_lambda_artillery"
-  })
+  }
 }
 
 resource "aws_internet_gateway" "artillery" {
   vpc_id = aws_vpc.artillery.id
 
-  tags = merge(var.tags, {
+  tags = {
     Name = "${var.resource_prefix}_apm_aws_lambda_artillery"
-  })
+  }
 }
 
 resource "aws_route" "artillery" {
@@ -58,7 +58,6 @@ resource "aws_route" "artillery" {
 resource "aws_security_group" "artillery" {
   name   = "${var.resource_prefix}_apm_aws_lambda_artillery"
   vpc_id = aws_vpc.artillery.id
-  tags   = var.tags
   egress = [
     {
       description      = "Allow all egress traffic"
@@ -90,7 +89,6 @@ resource "aws_security_group" "artillery" {
 resource "aws_key_pair" "artillery" {
   key_name   = "${var.resource_prefix}_apm_aws_lambda_artillery"
   public_key = data.tls_public_key.artillery.public_key_openssh
-  tags       = var.tags
 }
 
 resource "aws_instance" "artillery" {
@@ -99,7 +97,6 @@ resource "aws_instance" "artillery" {
   key_name               = aws_key_pair.artillery.key_name
   subnet_id              = aws_subnet.artillery.id
   vpc_security_group_ids = [aws_security_group.artillery.id]
-  tags                   = var.tags
 
   lifecycle {
     ignore_changes = [ami]
