@@ -31,6 +31,9 @@ provider "ec" {}
 
 provider "aws" {
   region = var.aws_region
+  default_tags {
+    tags = module.tags.tags
+  }
 }
 
 module "tags" {
@@ -74,8 +77,6 @@ module "lambda_deployment" {
 
   apm_server_url   = module.ec_deployment.apm_url
   apm_secret_token = module.ec_deployment.apm_secret_token
-
-  tags = module.tags.tags
 }
 
 module "artillery_deployment" {
@@ -93,6 +94,4 @@ module "artillery_deployment" {
   load_arrival_rate = var.load_arrival_rate
   load_base_url     = module.lambda_deployment.base_url
   load_req_path     = local.load_req_path
-
-  tags = module.tags.tags
 }
