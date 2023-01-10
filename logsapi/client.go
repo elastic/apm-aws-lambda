@@ -48,6 +48,7 @@ type ClientOption func(*Client)
 
 type invocationLifecycler interface {
 	OnLambdaLogRuntimeDone(requestID, status string, time time.Time) error
+	OnPlatformReport(reqID string) (fnARN string, deadlineMs int64, ts time.Time, err error)
 }
 
 // Client is the client used to subscribe to the Logs API.

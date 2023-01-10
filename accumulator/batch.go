@@ -185,6 +185,21 @@ func (b *Batch) OnLambdaLogRuntimeDone(reqID, status string, time time.Time) err
 	return b.finalizeInvocation(reqID, status, time)
 }
 
+// OnPlatformReport should be the last event for a request ID. On receiving the
+// platform.report event the batch will cleanup any datastructure for the request
+// ID. It will return some of the function metadata to allow the caller to enrich
+// the report metrics.
+func (b *Batch) OnPlatformReport(reqID string) (string, int64, time.Time, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	inc, ok := b.invocations[reqID]
+	if !ok {
+		return "", 0, time.Time{}, fmt.Errorf("invocation for requestID %s does not exist", reqID)
+	}
+	delete(b.invocations, reqID)
+	return inc.FunctionARN, inc.DeadlineMs, inc.Timestamp, nil
+}
+
 // OnShutdown flushes the data for shipping to APM Server by finalizing all
 // the invocation in the batch. If we haven't received a platform.runtimeDone
 // event for an invocation so far we won't be able to recieve it in time thus
@@ -201,6 +216,7 @@ func (b *Batch) OnShutdown(status string) error {
 		if err := b.finalizeInvocation(inc.RequestID, status, time); err != nil {
 			return err
 		}
+		delete(b.invocations, inc.RequestID)
 	}
 	return nil
 }
@@ -257,12 +273,16 @@ func (b *Batch) finalizeInvocation(reqID, status string, time time.Time) error {
 	if !ok {
 		return fmt.Errorf("invocation for requestID %s does not exist", reqID)
 	}
-	defer delete(b.invocations, reqID)
-	proxyTxn, err := inc.Finalize(status, time)
+	proxyTxn, err := inc.CreateProxyTxn(status, time)
 	if err != nil {
 		return err
 	}
-	return b.addData(proxyTxn)
+	err = b.addData(proxyTxn)
+	if err != nil {
+		return err
+	}
+	inc.Finalized = true
+	return nil
 }
 
 func (b *Batch) addData(data []byte) error {

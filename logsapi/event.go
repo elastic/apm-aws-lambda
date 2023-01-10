@@ -94,29 +94,29 @@ func (lc *Client) ProcessLogs(
 					return
 				}
 			case PlatformReport:
-				// TODO: @lahsivjar Refactor usage of prevEvent.RequestID (should now query the batch?)
-				if prevEvent != nil && logEvent.Record.RequestID == prevEvent.RequestID {
-					lc.logger.Debugf("Received platform report for %s", logEvent.Record.RequestID)
-					processedMetrics, err := ProcessPlatformReport(prevEvent, logEvent)
-					if err != nil {
-						lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
-					} else {
-						select {
-						case dataChan <- processedMetrics:
-						case <-ctx.Done():
-						}
-					}
-					// For shutdown event the platform report metrics for the previous log event
-					// would be the last possible log event.
-					if isShutdown {
-						lc.logger.Debugf(
-							"Processed platform report event for reqID %s as the last log event before shutdown",
-							logEvent.Record.RequestID,
-						)
-						return
-					}
+				fnARN, deadlineMs, ts, err := lc.invocationLifecycler.OnPlatformReport(logEvent.Record.RequestID)
+				if err != nil {
+					lc.logger.Warnf("Failed to process platform report: %v", err)
+					continue
+				}
+				lc.logger.Debugf("Received platform report for %s", logEvent.Record.RequestID)
+				processedMetrics, err := ProcessPlatformReport(fnARN, deadlineMs, ts, logEvent)
+				if err != nil {
+					lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
 				} else {
-					lc.logger.Warn("Report event request id didn't match the previous event id")
+					select {
+					case dataChan <- processedMetrics:
+					case <-ctx.Done():
+					}
+				}
+				// For shutdown event the platform report metrics for the previous log event
+				// would be the last possible log event.
+				if isShutdown {
+					lc.logger.Debugf(
+						"Processed platform report event for reqID %s as the last log event before shutdown",
+						logEvent.Record.RequestID,
+					)
+					return
 				}
 			case PlatformLogsDropped:
 				lc.logger.Warnf("Logs dropped due to extension falling behind: %v", logEvent.Record)

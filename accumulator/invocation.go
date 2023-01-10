@@ -47,26 +47,24 @@ type Invocation struct {
 	// TransactionObserved is true if the root transaction ID for the
 	// invocation is observed by the extension.
 	TransactionObserved bool
+	// Finalized tracks if the invocation has been finalized or not.
+	Finalized bool
 }
 
 // NeedProxyTransaction returns true if a proxy transaction needs to be
 // created based on the information available.
 func (inc *Invocation) NeedProxyTransaction() bool {
-	return inc.TransactionID != "" && !inc.TransactionObserved
+	return !inc.Finalized && inc.TransactionID != "" && !inc.TransactionObserved
 }
 
-// Finalize creates a proxy transaction for an invocation if required.
+// CreateProxyTxn creates a proxy transaction for an invocation if required.
 // A proxy transaction will be required to be created if the agent has
 // registered a transaction for the invocation but has not sent the
 // corresponding transaction to the extension.
-func (inc *Invocation) Finalize(status string, time time.Time) ([]byte, error) {
+func (inc *Invocation) CreateProxyTxn(status string, time time.Time) ([]byte, error) {
 	if !inc.NeedProxyTransaction() {
 		return nil, nil
 	}
-	return inc.createProxyTxn(status, time)
-}
-
-func (inc *Invocation) createProxyTxn(status string, time time.Time) ([]byte, error) {
 	txn, err := sjson.SetBytes(inc.AgentPayload, "transaction.result", status)
 	if err != nil {
 		return nil, err
