@@ -79,9 +79,6 @@ func (app *App) Run(ctx context.Context) error {
 		}
 	}
 
-	// The previous event id is used to validate the received Lambda metrics
-	var prevEvent *extension.NextEventResponse
-
 	for {
 		select {
 		case <-ctx.Done():
@@ -91,7 +88,7 @@ func (app *App) Run(ctx context.Context) error {
 			// Use a wait group to ensure the background go routine sending to the APM server
 			// completes before signaling that the extension is ready for the next invocation.
 			var backgroundDataSendWg sync.WaitGroup
-			event, err := app.processEvent(ctx, &backgroundDataSendWg, prevEvent)
+			event, err := app.processEvent(ctx, &backgroundDataSendWg)
 			if err != nil {
 				return err
 			}
@@ -110,7 +107,6 @@ func (app *App) Run(ctx context.Context) error {
 				app.apmClient.FlushAPMData(flushCtx)
 				cancel()
 			}
-			prevEvent = event
 		}
 	}
 }
@@ -118,7 +114,6 @@ func (app *App) Run(ctx context.Context) error {
 func (app *App) processEvent(
 	ctx context.Context,
 	backgroundDataSendWg *sync.WaitGroup,
-	prevEvent *extension.NextEventResponse,
 ) (*extension.NextEventResponse, error) {
 	// Reset flush state for future events.
 	defer app.apmClient.ResetFlush()
@@ -179,7 +174,7 @@ func (app *App) processEvent(
 		// also possible that lambda has init a few execution env preemptively,
 		// for such cases the extension will see only a SHUTDOWN event and
 		// there is no need to wait for any log event.
-		if prevEvent == nil {
+		if app.batch.Size() == 0 {
 			return event, nil
 		}
 	}
@@ -204,7 +199,6 @@ func (app *App) processEvent(
 				event.RequestID,
 				event.InvokedFunctionArn,
 				app.apmClient.LambdaDataChannel,
-				prevEvent,
 				event.EventType == extension.Shutdown,
 			)
 		}()

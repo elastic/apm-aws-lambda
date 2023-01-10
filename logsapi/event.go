@@ -20,8 +20,6 @@ package logsapi
 import (
 	"context"
 	"time"
-
-	"github.com/elastic/apm-aws-lambda/extension"
 )
 
 // LogEventType represents the log type that is received in the log messages
@@ -63,7 +61,6 @@ func (lc *Client) ProcessLogs(
 	requestID string,
 	invokedFnArn string,
 	dataChan chan []byte,
-	prevEvent *extension.NextEventResponse,
 	isShutdown bool,
 ) {
 	// platformStartReqID is to identify the requestID for the function

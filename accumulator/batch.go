@@ -82,6 +82,13 @@ func NewBatch(maxSize int, maxAge time.Duration) *Batch {
 	}
 }
 
+// Size returns the number of invocations cached in the batch.
+func (b *Batch) Size() int {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return len(b.invocations)
+}
+
 // RegisterInvocation registers a new function invocation against its request
 // ID. It also updates the caches for currently executing request ID.
 func (b *Batch) RegisterInvocation(
