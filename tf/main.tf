@@ -2,6 +2,11 @@ provider "aws" {
   region = var.aws_region
 }
 
+module "tags" {
+  source  = "github.com/elastic/apm-server//testing/infra/terraform/modules/tags?depth=1"
+  project = var.user_name
+}
+
 module "ec_deployment" {
   source                 = "github.com/elastic/apm-server//testing/infra/terraform/modules/ec_deployment?depth=1"
   deployment_name_prefix = "apm-aws-lambda-smoke-testing"
@@ -11,6 +16,7 @@ module "ec_deployment" {
   region                 = var.ess_region
   deployment_template    = var.ess_deployment_template
   stack_version          = var.ess_version
+  tags                   = module.tags.tags
 }
 
 module "lambda_function" {
@@ -35,9 +41,9 @@ module "lambda_function" {
     ELASTIC_APM_SECRET_TOKEN      = module.ec_deployment.apm_secret_token
   }
 
-  tags = {
+  tags = merge(module.tags.tags, {
     Name = "my-lambda"
-  }
+  })
 }
 
 module "lambda_layer_local" {
@@ -50,4 +56,6 @@ module "lambda_layer_local" {
   compatible_runtimes = ["nodejs16.x"]
 
   source_path = "../bin/"
+
+  tags = module.tags.tags
 }

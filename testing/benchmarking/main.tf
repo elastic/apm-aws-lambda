@@ -31,8 +31,15 @@ provider "ec" {}
 
 provider "aws" {
   region = var.aws_region
+  default_tags {
+    tags = module.tags.tags
+  }
 }
 
+module "tags" {
+  source  = "github.com/elastic/apm-server//testing/infra/terraform/modules/tags?depth=1"
+  project = "lambda-extension-benchmarks"
+}
 
 module "ec_deployment" {
   source = "github.com/elastic/apm-server/testing/infra/terraform/modules/ec_deployment"
@@ -49,6 +56,8 @@ module "ec_deployment" {
   integrations_server = true
   apm_server_expvar   = false
   apm_server_pprof    = false
+
+  tags = module.tags.tags
 }
 
 module "lambda_deployment" {

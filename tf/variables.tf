@@ -4,6 +4,11 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
+variable "user_name" {
+  description = "Required username to use for prefixes"
+  type        = string
+}
+
 variable "log_level" {
   type        = string
   description = "lambda extension log level"
