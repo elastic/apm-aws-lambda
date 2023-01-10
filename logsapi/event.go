@@ -94,21 +94,22 @@ func (lc *Client) ProcessLogs(
 				fnARN, deadlineMs, ts, err := lc.invocationLifecycler.OnPlatformReport(logEvent.Record.RequestID)
 				if err != nil {
 					lc.logger.Warnf("Failed to process platform report: %v", err)
-					continue
-				}
-				lc.logger.Debugf("Received platform report for %s", logEvent.Record.RequestID)
-				processedMetrics, err := ProcessPlatformReport(fnARN, deadlineMs, ts, logEvent)
-				if err != nil {
-					lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
 				} else {
-					select {
-					case dataChan <- processedMetrics:
-					case <-ctx.Done():
+					lc.logger.Debugf("Received platform report for %s", logEvent.Record.RequestID)
+					processedMetrics, err := ProcessPlatformReport(fnARN, deadlineMs, ts, logEvent)
+					if err != nil {
+						lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
+					} else {
+						select {
+						case dataChan <- processedMetrics:
+						case <-ctx.Done():
+						}
 					}
 				}
 				// For shutdown event the platform report metrics for the previous log event
-				// would be the last possible log event.
-				if isShutdown {
+				// would be the last possible log event. After processing this metric the
+				// invocation lifecycler's cache should be empty.
+				if isShutdown && lc.invocationLifecycler.Size() == 0 {
 					lc.logger.Debugf(
 						"Processed platform report event for reqID %s as the last log event before shutdown",
 						logEvent.Record.RequestID,
