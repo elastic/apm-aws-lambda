@@ -14,7 +14,7 @@ DATE_FMT = +%Y%m%d%H%M.%S
 # 2. 'date -r': BSD date. It does not support '-d'.
 BUILD_DATE = $(shell date -u -d "@${SOURCE_DATE_EPOCH}" "${DATE_FMT}" 2>/dev/null || date -u -r "${SOURCE_DATE_EPOCH}" "${DATE_FMT}")
 
-GO_BUILDFLAGS ?= -ldflags="-s -w"
+GO_BUILDFLAGS ?= -trimpath -ldflags="-s -w"
 
 ifndef GOARCH
 	GOARCH=amd64
