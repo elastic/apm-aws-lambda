@@ -14,6 +14,8 @@ DATE_FMT = +%Y%m%d%H%M.%S
 # 2. 'date -r': BSD date. It does not support '-d'.
 BUILD_DATE = $(shell date -u -d "@${SOURCE_DATE_EPOCH}" "${DATE_FMT}" 2>/dev/null || date -u -r "${SOURCE_DATE_EPOCH}" "${DATE_FMT}")
 
+GO_BUILDFLAGS ?= -ldflags="-s -w"
+
 ifndef GOARCH
 	GOARCH=amd64
 endif
@@ -48,7 +50,7 @@ lint:
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 run
 
 build: check-licenses NOTICE.txt
-	CGO_ENABLED=0 GOOS=linux go build -o bin/extensions/apm-lambda-extension main.go
+	CGO_ENABLED=0 GOOS=linux go build ${GO_BUILDFLAGS} -o bin/extensions/apm-lambda-extension main.go
 	cp NOTICE.txt bin/NOTICE.txt
 	cp dependencies.asciidoc bin/dependencies.asciidoc
 
