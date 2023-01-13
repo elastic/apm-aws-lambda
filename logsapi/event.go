@@ -20,8 +20,6 @@ package logsapi
 import (
 	"context"
 	"time"
-
-	"github.com/elastic/apm-aws-lambda/extension"
 )
 
 // LogEventType represents the log type that is received in the log messages
@@ -63,7 +61,6 @@ func (lc *Client) ProcessLogs(
 	requestID string,
 	invokedFnArn string,
 	dataChan chan []byte,
-	prevEvent *extension.NextEventResponse,
 	isShutdown bool,
 ) {
 	// platformStartReqID is to identify the requestID for the function
@@ -94,10 +91,12 @@ func (lc *Client) ProcessLogs(
 					return
 				}
 			case PlatformReport:
-				// TODO: @lahsivjar Refactor usage of prevEvent.RequestID (should now query the batch?)
-				if prevEvent != nil && logEvent.Record.RequestID == prevEvent.RequestID {
+				fnARN, deadlineMs, ts, err := lc.invocationLifecycler.OnPlatformReport(logEvent.Record.RequestID)
+				if err != nil {
+					lc.logger.Warnf("Failed to process platform report: %v", err)
+				} else {
 					lc.logger.Debugf("Received platform report for %s", logEvent.Record.RequestID)
-					processedMetrics, err := ProcessPlatformReport(prevEvent, logEvent)
+					processedMetrics, err := ProcessPlatformReport(fnARN, deadlineMs, ts, logEvent)
 					if err != nil {
 						lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
 					} else {
@@ -106,17 +105,16 @@ func (lc *Client) ProcessLogs(
 						case <-ctx.Done():
 						}
 					}
-					// For shutdown event the platform report metrics for the previous log event
-					// would be the last possible log event.
-					if isShutdown {
-						lc.logger.Debugf(
-							"Processed platform report event for reqID %s as the last log event before shutdown",
-							logEvent.Record.RequestID,
-						)
-						return
-					}
-				} else {
-					lc.logger.Warn("Report event request id didn't match the previous event id")
+				}
+				// For shutdown event the platform report metrics for the previous log event
+				// would be the last possible log event. After processing this metric the
+				// invocation lifecycler's cache should be empty.
+				if isShutdown && lc.invocationLifecycler.Size() == 0 {
+					lc.logger.Debugf(
+						"Processed platform report event for reqID %s as the last log event before shutdown",
+						logEvent.Record.RequestID,
+					)
+					return
 				}
 			case PlatformLogsDropped:
 				lc.logger.Warnf("Logs dropped due to extension falling behind: %v", logEvent.Record)

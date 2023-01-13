@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFinalize(t *testing.T) {
+func TestCreateProxyTransaction(t *testing.T) {
 	txnDur := time.Second
 	for _, tc := range []struct {
 		name              string
@@ -89,7 +89,7 @@ func TestFinalize(t *testing.T) {
 				AgentPayload:        []byte(tc.payload),
 				TransactionObserved: tc.txnObserved,
 			}
-			result, err := inc.Finalize(tc.runtimeDoneStatus, ts.Add(txnDur))
+			result, err := inc.CreateProxyTxn(tc.runtimeDoneStatus, ts.Add(txnDur))
 			assert.Nil(t, err)
 			if len(tc.output) > 0 {
 				assert.JSONEq(t, tc.output, string(result))
@@ -114,7 +114,7 @@ func BenchmarkCreateProxyTxn(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := inc.createProxyTxn("success", txnDur)
+		_, err := inc.CreateProxyTxn("success", txnDur)
 		if err != nil {
 			b.Fail()
 		}

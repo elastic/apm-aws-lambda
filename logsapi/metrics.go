@@ -19,8 +19,8 @@ package logsapi
 
 import (
 	"math"
+	"time"
 
-	"github.com/elastic/apm-aws-lambda/extension"
 	"go.elastic.co/apm/v2/model"
 	"go.elastic.co/fastjson"
 )
@@ -64,7 +64,7 @@ func (mc MetricsContainer) MarshalFastJSON(json *fastjson.Writer) error {
 // ProcessPlatformReport processes the `platform.report` log line from lambda logs API and
 // returns a byte array containing the JSON body for the extracted platform metrics. A non
 // nil error is returned when marshaling of platform metrics into JSON fails.
-func ProcessPlatformReport(functionData *extension.NextEventResponse, platformReport LogEvent) ([]byte, error) {
+func ProcessPlatformReport(fnARN string, deadlineMs int64, ts time.Time, platformReport LogEvent) ([]byte, error) {
 	metricsContainer := MetricsContainer{
 		Metrics: &model.Metrics{},
 	}
@@ -78,7 +78,7 @@ func ProcessPlatformReport(functionData *extension.NextEventResponse, platformRe
 	// FaaS Fields
 	metricsContainer.Metrics.FAAS = &model.FAAS{
 		Execution: platformReport.Record.RequestID,
-		ID:        functionData.InvokedFunctionArn,
+		ID:        fnARN,
 		Coldstart: platformReportMetrics.InitDurationMs > 0,
 	}
 
@@ -95,7 +95,7 @@ func ProcessPlatformReport(functionData *extension.NextEventResponse, platformRe
 	// - The epoch corresponding to the end of the current invocation (its "deadline")
 	// - The epoch corresponding to the start of the current invocation
 	// - The multiplication / division then rounds the value to obtain a number of ms that can be expressed a multiple of 1000 (see initial assumption)
-	metricsContainer.Add("faas.timeout", math.Ceil(float64(functionData.DeadlineMs-functionData.Timestamp.UnixMilli())/1e3)*1e3) // Unit : Milliseconds
+	metricsContainer.Add("faas.timeout", math.Ceil(float64(deadlineMs-ts.UnixMilli())/1e3)*1e3) // Unit : Milliseconds
 
 	var jsonWriter fastjson.Writer
 	if err := metricsContainer.MarshalFastJSON(&jsonWriter); err != nil {
