@@ -136,7 +136,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		apmOpts = append(apmOpts, apmproxy.WithAgentDataBufferSize(size))
 	}
 
-	if verifyCertsString := os.Getenv("ELASTIC_APM_LAMBDA_SERVER_VERIFY_CERT"); verifyCertsString != "" {
+	if verifyCertsString := os.Getenv("ELASTIC_APM_LAMBDA_VERIFY_SERVER_CERT"); verifyCertsString != "" {
 		verifyCerts, err := strconv.ParseBool(verifyCertsString)
 		if err != nil {
 			return nil, err
@@ -147,13 +147,13 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		apmOpts = append(apmOpts, apmproxy.WithVerifyCerts(verifyCerts))
 	}
 
-	if encodedCertPem := os.Getenv("ELASTIC_APM_LAMBDA_SERVER_CERT_PEM"); encodedCertPem != "" {
+	if encodedCertPem := os.Getenv("ELASTIC_APM_LAMBDA_SERVER_CA_CERT_PEM"); encodedCertPem != "" {
 		certPem := strings.ReplaceAll(encodedCertPem, "\\n", "\n")
 		app.logger.Infof("Using CA certificates from environment variable.")
 		apmOpts = append(apmOpts, apmproxy.WithRootCerts(certPem))
 	}
 
-	if certFile := os.Getenv("ELASTIC_APM_LAMBDA_SERVER_CERT"); certFile != "" {
+	if certFile := os.Getenv("ELASTIC_APM_SERVER_CA_CERT_FILE"); certFile != "" {
 		cert, err := os.ReadFile(certFile)
 		if err != nil {
 			return nil, err
@@ -162,7 +162,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		apmOpts = append(apmOpts, apmproxy.WithRootCerts(string(cert)))
 	}
 
-	if acmCertArn := os.Getenv("ELASTIC_APM_LAMBDA_SERVER_CERT_ID"); acmCertArn != "" {
+	if acmCertArn := os.Getenv("ELASTIC_APM_SERVER_CA_CERT_ACM_ID"); acmCertArn != "" {
 		cert, err := loadAcmCertificate(acmCertArn, c.awsConfig, ctx)
 		if err != nil {
 			return nil, err
