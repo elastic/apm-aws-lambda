@@ -19,6 +19,7 @@ package apmproxy_test
 
 import (
 	"bytes"
+	"encoding/pem"
 	"io"
 	"net"
 	"net/http"
@@ -330,4 +331,104 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Fatal("Timed out waiting for server to send flush signal")
 	}
+}
+
+func TestWithVerifyCerts(t *testing.T) {
+	headers := map[string]string{"Authorization": "test-value"}
+	clientConnected := false
+
+	// Create apm server and handler
+	apmServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("test", "header")
+		_, err := w.Write([]byte(`{"foo": "bar"}`))
+		require.NoError(t, err)
+		clientConnected = true
+	}))
+	defer apmServer.Close()
+
+	// Create extension config and start the server
+	apmClient, err := apmproxy.NewClient(
+		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithSecretToken("foo"),
+		apmproxy.WithAPIKey("bar"),
+		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverTimeout(15*time.Second),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithVerifyCerts(false),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, apmClient.StartReceiver())
+	defer func() {
+		require.NoError(t, apmClient.Shutdown())
+	}()
+
+	hosts, _ := net.LookupHost("localhost")
+	url := "http://" + hosts[0] + ":1234"
+
+	// Create a request to send to the extension
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	require.NoError(t, err)
+	for name, value := range headers {
+		req.Header.Add(name, value)
+	}
+
+	// Send the request to the extension
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	require.True(t, clientConnected, "The apm proxy did not connect to the tls server.")
+}
+
+func TestWithRootCerts(t *testing.T) {
+	headers := map[string]string{"Authorization": "test-value"}
+	clientConnected := false
+
+	// Create apm server and handler
+	apmServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("test", "header")
+		_, err := w.Write([]byte(`{"foo": "bar"}`))
+		require.NoError(t, err)
+		clientConnected = true
+	}))
+	defer apmServer.Close()
+
+	pemCert := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: apmServer.Certificate().Raw})
+
+	// Create extension config and start the server
+	apmClient, err := apmproxy.NewClient(
+		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithSecretToken("foo"),
+		apmproxy.WithAPIKey("bar"),
+		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverTimeout(15*time.Second),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+		apmproxy.WithRootCerts(string(pemCert)),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, apmClient.StartReceiver())
+	defer func() {
+		require.NoError(t, apmClient.Shutdown())
+	}()
+
+	hosts, _ := net.LookupHost("localhost")
+	url := "http://" + hosts[0] + ":1234"
+
+	// Create a request to send to the extension
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	require.NoError(t, err)
+	for name, value := range headers {
+		req.Header.Add(name, value)
+	}
+
+	// Send the request to the extension
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	require.True(t, clientConnected, "The apm proxy did not connect to the tls server.")
 }
