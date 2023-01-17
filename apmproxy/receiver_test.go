@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"encoding/pem"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -56,7 +55,8 @@ func TestInfoProxy(t *testing.T) {
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithSecretToken("foo"),
 		apmproxy.WithAPIKey("bar"),
-		apmproxy.WithReceiverAddress(":1234"),
+		// Use ipv4 to avoid issues in CI
+		apmproxy.WithReceiverAddress("127.0.0.1:1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
@@ -67,8 +67,7 @@ func TestInfoProxy(t *testing.T) {
 		require.NoError(t, apmClient.Shutdown())
 	}()
 
-	hosts, _ := net.LookupHost("localhost")
-	url := "http://" + hosts[0] + ":1234"
+	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -101,7 +100,7 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithSecretToken("foo"),
 		apmproxy.WithAPIKey("bar"),
-		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverAddress("127.0.0.1:1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
@@ -112,8 +111,7 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 		require.NoError(t, apmClient.Shutdown())
 	}()
 
-	hosts, _ := net.LookupHost("localhost")
-	url := "http://" + hosts[0] + ":1234"
+	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -137,7 +135,7 @@ func TestInfoProxyUnreachable(t *testing.T) {
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithSecretToken("foo"),
 		apmproxy.WithAPIKey("bar"),
-		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverAddress("127.0.0.1:1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
@@ -148,8 +146,7 @@ func TestInfoProxyUnreachable(t *testing.T) {
 		require.NoError(t, apmClient.Shutdown())
 	}()
 
-	hosts, _ := net.LookupHost("localhost")
-	url := "http://" + hosts[0] + ":1234"
+	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -177,7 +174,7 @@ func Test_handleInfoRequest(t *testing.T) {
 		apmproxy.WithURL("https://example.com"),
 		apmproxy.WithSecretToken("foo"),
 		apmproxy.WithAPIKey("bar"),
-		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverAddress("127.0.0.1:1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
@@ -190,8 +187,7 @@ func Test_handleInfoRequest(t *testing.T) {
 	}()
 
 	// Create a request to send to the extension
-	hosts, _ := net.LookupHost("localhost")
-	url := "http://" + hosts[0] + ":1234/intake/v2/events"
+	url := "http://127.0.0.1:1234/intake/v2/events"
 	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(agentRequestBody))
 	require.NoError(t, err)
 	// Add headers to the request
@@ -217,7 +213,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	// Create extension config and start the server
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
-		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverAddress("127.0.0.1:1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
@@ -227,8 +223,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 		require.NoError(t, apmClient.Shutdown())
 	}()
 
-	hosts, _ := net.LookupHost("localhost")
-	url := "http://" + hosts[0] + ":1234/intake/v2/events?flushed=true"
+	url := "http://127.0.0.1:1234/intake/v2/events?flushed=true"
 
 	// Create a request to send to the extension
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
@@ -259,7 +254,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 	// Create extension config and start the server
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
-		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverAddress("127.0.0.1:1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
@@ -269,8 +264,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 		require.NoError(t, apmClient.Shutdown())
 	}()
 
-	hosts, _ := net.LookupHost("localhost")
-	url := "http://" + hosts[0] + ":1234/intake/v2/events"
+	url := "http://127.0.0.1:1234/intake/v2/events"
 
 	// Create a request to send to the extension
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
@@ -302,7 +296,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	// Create extension config and start the server
 	apmClient, err := apmproxy.NewClient(
 		apmproxy.WithURL(apmServer.URL),
-		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverAddress("127.0.0.1:1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
@@ -312,8 +306,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 		require.NoError(t, apmClient.Shutdown())
 	}()
 
-	hosts, _ := net.LookupHost("localhost")
-	url := "http://" + hosts[0] + ":1234/intake/v2/events?flushed=true"
+	url := "http://127.0.0.1:1234/intake/v2/events?flushed=true"
 
 	// Create a request to send to the extension
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
