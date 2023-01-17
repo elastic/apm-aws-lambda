@@ -344,7 +344,7 @@ func TestWithVerifyCerts(t *testing.T) {
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithSecretToken("foo"),
 		apmproxy.WithAPIKey("bar"),
-		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverAddress("127.0.0.1:1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 		apmproxy.WithVerifyCerts(false),
@@ -356,8 +356,7 @@ func TestWithVerifyCerts(t *testing.T) {
 		require.NoError(t, apmClient.Shutdown())
 	}()
 
-	hosts, _ := net.LookupHost("localhost")
-	url := "http://" + hosts[0] + ":1234"
+	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -395,7 +394,7 @@ func TestWithRootCerts(t *testing.T) {
 		apmproxy.WithURL(apmServer.URL),
 		apmproxy.WithSecretToken("foo"),
 		apmproxy.WithAPIKey("bar"),
-		apmproxy.WithReceiverAddress(":1234"),
+		apmproxy.WithReceiverAddress("127.0.0.1:1234"),
 		apmproxy.WithReceiverTimeout(15*time.Second),
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 		apmproxy.WithRootCerts(string(pemCert)),
@@ -407,8 +406,7 @@ func TestWithRootCerts(t *testing.T) {
 		require.NoError(t, apmClient.Shutdown())
 	}()
 
-	hosts, _ := net.LookupHost("localhost")
-	url := "http://" + hosts[0] + ":1234"
+	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
 	req, err := http.NewRequest(http.MethodGet, url, nil)
