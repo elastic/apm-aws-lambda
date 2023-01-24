@@ -10,7 +10,6 @@ cat ./*"-${SUFFIX_ARN_FILE}" >> "$SUFFIX_ARN_FILE"
 
 gh release \
   create "${VERSION}" \
-  --draft \
   --title="${VERSION}" \
   --generate-notes \
   --notes-file="${SUFFIX_ARN_FILE}" \
