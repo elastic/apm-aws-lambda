@@ -22,9 +22,11 @@
 
 # AWS regions file
 .regions
-.aws/
+.aws-*/
+*arn-file.md
 
 bin/
 
 # local docs
 html_docs
+dist/

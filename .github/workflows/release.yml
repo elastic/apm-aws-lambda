@@ -1,0 +1,60 @@
+name: release
+
+on:
+  push:
+    tags:
+      - v*.*.*
+
+env:
+  DOCKER_BUILDKIT: 1
+  DOCKER_REGISTRY: docker.elastic.co
+  DOCKER_IMAGE_NAME: observability/apm-lambda-extension
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      os: ${{ steps.artifacts.outputs.os }}
+      arch: ${{ steps.artifacts.outputs.arch }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+      - uses: docker/setup-qemu-action@v2
+        with:
+          platforms: linux/arm64, linux/amd64
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - uses: elastic/apm-pipeline-library/.github/actions/docker-login@current
+        with:
+          registry: docker.elastic.co
+          secret: secret/observability-team/ci/docker-registry/prod
+          url: ${{ secrets.VAULT_ADDR }}
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+      - uses: hashicorp/vault-action@v2
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          method: approle
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          secrets: |
+            secret/observability-team/ci/service-account/apm-aws-lambda access_key_id | AWS_ACCESS_KEY_ID ;
+            secret/observability-team/ci/service-account/apm-aws-lambda secret_access_key | AWS_SECRET_ACCESS_KEY
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          args: release --rm-dist
+      - name: GitHub Release
+        run: make release-notes
+        env:
+          VERSION: ${{ github.ref_name }}
+
+
