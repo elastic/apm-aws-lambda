@@ -1,0 +1,61 @@
+name: test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - "ubuntu-latest"
+          - "macos-latest"
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+      - name: Build
+        run: make build
+      - name: Test
+        run: |
+          go install gotest.tools/gotestsum@latest
+          gotestsum --format testname --junitfile ${{ matrix.platform }}-junit-report.xml
+      - uses: actions/upload-artifact@v3
+        if: success() || failure()
+        with:
+          name: test-results
+          path: '*-junit-report.xml'
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+      - name: lint-prep
+        run: go mod tidy && git diff --exit-code
+      - name: lint-run
+        run: make lint
+      - name: Go vet
+        run: go vet
+  notice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: notice
+        run: |
+          make NOTICE.txt
+          git diff --exit-code --quiet && exit 0 || echo "regenerate NOTICE.txt" && exit 1
+        
+      
+
