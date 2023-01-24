@@ -1,0 +1,81 @@
+project_name: apm-lambda-extension
+
+before:
+  hooks:
+    # test
+    - 'sh -c "go test extension/*.go -v"'
+    # check-licenses
+    - go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -exclude testing .
+    - go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -exclude testing -ext .java .
+    - go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -exclude testing -ext .js .
+    # NOTICE.txt
+    - ./scripts/notice.sh
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+    binary: "extensions/{{ .ProjectName }}"
+
+archives:
+  - id: zip
+    format: zip
+    name_template: |-
+      {{ .Tag }}-{{ .Os }}-{{ .Arch }}
+    files:
+      - NOTICE.txt
+      - dependencies.asciidoc
+    rlcp: true # https://goreleaser.com/deprecations/#archivesrlcp
+
+dockers:
+
+  - &default-docker-image
+    id: linux-amd64-image
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - 'docker.elastic.co/observability/{{ .ProjectName }}-x86_64:{{ trimprefix .Tag "v" }}'
+      - "docker.elastic.co/observability/{{ .ProjectName }}-x86_64:latest"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=EXTENSION_FILE={{ .ProjectName }}"
+    extra_files:
+      - NOTICE.txt
+      - dependencies.asciidoc
+
+  - <<: *default-docker-image
+    id: linux-arm64-image
+    goarch: arm64
+    image_templates:
+      - 'docker.elastic.co/observability/{{ .ProjectName }}-arm64:{{ trimprefix .Tag "v" }}'
+      - "docker.elastic.co/observability/{{ .ProjectName }}-arm64:latest"
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--build-arg=EXTENSION_FILE={{ .ProjectName }}"
+
+publishers:
+  - name: publish-aws
+    cmd: ./.ci/publish-aws.sh
+    env:
+      - AWS_ACCESS_KEY_ID={{ .Env.AWS_ACCESS_KEY_ID }}
+      - AWS_SECRET_ACCESS_KEY={{ .Env.AWS_SECRET_ACCESS_KEY }}
+      - AWS_SECURITY_TOKEN={{ .Env.AWS_SECURITY_TOKEN }}
+      - AWS_SESSION_TOKEN={{ .Env.AWS_SESSION_TOKEN }}
+      - ELASTIC_LAYER_NAME=elastic-apm-extension-ver-{{ replace (trimprefix .Tag "v") "." "-" }}
+      - VERSION={{ .Tag }}
+      - ARCHITECTURE={{ if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
+      - GOOS={{ .Os }}
+      - GOARCH={{ .Arch }}
+      - AWS_FOLDER=.aws-{{ .Os }}-{{ .Arch }}
+release:
+  # Custom GitHub release
+  disable: true
