@@ -19,5 +19,5 @@ lint:
 	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 version
 	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 run
 
-NOTICE.txt:
+NOTICE.txt: go.mod
 	@bash ./scripts/notice.sh
