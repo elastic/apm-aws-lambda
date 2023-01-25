@@ -23,12 +23,6 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version-file: 'go.mod'
-      - name: Install GoReleaser
-        uses: goreleaser/goreleaser-action@v4
-        with:
-          install-only: true
-      - name: Build
-        run: make dist
       - name: Test
         run: make test junitfile="${{ matrix.platform }}-junit-report.xml"
       - uses: actions/upload-artifact@v3
@@ -36,7 +30,19 @@ jobs:
         with:
           name: test-results
           path: '*-junit-report.xml'
-
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version-file: 'go.mod'
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          install-only: true
+      - name: Build
+        run: make dist
   lint:
     runs-on: ubuntu-latest
     steps:
