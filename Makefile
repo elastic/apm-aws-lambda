@@ -29,6 +29,12 @@ lint:
 NOTICE.txt: go.mod
 	@bash ./scripts/notice.sh
 
+.PHONY: check-linceses
+check-licenses:
+	@go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -exclude testing .
+	@go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -exclude testing -ext .java .
+	@go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -exclude testing -ext .js .
+
 
 ##############################################################################
 # Smoke tests -- Basic smoke tests for the APM Lambda extension
