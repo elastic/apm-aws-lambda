@@ -54,6 +54,7 @@ for region in $ALL_AWS_REGIONS; do
     publish-layer-version \
     --region="${region}" \
     --layer-name="${FULL_LAYER_NAME}" \
+    --compatible-architectures="${ARCHITECTURE}" \
     --description="AWS Lambda Extension Layer for Elastic APM ${ARCHITECTURE}" \
     --license="Apache-2.0" \
     --zip-file="fileb://${new_zip_file}")
