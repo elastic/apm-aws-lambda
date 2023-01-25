@@ -20,13 +20,14 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-# AWS regions file
-.regions
-.aws-*/
-*arn-file.md
-
 bin/
 
 # local docs
 html_docs
+
+# temporary release files
 dist/
+.tmp
+.aws-*/
+*arn-file.md
+

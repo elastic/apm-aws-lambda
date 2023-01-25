@@ -2,6 +2,19 @@ SHELL = /bin/bash -eo pipefail
 export DOCKER_IMAGE_NAME = observability/apm-lambda-extension
 export DOCKER_REGISTRY = docker.elastic.co
 
+# Add support for SOURCE_DATE_EPOCH and reproducble buils
+# See https://reproducible-builds.org/specs/source-date-epoch/
+SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
+DATE_FMT = +%Y%m%d%H%M.%S
+# Fallback mechanism to support other systems:
+# 1. 'date -d': Busybox and GNU coreutils.
+# 2. 'date -r': BSD date. It does not support '-d'.
+export BUILD_DATE = $(shell date -u -d "@${SOURCE_DATE_EPOCH}" "${DATE_FMT}" 2>/dev/null || date -u -r "${SOURCE_DATE_EPOCH}" "${DATE_FMT}")
+
+
+date:
+	@echo $(BUILD_DATE)
+
 clean:
 	@rm -rf dist/
 	@docker image ls "$(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)*" -aq | xargs docker rmi --force

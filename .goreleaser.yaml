@@ -43,6 +43,7 @@ dockers:
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--build-arg=EXTENSION_FILE={{ .ProjectName }}"
+      - "--build-arg=BUILD_DATE={{ .Env.BUILD_DATE }}"
       - "--label=org.opencontainers.image.created={{ .Date }}"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
@@ -60,6 +61,7 @@ dockers:
     build_flag_templates:
       - "--platform=linux/arm64"
       - "--build-arg=EXTENSION_FILE={{ .ProjectName }}"
+      - "--build-arg=BUILD_DATE={{ .Env.BUILD_DATE }}"
       - "--label=org.opencontainers.image.created={{ .Date }}"
       - "--label=org.opencontainers.image.title={{ .ProjectName }}"
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
