@@ -1,6 +1,6 @@
 SHELL = /bin/bash -eo pipefail
-DOCKER_IMAGE_NAME = observability/apm-lambda-extension
-DOCKER_REGISTRY = docker.elastic.co
+export DOCKER_IMAGE_NAME = observability/apm-lambda-extension
+export DOCKER_REGISTRY = docker.elastic.co
 
 clean:
 	@rm -rf dist/
