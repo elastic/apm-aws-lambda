@@ -46,6 +46,8 @@ mkdir -p .tmp
 unzip "${zip_file}" -d "${tmp_dir}"
 find "${tmp_dir}" -exec touch -t "${BUILD_DATE}" {} \;
 (cd "${tmp_dir}" && zip -X -r "../../${new_zip_file}" .)
+rm -rf "${zip_file}"
+mv "${new_zip_file}" "${zip_file}"
 
 for region in $ALL_AWS_REGIONS; do
   echo "Publish ${FULL_LAYER_NAME} in ${region}"
@@ -57,7 +59,7 @@ for region in $ALL_AWS_REGIONS; do
     --compatible-architectures="${ARCHITECTURE}" \
     --description="AWS Lambda Extension Layer for Elastic APM ${ARCHITECTURE}" \
     --license="Apache-2.0" \
-    --zip-file="fileb://${new_zip_file}")
+    --zip-file="fileb://${zip_file}")
   echo "${publish_output}" > "${AWS_FOLDER}/${region}"
   layer_version=$(echo "${publish_output}" | jq '.Version')
   echo "Grant public layer access ${FULL_LAYER_NAME}:${layer_version} in ${region}"
