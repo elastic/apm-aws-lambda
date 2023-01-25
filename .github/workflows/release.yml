@@ -62,7 +62,7 @@ jobs:
           url: ${{ secrets.VAULT_ADDR }}
           roleId: ${{ secrets.VAULT_ROLE_ID }}
           secretId: ${{ secrets.VAULT_SECRET_ID }}
-          channel: "#apm-serverless"
+          channel: "#apm-aws-lambda"
           message: |
             :large_green_circle: [${{ github.repository }}] Release *${{ github.ref_name }}* published."
             Build: (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|here>)
@@ -73,7 +73,7 @@ jobs:
           url: ${{ secrets.VAULT_ADDR }}
           roleId: ${{ secrets.VAULT_ROLE_ID }}
           secretId: ${{ secrets.VAULT_SECRET_ID }}
-          channel: "#apm-serverless"
+          channel: "#apm-aws-lambda"
           message: |
             :large_yellow_circle: [${{ github.repository }}] Release *${{ github.ref_name }}* could not be published."
             Build: (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|here>)
