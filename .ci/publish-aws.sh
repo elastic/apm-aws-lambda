@@ -4,7 +4,7 @@ set -euo pipefail
 export AWS_FOLDER=${AWS_FOLDER:-.aws}
 export SUFFIX_ARN_FILE=${SUFFIX_ARN_FILE:-arn-file.md}
 
-GOOS=${GOOS:?Pleas provide GOOS environment variable.}
+GOOS=${GOOS:?Please provide GOOS environment variable.}
 GOARCH=${GOARCH:?Please provide GOARCH environment variable.}
 ELASTIC_LAYER_NAME=${ELASTIC_LAYER_NAME:?Please provide ELASTIC_LAYER_NAME environment variable.}
 ARCHITECTURE=${ARCHITECTURE:?Please provide ARCHITECTURE environment variable.}
