@@ -12,27 +12,23 @@ DATE_FMT = +%Y%m%d%H%M.%S
 export BUILD_DATE = $(shell date -u -d "@${SOURCE_DATE_EPOCH}" "${DATE_FMT}" 2>/dev/null || date -u -r "${SOURCE_DATE_EPOCH}" "${DATE_FMT}")
 
 
-date:
-	@echo $(BUILD_DATE)
-
 clean:
 	@rm -rf dist/
 	@docker image ls "$(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)*" -aq | xargs docker rmi --force
 
 dist:
-	@goreleaser release --snapshot --rm-dist
+	@go run github.com/goreleaser/goreleaser@v1.14.1 release --snapshot --rm-dist
 
 .PHONY: release
 release:
-	@goreleaser release --rm-dist
+	go run github.com/goreleaser/goreleaser@v1.14.1 release --rm-dist
 
 release-notes:
 	@./.ci/release-github.sh
 
 .PHONY: test
 test:
-	@go install gotest.tools/gotestsum@v1.9.0
-	@gotestsum --format testname --junitfile $(junitfile)
+	@go run gotest.tools/gotestsum@v1.9.0 --format testname --junitfile $(junitfile)
 
 .PHONY: lint-prep
 lint-prep:
