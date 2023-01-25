@@ -16,7 +16,7 @@ release-notes:
 	@./.ci/release-github.sh
 
 test:
-	@go install gotest.tools/gotestsum@latest
+	@go install gotest.tools/gotestsum@v1.9.0
 	@gotestsum --format testname --junitfile $(junitfile)
 
 lint:
