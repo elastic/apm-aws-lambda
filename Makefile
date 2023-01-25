@@ -9,16 +9,19 @@ clean:
 dist:
 	@goreleaser release --snapshot --rm-dist
 
+.PHONY: release
 release:
 	@goreleaser release --rm-dist
 
 release-notes:
 	@./.ci/release-github.sh
 
+.PHONY: test
 test:
 	@go install gotest.tools/gotestsum@v1.9.0
 	@gotestsum --format testname --junitfile $(junitfile)
 
+.PHONY: lint
 lint:
 	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 version
 	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 run
