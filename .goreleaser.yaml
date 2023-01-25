@@ -9,7 +9,7 @@ before:
     - go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -exclude testing -ext .java .
     - go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -exclude testing -ext .js .
     # NOTICE.txt
-    - ./scripts/notice.sh
+    - make NOTICE.txt
 
 builds:
   - env:
