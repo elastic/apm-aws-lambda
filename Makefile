@@ -15,6 +15,10 @@ release:
 release-notes:
 	@./.ci/release-github.sh
 
+test:
+	@go install gotest.tools/gotestsum@latest
+	@gotestsum --format testname --junitfile $(junitfile)
+
 lint:
 	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 version
 	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 run

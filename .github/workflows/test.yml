@@ -26,9 +26,7 @@ jobs:
       - name: Build
         run: make build
       - name: Test
-        run: |
-          go install gotest.tools/gotestsum@latest
-          gotestsum --format testname --junitfile ${{ matrix.platform }}-junit-report.xml
+        run: make test junitfile="${{ matrix.platform }}-junit-report.xml"
       - uses: actions/upload-artifact@v3
         if: success() || failure()
         with:
