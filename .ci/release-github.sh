@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 export SUFFIX_ARN_FILE=${SUFFIX_ARN_FILE:-arn-file.md}

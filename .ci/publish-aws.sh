@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 export AWS_FOLDER=${AWS_FOLDER:-.aws}
