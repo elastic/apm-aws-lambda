@@ -8,4 +8,5 @@ COPY ${EXTENSION_FILE} /opt/elastic-apm-extension
 COPY NOTICE.txt dependencies.asciidoc /opt/
 
 # Related to reproducible builds
-RUN find /opt -exec touch -t ${BUILD_DATE} {} \;
+RUN find /opt -exec touch -t "${BUILD_TIME}" {} \;
+
