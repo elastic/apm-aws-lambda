@@ -24,7 +24,7 @@ jobs:
         with:
           go-version-file: 'go.mod'
       - name: Build
-        run: make build
+        run: make dist
       - name: Test
         run: make test junitfile="${{ matrix.platform }}-junit-report.xml"
       - uses: actions/upload-artifact@v3
