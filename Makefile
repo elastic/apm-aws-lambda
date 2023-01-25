@@ -36,6 +36,11 @@ check-licenses:
 	@go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -exclude testing -ext .js .
 
 
+.PHONY: check-notice
+check-notice:
+	$(MAKE) NOTICE.txt
+	@git diff --exit-code --quiet NOTICE.txt && exit 0 || echo "regenerate NOTICE.txt" && exit 1
+
 ##############################################################################
 # Smoke tests -- Basic smoke tests for the APM Lambda extension
 ##############################################################################

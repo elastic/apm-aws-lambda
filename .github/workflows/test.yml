@@ -61,9 +61,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: notice
-        run: |
-          make NOTICE.txt
-          git diff --exit-code --quiet && exit 0 || echo "regenerate NOTICE.txt" && exit 1
+        run: make check-notice
         
       
 
