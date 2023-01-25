@@ -21,6 +21,10 @@ test:
 	@go install gotest.tools/gotestsum@v1.9.0
 	@gotestsum --format testname --junitfile $(junitfile)
 
+.PHONY: lint-prep
+lint-prep:
+	@go mod tidy && git diff --exit-code
+
 .PHONY: lint
 lint:
 	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 version

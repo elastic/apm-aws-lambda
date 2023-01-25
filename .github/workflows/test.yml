@@ -50,12 +50,9 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version-file: 'go.mod'
-      - name: lint-prep
-        run: go mod tidy && git diff --exit-code
-      - name: lint-run
-        run: make lint
-      - name: Go vet
-        run: go vet
+      - run: make lint-prep
+      - run: make lint
+      - run: go vet
   notice:
     runs-on: ubuntu-latest
     steps:
