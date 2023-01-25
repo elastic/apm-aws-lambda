@@ -2,11 +2,8 @@ project_name: apm-lambda-extension
 
 before:
   hooks:
-    # test
-    - 'sh -c "go test extension/*.go -v"'
-    # check-licenses
+    - make check-extension
     - make check-licenses
-    # NOTICE.txt
     - make NOTICE.txt
 
 builds:

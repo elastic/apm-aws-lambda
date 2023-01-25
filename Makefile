@@ -45,6 +45,10 @@ check-notice:
 	$(MAKE) NOTICE.txt
 	@git diff --exit-code --quiet NOTICE.txt && exit 0 || echo "regenerate NOTICE.txt" && exit 1
 
+.PHONY: check-extension
+check-extension:
+	@go test extension/*.go -v
+
 ##############################################################################
 # Smoke tests -- Basic smoke tests for the APM Lambda extension
 ##############################################################################
