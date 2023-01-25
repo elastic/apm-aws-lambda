@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+#
+# Publishes the created artifacts from GoReleaser to AWS as AWS Lambda Layers in every region.
+# Finalized by generating an ARN table which will be used in the release notes.
+#
+
 export AWS_FOLDER=${AWS_FOLDER:-.aws}
 export SUFFIX_ARN_FILE=${SUFFIX_ARN_FILE:-arn-file.md}
 
@@ -14,7 +19,7 @@ FULL_LAYER_NAME="${ELASTIC_LAYER_NAME}-${ARCHITECTURE}"
 
 ALL_AWS_REGIONS=$(aws ec2 describe-regions --output json --no-cli-pager | jq -r '.Regions[].RegionName')
 
-rm -rf ${AWS_FOLDER}
+rm -rf "${AWS_FOLDER}"
 
 # Delete previous layers
 for region in $ALL_AWS_REGIONS; do
