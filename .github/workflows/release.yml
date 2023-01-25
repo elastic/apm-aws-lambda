@@ -77,6 +77,3 @@ jobs:
           message: |
             :large_yellow_circle: [${{ github.repository }}] Release *${{ github.ref_name }}* could not be published."
             Build: (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|here>)
-      
-
-
