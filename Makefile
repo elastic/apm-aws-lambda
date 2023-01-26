@@ -19,6 +19,9 @@ clean:
 dist:
 	@go run github.com/goreleaser/goreleaser@v1.14.1 release --snapshot --rm-dist
 
+build:
+	@go run github.com/goreleaser/goreleaser@v1.14.1 build --snapshot --rm-dist
+
 .PHONY: release
 release:
 	go run github.com/goreleaser/goreleaser@v1.14.1 release --rm-dist

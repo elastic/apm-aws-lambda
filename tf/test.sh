@@ -15,7 +15,13 @@ echo "-> Creating the underlying infrastructure..."
 terraform init | tee tf.log
 terraform apply -auto-approve | tee -a tf.log
 
-AWS_REGION=$(terraform output -raw aws_region)
+# https://github.com/hashicorp/setup-terraform/issues/167#issuecomment-1090760365
+if [[ -z "${GITHUB_WORKFLOW}" ]]; then
+  AWS_REGION=$(terraform output -raw aws_region)
+else
+  AWS_REGION=$(terraform-bin output -raw aws_region)
+fi
+
 
 echo "-> Calling the lambda function..."
 aws lambda invoke --region="${AWS_REGION}" --function-name smoke-testing-test response.json
@@ -23,9 +29,18 @@ aws lambda invoke --region="${AWS_REGION}" --function-name smoke-testing-test re
 
 echo "-> Waiting for the agent documents to be indexed in Elasticsearch..."
 
-ES_HOST=$(terraform output -raw elasticsearch_url)
-ES_USER=$(terraform output -raw elasticsearch_username)
-ES_PASS=$(terraform output -raw elasticsearch_password)
+# https://github.com/hashicorp/setup-terraform/issues/167#issuecomment-1090760365
+if [[ -z "${GITHUB_WORKFLOW}" ]]; then
+  ES_HOST=$(terraform output -raw elasticsearch_url)
+  ES_USER=$(terraform output -raw elasticsearch_username)
+  ES_PASS=$(terraform output -raw elasticsearch_password)
+else
+  ES_HOST=$(terraform-bin output -raw elasticsearch_url)
+  ES_USER=$(terraform-bin output -raw elasticsearch_username)
+  ES_PASS=$(terraform-bin output -raw elasticsearch_password)
+fi
+
+
 
 hits=0
 attempts=0

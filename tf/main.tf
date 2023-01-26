@@ -55,7 +55,7 @@ module "lambda_layer_local" {
   description         = "AWS Lambda Extension Layer for Elastic APM - smoke testing"
   compatible_runtimes = ["nodejs16.x"]
 
-  source_path = "../bin/"
+  source_path = "../dist/apm-lambda-extension_linux_amd64_v1/"
 
   tags = module.tags.tags
 }
