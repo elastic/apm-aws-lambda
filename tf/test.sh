@@ -5,6 +5,9 @@ set -e
 export TF_IN_AUTOMATION=1
 export TF_CLI_ARGS=-no-color
 
+export TF_VAR_user_name="${BUILD_TAG}"
+
+
 cleanup() {
   [ "$SKIP_DESTROY" != "1" ]; terraform destroy -auto-approve >> tf.log
 }
