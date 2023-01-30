@@ -28,7 +28,7 @@ jobs:
 
       TF_VAR_BUILD_ID: "${{ github.run_id }}"
       TF_VAR_ENVIRONMENT: 'ci'
-      TF_VAR_BRANCH: ${{ github.event.pull_request.head.ref }} # "${{ github.ref_name }}"
+      TF_VAR_BRANCH: "${{ github.ref_name }}"
       TF_VAR_REPO: "${{ github.repository }}"
       SMOKETEST_VERSIONS: "${{ inputs.smoketest_versions }}"
     steps:
@@ -53,3 +53,23 @@ jobs:
       - run: make smoketest/run TEST_DIR=./tf
       - if: always()
         run: make smoketest/all/cleanup TEST_DIR=./tf
+      - if: ${{ success() }}
+        uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          channel: "#apm-aws-lambda"
+          message: |
+            :large_green_circle: [${{ github.repository }}] Smoketests successfully run on ${{ github.ref_name }}"
+            Build: (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|here>)
+      - if: ${{ failure() }}
+        uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
+        with:
+          url: ${{ secrets.VAULT_ADDR }}
+          roleId: ${{ secrets.VAULT_ROLE_ID }}
+          secretId: ${{ secrets.VAULT_SECRET_ID }}
+          channel: "#apm-aws-lambda"
+          message: |
+            :large_yellow_circle: [${{ github.repository }}] Smoketests failed on ${{ github.ref_name }}"
+            Build: (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|here>)
