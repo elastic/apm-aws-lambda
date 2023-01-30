@@ -59,7 +59,7 @@ jobs:
           secretId: ${{ secrets.VAULT_SECRET_ID }}
           channel: "#apm-aws-lambda"
           message: |
-            :large_green_circle: [${{ github.repository }}] Smoketests successfully run on ${{ github.ref_name }}"
+            :large_green_circle: [${{ github.repository }}] Smoketests successfully run on ${{ github.ref_name }}
             Build: (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|here>)
       - if: ${{ failure() }}
         uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
@@ -69,5 +69,5 @@ jobs:
           secretId: ${{ secrets.VAULT_SECRET_ID }}
           channel: "#apm-aws-lambda"
           message: |
-            :large_yellow_circle: [${{ github.repository }}] Smoketests failed on ${{ github.ref_name }}"
+            :large_yellow_circle: [${{ github.repository }}] Smoketests failed on ${{ github.ref_name }}
             Build: (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|here>)
