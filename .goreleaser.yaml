@@ -2,7 +2,6 @@ project_name: apm-lambda-extension
 
 before:
   hooks:
-    - make check-extension
     - make check-licenses
     - make NOTICE.txt
 
