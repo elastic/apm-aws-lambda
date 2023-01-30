@@ -51,8 +51,6 @@ jobs:
         with:
           terraform_version: 1.2.3
       - run: make smoketest/run TEST_DIR=./tf
-      - if: always()
-        run: make smoketest/all/cleanup TEST_DIR=./tf
       - if: ${{ success() }}
         uses: elastic/apm-pipeline-library/.github/actions/slack-message@current
         with:
