@@ -1,6 +1,7 @@
 name: smoke-tests
 
 on:
+  pull_request: ~
   workflow_dispatch:
     inputs:
       smoketest_versions:
@@ -30,7 +31,7 @@ jobs:
       TF_VAR_ENVIRONMENT: 'ci'
       TF_VAR_BRANCH: "${{ github.ref_name }}"
       TF_VAR_REPO: "${{ github.repository }}"
-      SMOKETEST_VERSIONS: "${{ inputs.smoketest_versions }}"
+      SMOKETEST_VERSIONS: "${{ inputs.smoketest_versions || 'latest' }}"
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
