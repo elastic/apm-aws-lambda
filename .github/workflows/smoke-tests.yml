@@ -10,9 +10,7 @@ on:
     branches:
       - main
 
-concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: true
+concurrency: ${{ github.workflow }}
 
 permissions:
   contents: read
