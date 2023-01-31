@@ -16,12 +16,12 @@ terraform init | tee tf.log
 terraform apply -auto-approve | tee -a tf.log
 
 # https://github.com/hashicorp/setup-terraform/issues/167#issuecomment-1090760365
+TERRAFORM_WRAPPER=terraform-bin
 if [[ -z "${GITHUB_WORKFLOW}" ]]; then
-  AWS_REGION=$(terraform output -raw aws_region)
-else
-  AWS_REGION=$(terraform-bin output -raw aws_region)
+  TERRAFORM_WRAPPER=terraform
 fi
 
+AWS_REGION=$($TERRAFORM_WRAPPER output -raw aws_region)
 
 echo "-> Calling the lambda function..."
 aws lambda invoke --region="${AWS_REGION}" --function-name smoke-testing-test response.json
@@ -29,18 +29,9 @@ aws lambda invoke --region="${AWS_REGION}" --function-name smoke-testing-test re
 
 echo "-> Waiting for the agent documents to be indexed in Elasticsearch..."
 
-# https://github.com/hashicorp/setup-terraform/issues/167#issuecomment-1090760365
-if [[ -z "${GITHUB_WORKFLOW}" ]]; then
-  ES_HOST=$(terraform output -raw elasticsearch_url)
-  ES_USER=$(terraform output -raw elasticsearch_username)
-  ES_PASS=$(terraform output -raw elasticsearch_password)
-else
-  ES_HOST=$(terraform-bin output -raw elasticsearch_url)
-  ES_USER=$(terraform-bin output -raw elasticsearch_username)
-  ES_PASS=$(terraform-bin output -raw elasticsearch_password)
-fi
-
-
+ES_HOST=$($TERRAFORM_WRAPPER output -raw elasticsearch_url)
+ES_USER=$($TERRAFORM_WRAPPER output -raw elasticsearch_username)
+ES_PASS=$($TERRAFORM_WRAPPER output -raw elasticsearch_password)
 
 hits=0
 attempts=0
