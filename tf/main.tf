@@ -55,6 +55,8 @@ module "lambda_layer_local" {
   description         = "AWS Lambda Extension Layer for Elastic APM - smoke testing"
   compatible_runtimes = ["nodejs16.x"]
 
+  # The path could change when upgrading GoReleaser.
+  # https://goreleaser.com/customization/build/#a-note-about-folder-names-inside-dist
   source_path = "../dist/apm-lambda-extension_linux_amd64_v1/"
 
   tags = module.tags.tags
