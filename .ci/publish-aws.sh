@@ -14,7 +14,6 @@ GOARCH=${GOARCH:?Please provide GOARCH environment variable.}
 ELASTIC_LAYER_NAME=${ELASTIC_LAYER_NAME:?Please provide ELASTIC_LAYER_NAME environment variable.}
 ARCHITECTURE=${ARCHITECTURE:?Please provide ARCHITECTURE environment variable.}
 VERSION=${VERSION:?Please provide VERSION environment variable. e.g. current git tag}
-BUILD_DATE=${BUILD_DATE:?Please provide BUILD_DATE environment variable.}
 
 FULL_LAYER_NAME="${ELASTIC_LAYER_NAME}-${ARCHITECTURE}"
 
