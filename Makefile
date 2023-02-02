@@ -2,10 +2,6 @@ SHELL = /bin/bash -eo pipefail
 export DOCKER_IMAGE_NAME = observability/apm-lambda-extension
 export DOCKER_REGISTRY = docker.elastic.co
 
-# Add support for SOURCE_DATE_EPOCH and reproducble buils
-# See https://reproducible-builds.org/specs/source-date-epoch/
-SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
-
 clean:
 	@rm -rf dist/
 	@docker image ls "$(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)*" -aq | xargs docker rmi --force
