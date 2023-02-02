@@ -27,6 +27,8 @@ archives:
     files:
       - NOTICE.txt
       - dependencies.asciidoc
+    builds_info:
+      mtime: "{{ .Env.BUILD_DATE_RFC_3339 }}"
     rlcp: true # https://goreleaser.com/deprecations/#archivesrlcp
 
 dockers:

@@ -6,11 +6,12 @@ export DOCKER_REGISTRY = docker.elastic.co
 # See https://reproducible-builds.org/specs/source-date-epoch/
 SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
 DATE_FMT = +%Y%m%d%H%M.%S
+DATE_FMT_RFC_3339 = +%Y-%m-%dT%H:%M:%SZ
 # Fallback mechanism to support other systems:
 # 1. 'date -d': Busybox and GNU coreutils.
 # 2. 'date -r': BSD date. It does not support '-d'.
 export BUILD_DATE = $(shell date -u -d "@${SOURCE_DATE_EPOCH}" "${DATE_FMT}" 2>/dev/null || date -u -r "${SOURCE_DATE_EPOCH}" "${DATE_FMT}")
-
+export BUILD_DATE_RFC_3339 = $(shell date -u -d "@${SOURCE_DATE_EPOCH}" "${DATE_FMT_RFC_3339}" 2>/dev/null || date -u -r "${SOURCE_DATE_EPOCH}" "${DATE_FMT_RFC_3339}")
 
 clean:
 	@rm -rf dist/
