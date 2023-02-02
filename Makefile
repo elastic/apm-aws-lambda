@@ -13,6 +13,7 @@ clean:
 dist:
 	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --snapshot --rm-dist
 
+.PHONY: zip
 zip:
 	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --snapshot --rm-dist --skip-docker
 
@@ -20,6 +21,7 @@ zip:
 release:
 	go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --rm-dist
 
+.PHONY: release-notes
 release-notes:
 	@./.ci/release-github.sh
 
