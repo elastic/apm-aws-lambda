@@ -26,8 +26,12 @@ archives:
     name_template: |-
       {{ .Tag }}-{{ .Os }}-{{ .Arch }}
     files:
-      - NOTICE.txt
-      - dependencies.asciidoc
+      - src: NOTICE.txt
+        info:
+          mtime: '{{ .CommitDate }}'
+      - src: dependencies.asciidoc
+        info:
+          mtime: '{{ .CommitDate }}'
     builds_info:
       mtime: "{{ .CommitTimestamp }}"
     rlcp: true # https://goreleaser.com/deprecations/#archivesrlcp
