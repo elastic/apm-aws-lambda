@@ -9,6 +9,9 @@ clean:
 dist:
 	@go run github.com/goreleaser/goreleaser@v1.14.1 release --snapshot --rm-dist
 
+zip:
+	@go run github.com/goreleaser/goreleaser@v1.14.1 release --snapshot --rm-dist --skip-docker
+
 .PHONY: release
 release:
 	go run github.com/goreleaser/goreleaser@v1.14.1 release --rm-dist
