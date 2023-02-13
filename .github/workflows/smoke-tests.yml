@@ -1,6 +1,7 @@
 name: smoke-tests
 
 on:
+  pull_request: ~
   workflow_dispatch:
     inputs:
       smoketest_versions:
