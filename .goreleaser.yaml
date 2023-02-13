@@ -1,0 +1,92 @@
+project_name: apm-lambda-extension
+
+before:
+  hooks:
+    - make check-licenses
+    - make NOTICE.txt
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+    binary: "extensions/{{ .ProjectName }}"
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+archives:
+  - id: zip
+    format: zip
+    name_template: |-
+      {{ .Tag }}-{{ .Os }}-{{ .Arch }}
+    files:
+      - src: NOTICE.txt
+        info:
+          mtime: '{{ .CommitDate }}'
+      - src: dependencies.asciidoc
+        info:
+          mtime: '{{ .CommitDate }}'
+    builds_info:
+      mtime: "{{ .CommitTimestamp }}"
+    rlcp: true # https://goreleaser.com/deprecations/#archivesrlcp
+
+dockers:
+
+  - &default-docker-image
+    id: linux-amd64-image
+    use: buildx
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-x86_64:{{ trimprefix .Tag "v" }}'
+      - "{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-x86_64:latest"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--build-arg=EXTENSION_FILE={{ .ProjectName }}"
+      - "--build-arg=COMMIT_TIMESTAMP={{ .CommitTimestamp }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+    extra_files:
+      - NOTICE.txt
+      - dependencies.asciidoc
+
+  - <<: *default-docker-image
+    id: linux-arm64-image
+    goarch: arm64
+    image_templates:
+      - '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-arm64:{{ trimprefix .Tag "v" }}'
+      - "{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-arm64:latest"
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--build-arg=EXTENSION_FILE={{ .ProjectName }}"
+      - "--build-arg=COMMIT_TIMESTAMP={{ .CommitTimestamp }}"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+
+publishers:
+  - name: publish-aws
+    cmd: ./.ci/publish-aws.sh
+    env:
+      - AWS_ACCESS_KEY_ID={{ .Env.AWS_ACCESS_KEY_ID }}
+      - AWS_SECRET_ACCESS_KEY={{ .Env.AWS_SECRET_ACCESS_KEY }}
+      - AWS_SECURITY_TOKEN={{ .Env.AWS_SECURITY_TOKEN }}
+      - AWS_SESSION_TOKEN={{ .Env.AWS_SESSION_TOKEN }}
+      - ELASTIC_LAYER_NAME=elastic-apm-extension-ver-{{ replace (trimprefix .Tag "v") "." "-" }}
+      - VERSION={{ .Tag }}
+      - ARCHITECTURE={{ if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
+      - GOOS={{ .Os }}
+      - GOARCH={{ .Arch }}
+      - AWS_FOLDER=.aws-{{ .Os }}-{{ .Arch }}
+release:
+  # Custom GitHub release
+  disable: true

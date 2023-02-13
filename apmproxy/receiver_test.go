@@ -195,6 +195,8 @@ func Test_handleInfoRequest(t *testing.T) {
 		req.Header.Add(name, value)
 	}
 
+	time.Sleep(5 * time.Second)
+
 	// Send the request to the extension
 	client := &http.Client{}
 	resp, err := client.Do(req)
