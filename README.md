@@ -1,5 +1,4 @@
-[![Build Status](https://apm-ci.elastic.co/buildStatus/icon?job=library%2Fapm-aws-lambda-mbp%2Fmain)](https://apm-ci.elastic.co/job/library/job/apm-aws-lambda-mbp/job/main/)
-
+[![test](https://github.com/elastic/apm-aws-lambda/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/elastic/apm-aws-lambda/actions/workflows/test.yml) [![smoke-tests](https://github.com/elastic/apm-aws-lambda/actions/workflows/smoke-tests.yml/badge.svg?branch=main)](https://github.com/elastic/apm-aws-lambda/actions/workflows/smoke-tests.yml)
 # Elastic APM AWS Lambda extension
 
 This repository contains code and tools for working with the Elastic APM AWS Lambda extension.
