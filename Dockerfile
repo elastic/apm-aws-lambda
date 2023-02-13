@@ -8,5 +8,5 @@ COPY ${EXTENSION_FILE} /opt/elastic-apm-extension
 COPY NOTICE.txt dependencies.asciidoc /opt/
 
 # Related to reproducible builds
-RUN find /opt -exec touch -amdt "${COMMIT_TIMESTAMP}" {} \;
+RUN find /opt -exec touch -am -d $(date -u -d @"${COMMIT_TIMESTAMP}" "+%Y%m%d%H%M.%S") -t $(date -u -d @"${COMMIT_TIMESTAMP}" "+%Y%m%d%H%M.%S") {} \;
 
