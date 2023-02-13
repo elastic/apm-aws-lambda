@@ -17,6 +17,9 @@ dist:
 zip:
 	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --snapshot --rm-dist --skip-docker
 
+build:
+	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) build --snapshot --rm-dist
+
 .PHONY: release
 release:
 	go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --rm-dist
