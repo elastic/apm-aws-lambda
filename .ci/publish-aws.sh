@@ -14,7 +14,6 @@ GOARCH=${GOARCH:?Please provide GOARCH environment variable.}
 ELASTIC_LAYER_NAME=${ELASTIC_LAYER_NAME:?Please provide ELASTIC_LAYER_NAME environment variable.}
 ARCHITECTURE=${ARCHITECTURE:?Please provide ARCHITECTURE environment variable.}
 VERSION=${VERSION:?Please provide VERSION environment variable. e.g. current git tag}
-BUILD_DATE=${BUILD_DATE:?Please provide BUILD_DATE environment variable.}
 
 FULL_LAYER_NAME="${ELASTIC_LAYER_NAME}-${ARCHITECTURE}"
 
@@ -37,17 +36,7 @@ done
 
 mkdir -p "${AWS_FOLDER}"
 
-# Related to reproducible builds
 zip_file="./dist/${VERSION}-${GOOS}-${GOARCH}.zip"
-new_zip_file="./dist/${VERSION}-${GOOS}-${GOARCH}-with-build-time.zip"
-tmp_dir=".tmp/${VERSION}-${GOOS}-${GOARCH}"
-rm -rf "$tmp_dir"
-mkdir -p .tmp
-unzip "${zip_file}" -d "${tmp_dir}"
-find "${tmp_dir}" -exec touch -t "${BUILD_DATE}" {} \;
-(cd "${tmp_dir}" && zip -X -r "../../${new_zip_file}" .)
-rm -rf "${zip_file}"
-mv "${new_zip_file}" "${zip_file}"
 
 for region in $ALL_AWS_REGIONS; do
   echo "Publish ${FULL_LAYER_NAME} in ${region}"

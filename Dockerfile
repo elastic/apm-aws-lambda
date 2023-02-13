@@ -1,12 +1,12 @@
 # Pin to Alpine 3.16.2
 # For a complete list of hashes, see:
 # https://github.com/docker-library/repo-info/tree/master/repos/alpine/remote
-FROM alpine@sha256:bc41182d7ef5ffc53a40b044e725193bc10142a1243f395ee852a8d9730fc2ad
+FROM --platform=$BUILDPLATFORM alpine@sha256:b95359c2505145f16c6aa384f9cc74eeff78eb36d308ca4fd902eeeb0a0b161b
 ARG EXTENSION_FILE
-ARG BUILD_DATE
+ARG COMMIT_TIMESTAMP
 COPY ${EXTENSION_FILE} /opt/elastic-apm-extension
 COPY NOTICE.txt dependencies.asciidoc /opt/
 
 # Related to reproducible builds
-RUN find /opt -exec touch -t "${BUILD_TIME}" {} \;
+RUN find /opt -exec touch -am -d $(date -u -d @"${COMMIT_TIMESTAMP}" "+%Y%m%d%H%M.%S") -t $(date -u -d @"${COMMIT_TIMESTAMP}" "+%Y%m%d%H%M.%S") {} \;
 

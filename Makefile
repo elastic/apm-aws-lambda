@@ -1,31 +1,30 @@
 SHELL = /bin/bash -eo pipefail
+
+GORELEASER_VERSION = "v1.14.1"
+GO_LICENSER_VERSION = "v0.4.0"
+GOLANGCI_LINT_VERSION = "v1.48.0"
 export DOCKER_IMAGE_NAME = observability/apm-lambda-extension
 export DOCKER_REGISTRY = docker.elastic.co
 
-# Add support for SOURCE_DATE_EPOCH and reproducble buils
-# See https://reproducible-builds.org/specs/source-date-epoch/
-SOURCE_DATE_EPOCH ?= $(shell git log -1 --pretty=%ct)
-DATE_FMT = +%Y%m%d%H%M.%S
-# Fallback mechanism to support other systems:
-# 1. 'date -d': Busybox and GNU coreutils.
-# 2. 'date -r': BSD date. It does not support '-d'.
-export BUILD_DATE = $(shell date -u -d "@${SOURCE_DATE_EPOCH}" "${DATE_FMT}" 2>/dev/null || date -u -r "${SOURCE_DATE_EPOCH}" "${DATE_FMT}")
-
-
 clean:
 	@rm -rf dist/
-	@docker image ls "$(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)*" -aq | xargs docker rmi --force
+	@docker image ls "$(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)*" -aq | xargs -I {} docker rmi --force {} || true
 
 dist:
-	@go run github.com/goreleaser/goreleaser@v1.14.1 release --snapshot --rm-dist
+	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --snapshot --rm-dist
+
+.PHONY: zip
+zip:
+	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --snapshot --rm-dist --skip-docker
 
 build:
-	@go run github.com/goreleaser/goreleaser@v1.14.1 build --snapshot --rm-dist
+	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) build --snapshot --rm-dist
 
 .PHONY: release
 release:
-	go run github.com/goreleaser/goreleaser@v1.14.1 release --rm-dist
+	go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --rm-dist
 
+.PHONY: release-notes
 release-notes:
 	@./.ci/release-github.sh
 
@@ -39,17 +38,17 @@ lint-prep:
 
 .PHONY: lint
 lint:
-	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 version
-	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@v1.48.0 run
+	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) version
+	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run
 
 NOTICE.txt: go.mod
 	@bash ./scripts/notice.sh
 
 .PHONY: check-linceses
 check-licenses:
-	@go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -exclude testing .
-	@go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -exclude testing -ext .java .
-	@go run github.com/elastic/go-licenser@v0.4.0 -d -exclude tf -exclude testing -ext .js .
+	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing .
+	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -ext .java .
+	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -ext .js .
 
 
 .PHONY: check-notice
