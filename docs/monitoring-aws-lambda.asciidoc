@@ -142,28 +142,28 @@ Log events can be viewed in {kib} in the APM UI. Disable log collection by setti
 [float]
 === `ELASTIC_APM_LAMBDA_VERIFY_SERVER_CERT`
 
-[small]#Added in: v1.3.0.
+[small]#Added in: v1.3.0.#
 
 Whether to enable {apm-lambda-ext} to verify APM Server's certificate chain and host name.
 
 [float]
 === `ELASTIC_APM_LAMBDA_SERVER_CA_CERT_PEM`
 
-[small]#Added in: v1.3.0.
+[small]#Added in: v1.3.0.#
 
 The certificate passed as environment variable. To be used to verify APM Server's certificate chain if verify server certificate is enabled.
 
 [float]
 === `ELASTIC_APM_SERVER_CA_CERT_FILE`
 
-[small]#Added in: v1.3.0.
+[small]#Added in: v1.3.0.#
 
 The certificate passed as a file name available to the extension. To be used to verify APM Server's certificate chain if verify server certificate is enabled.
 
 [float]
 === `ELASTIC_APM_SERVER_CA_CERT_ACM_ID`
 
-[small]#Added in: v1.3.0.
+[small]#Added in: v1.3.0.#
 
 The ARN for Amazon-issued certificate. To be used to verify APM Server's certificate chain if verify server certificate is enabled.
 
