@@ -5,7 +5,7 @@
 
 1. Update the [`CHANGELOG.asciidoc`](CHANGELOG.asciidoc), by adding a new version heading (`==== 1.x.x - yyyy/MM/dd`) and changing the base tag of the Unreleased comparison URL
 2. Ensure all changes are merged into github.com/elastic/apm-aws-lambda@main
-3. Create a test plan for any changes that require manual testing. At the very minimum, a manual smoke test must be conducted before releasing. 
+3. Create a test plan for any changes that require manual testing. Ensure that the automatic smoke test on the latest commit is successful.
 4. Trigger a release after succesful testing.
 
 ### Trigger a Release
