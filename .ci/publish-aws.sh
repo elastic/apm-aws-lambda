@@ -8,6 +8,7 @@ set -euo pipefail
 
 export AWS_FOLDER=${AWS_FOLDER:-.aws}
 export SUFFIX_ARN_FILE=${SUFFIX_ARN_FILE:-arn-file.md}
+export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-eu-west-1}
 
 GOOS=${GOOS:?Please provide GOOS environment variable.}
 GOARCH=${GOARCH:?Please provide GOARCH environment variable.}
