@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/elastic/apm-aws-lambda/accumulator"
+	"go.uber.org/zap"
 )
 
 type jsonResult struct {
@@ -186,45 +187,52 @@ func (c *Client) PostToApmServer(ctx context.Context, apmData accumulator.APMDat
 		return nil
 	}
 
-	jErr := jsonResult{}
-	if err := json.NewDecoder(resp.Body).Decode(&jErr); err != nil {
-		// non critical error.
-		// Log a warning and continue.
-		c.logger.Warnf("failed to decode response body: %v", err)
-	}
-
 	// Auth errors
 	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		c.logger.Warnf("Authentication with the APM server failed: response status code: %d", resp.StatusCode)
-		for _, err := range jErr.Errors {
-			c.logger.Warnf("failed to authenticate: document %s: message: %s", err.Document, err.Message)
-		}
+		logBodyErrors(c.logger, resp)
 		c.UpdateStatus(ctx, Failing)
 		return nil
 	}
 
 	// ClientErrors
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
-		c.logger.Warnf("client error: response status code: %d", resp.StatusCode)
-		for _, err := range jErr.Errors {
-			c.logger.Warnf("client error: document %s: message: %s", err.Document, err.Message)
-		}
+		logBodyErrors(c.logger, resp)
 		c.UpdateStatus(ctx, ClientFailing)
 		return nil
 	}
 
 	// critical errors
 	if resp.StatusCode == http.StatusInternalServerError || resp.StatusCode == http.StatusServiceUnavailable {
-		c.logger.Warnf("failed to post data to APM server: response status code: %d", resp.StatusCode)
-		for _, err := range jErr.Errors {
-			c.logger.Warnf("critical error: document %s: message: %s", err.Document, err.Message)
-		}
+		logBodyErrors(c.logger, resp)
 		c.UpdateStatus(ctx, Failing)
 		return nil
 	}
 
 	c.logger.Warnf("unhandled status code: %d", resp.StatusCode)
 	return nil
+}
+
+func logBodyErrors(logger *zap.SugaredLogger, resp *http.Response) {
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Warnf("response status: %s: failed to read response body: %v", resp.Status, err)
+		return
+	}
+
+	jErr := jsonResult{}
+	if err := json.Unmarshal(b, &jErr); err != nil {
+		logger.Warnf("response status: %s: failed to decode response body: %v: body: %s", resp.Status, err, string(b))
+		return
+	}
+
+	if len(jErr.Errors) == 0 {
+		logger.Warnf("response status: %s: response body: %s", resp.Status, string(b))
+		return
+	}
+
+	for _, err := range jErr.Errors {
+		logger.Warnf("response status: %s: document %s: message: %s", resp.Status, err.Document, err.Message)
+	}
 }
 
 // IsUnhealthy returns true if the apmproxy is not healthy.
