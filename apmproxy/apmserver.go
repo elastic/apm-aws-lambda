@@ -215,23 +215,24 @@ func (c *Client) PostToApmServer(ctx context.Context, apmData accumulator.APMDat
 func logBodyErrors(logger *zap.SugaredLogger, resp *http.Response) {
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Warnf("response status: %s: failed to read response body: %v", resp.Status, err)
+		logger.Warnf("failed to post data to APM server: response status: %s: failed to read response body: %v", resp.Status, err)
 		return
 	}
 
 	jErr := jsonResult{}
 	if err := json.Unmarshal(b, &jErr); err != nil {
-		logger.Warnf("response status: %s: failed to decode response body: %v: body: %s", resp.Status, err, string(b))
+		logger.Warnf("failed to post data to APM server: response status: %s: failed to decode response body: %v: body: %s", resp.Status, err, string(b))
 		return
 	}
 
 	if len(jErr.Errors) == 0 {
-		logger.Warnf("response status: %s: response body: %s", resp.Status, string(b))
+		logger.Warnf("failed to post data to APM server: response status: %s: response body: %s", resp.Status, string(b))
 		return
 	}
 
+	logger.Warnf("failed to post data to APM server: response status: %s", resp.Status)
 	for _, err := range jErr.Errors {
-		logger.Warnf("response status: %s: document %s: message: %s", resp.Status, err.Document, err.Message)
+		logger.Warnf("document %s: message: %s", err.Document, err.Message)
 	}
 }
 
