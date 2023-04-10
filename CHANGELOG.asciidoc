@@ -17,6 +17,16 @@
 ////
 
 [float]
+[[lambda-unreleased]]
+=== Unreleased
+
+https://github.com/elastic/apm-aws-lambda/compare/v1.3.1...main[View commits]
+
+[float]
+===== Features
+- experimental:[] Allow metadata in register transaction {lambda-pull}384[384]
+
+[float]
 [[lambda-1.3.1]]
 === 1.3.1 - 2023/04/04
 
