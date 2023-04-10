@@ -95,22 +95,26 @@ func TestShouldShip_ReasonAge(t *testing.T) {
 func TestLifecycle(t *testing.T) {
 	reqID := "test-req-id"
 	fnARN := "test-fn-arn"
-	txnID := "023d90ff77f13b9f"
 	lambdaData := `{"log":{"message":"this is log"}}`
-	txnData := fmt.Sprintf(`{"transaction":{"id":"%s"}}`, txnID)
+	txnData := fmt.Sprintf(`{"transaction":{"id":"%s"}}`, "023d90ff77f13b9f")
 	ts := time.Date(2022, time.October, 1, 1, 1, 1, 0, time.UTC)
 	txnDur := time.Second
 
+	type agentInit struct {
+		init         bool
+		withMetadata bool
+	}
+
 	for _, tc := range []struct {
 		name                    string
-		agentInit               bool
+		agentInit               agentInit
 		receiveAgentRootTxn     bool
 		receiveLambdaLogRuntime bool
 		expected                string
 	}{
 		{
 			name:                    "without_agent_init_without_root_txn",
-			agentInit:               false,
+			agentInit:               agentInit{init: false, withMetadata: false},
 			receiveAgentRootTxn:     false,
 			receiveLambdaLogRuntime: false,
 			// Without agent init no proxy txn is created if root txn is not reported
@@ -122,7 +126,7 @@ func TestLifecycle(t *testing.T) {
 		},
 		{
 			name:                    "without_agent_init_with_root_txn",
-			agentInit:               false,
+			agentInit:               agentInit{init: false, withMetadata: false},
 			receiveAgentRootTxn:     true,
 			receiveLambdaLogRuntime: false,
 			expected: fmt.Sprintf(
@@ -133,8 +137,8 @@ func TestLifecycle(t *testing.T) {
 			),
 		},
 		{
-			name:                    "with_agent_init_with_root_txn",
-			agentInit:               true,
+			name:                    "with_no_meta_agent_init_with_root_txn",
+			agentInit:               agentInit{init: true, withMetadata: false},
 			receiveAgentRootTxn:     true,
 			receiveLambdaLogRuntime: false,
 			expected: fmt.Sprintf(
@@ -145,8 +149,20 @@ func TestLifecycle(t *testing.T) {
 			),
 		},
 		{
-			name:                    "with_agent_init_without_root_txn_with_runtimeDone",
-			agentInit:               true,
+			name:                    "with_meta_agent_init_with_root_txn",
+			agentInit:               agentInit{init: true, withMetadata: true},
+			receiveAgentRootTxn:     true,
+			receiveLambdaLogRuntime: false,
+			expected: fmt.Sprintf(
+				"%s\n%s\n%s",
+				metadata,
+				generateCompleteTxn(t, txnData, "success", "", txnDur),
+				lambdaData,
+			),
+		},
+		{
+			name:                    "with_no_meta_agent_init_without_root_txn_with_runtimeDone",
+			agentInit:               agentInit{init: true, withMetadata: false},
 			receiveAgentRootTxn:     false,
 			receiveLambdaLogRuntime: true,
 			// With agent init proxy txn is created if root txn is not reported.
@@ -159,8 +175,37 @@ func TestLifecycle(t *testing.T) {
 			),
 		},
 		{
-			name:                    "with_agent_init_without_root_txn",
-			agentInit:               true,
+			name:                    "with_meta_agent_init_without_root_txn_with_runtimeDone",
+			agentInit:               agentInit{init: true, withMetadata: true},
+			receiveAgentRootTxn:     false,
+			receiveLambdaLogRuntime: true,
+			// With agent init proxy txn is created if root txn is not reported.
+			// Details in runtimeDone event is used to find the result of the txn.
+			expected: fmt.Sprintf(
+				"%s\n%s\n%s",
+				metadata,
+				lambdaData,
+				generateCompleteTxn(t, txnData, "failure", "failure", txnDur),
+			),
+		},
+		{
+			name:                    "with_no_meta_agent_init_without_root_txn",
+			agentInit:               agentInit{init: true, withMetadata: false},
+			receiveAgentRootTxn:     false,
+			receiveLambdaLogRuntime: false,
+			// With agent init proxy txn is created if root txn is not reported.
+			// If runtimeDone event is not available `timeout` is used as the
+			// result of the transaction.
+			expected: fmt.Sprintf(
+				"%s\n%s\n%s",
+				metadata,
+				lambdaData,
+				generateCompleteTxn(t, txnData, "timeout", "failure", txnDur),
+			),
+		},
+		{
+			name:                    "with_meta_agent_init_without_root_txn",
+			agentInit:               agentInit{init: true, withMetadata: true},
 			receiveAgentRootTxn:     false,
 			receiveLambdaLogRuntime: false,
 			// With agent init proxy txn is created if root txn is not reported.
@@ -179,8 +224,12 @@ func TestLifecycle(t *testing.T) {
 			// NEXT API response creates a new invocation cache
 			b.RegisterInvocation(reqID, fnARN, ts.Add(txnDur).UnixMilli(), ts)
 			// Agent creates and registers a partial transaction in the extn
-			if tc.agentInit {
-				require.NoError(t, b.OnAgentInit(reqID, txnID, []byte(txnData)))
+			if tc.agentInit.init {
+				initData := txnData
+				if tc.agentInit.withMetadata {
+					initData = fmt.Sprintf("%s\n%s", metadata, txnData)
+				}
+				require.NoError(t, b.OnAgentInit(reqID, "", []byte(initData)))
 			}
 			// Agent sends a request with metadata
 			require.NoError(t, b.AddAgentData(APMData{
@@ -209,17 +258,18 @@ func TestLifecycle(t *testing.T) {
 	}
 }
 
-func TestIsTransactionEvent(t *testing.T) {
+func TestFindEventType(t *testing.T) {
 	for _, tc := range []struct {
 		body     []byte
-		expected bool
+		expected eventType
 	}{
-		{body: []byte(`{}`), expected: false},
-		{body: []byte(`{"tran":{}}`), expected: false},
-		{body: []byte(`{"span":{}}`), expected: false},
-		{body: []byte(`{"transaction":{}}`), expected: true},
+		{body: []byte(`{}`), expected: otherEvent},
+		{body: []byte(`{"tran":{}}`), expected: otherEvent},
+		{body: []byte(`{"span":{}}`), expected: otherEvent},
+		{body: []byte(`{"metadata":{}}\n{"transaction":{}}`), expected: metadataEvent},
+		{body: []byte(`{"transaction":{}}`), expected: transactionEvent},
 	} {
-		assert.Equal(t, tc.expected, isTransactionEvent(tc.body))
+		assert.Equal(t, tc.expected, findEventType(tc.body))
 	}
 }
 

@@ -29,10 +29,9 @@ import (
 	"time"
 
 	"github.com/elastic/apm-aws-lambda/accumulator"
-	"github.com/tidwall/gjson"
 )
 
-const txnRegistrationContentType = "application/vnd.elastic.apm.transaction+json"
+const txnRegistrationContentType = "application/vnd.elastic.apm.transaction+ndjson"
 
 // StartReceiver starts the server listening for APM agent data.
 func (c *Client) StartReceiver() error {
@@ -76,12 +75,12 @@ func (c *Client) Shutdown() error {
 // URL: http://server/
 func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Request), error) {
 	// Init reverse proxy
-	parsedApmServerUrl, err := url.Parse(c.serverURL)
+	parsedApmServerURL, err := url.Parse(c.serverURL)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse APM server URL: %w", err)
 	}
 
-	reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerUrl)
+	reverseProxy := httputil.NewSingleHostReverseProxy(parsedApmServerURL)
 
 	reverseProxy.Transport = c.client.Transport.(*http.Transport).Clone()
 
@@ -103,10 +102,10 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 		r.Header.Del("X-Forwarded-For")
 
 		// Update headers to allow for SSL redirection
-		r.URL.Host = parsedApmServerUrl.Host
-		r.URL.Scheme = parsedApmServerUrl.Scheme
+		r.URL.Host = parsedApmServerURL.Host
+		r.URL.Scheme = parsedApmServerURL.Scheme
 		r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
-		r.Host = parsedApmServerUrl.Host
+		r.Host = parsedApmServerURL.Host
 
 		// Forward request to the APM server
 		reverseProxy.ServeHTTP(w, r)
@@ -185,14 +184,11 @@ func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		txnID := gjson.GetBytes(rawBytes, "transaction.id").String()
-		if txnID == "" {
-			c.logger.Warn("Could not parse transaction id from transaction registration body")
-			w.WriteHeader(http.StatusUnprocessableEntity)
-			return
-		}
-		if err := c.batch.OnAgentInit(reqID, txnID, rawBytes); err != nil {
-			c.logger.Warnf("Failed to update invocation for transaction ID %s: %v", txnID, err)
+
+		if err := c.batch.OnAgentInit(
+			reqID, r.Header.Get("Content-Encoding"), rawBytes,
+		); err != nil {
+			c.logger.Warnf("Failed to update invocation: %w", err)
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			return
 		}
