@@ -43,7 +43,16 @@ var (
 	maxSizeThreshold = 0.9
 	zeroTime         = time.Time{}
 	newLineSep       = []byte("\n")
-	transactionKey   = []byte("transaction")
+	transactionKey   = "transaction"
+	metadataKey      = "metadata"
+)
+
+type eventType int
+
+const (
+	metadataEvent = iota
+	transactionEvent
+	otherEvent
 )
 
 // Batch manages the data that needs to be shipped to APM Server. It holds
@@ -112,22 +121,44 @@ func (b *Batch) RegisterInvocation(
 }
 
 // OnAgentInit caches the transaction ID and the payload for the currently
-// executing invocation as reported by the agent. The agent payload will be
-// used to create a new transaction in an event the actual transaction is
-// not reported by the agent due to unexpected termination.
-func (b *Batch) OnAgentInit(reqID, txnID string, payload []byte) error {
-	if !isTransactionEvent(payload) {
+// executing invocation as reported by the agent. The payload can contain
+// metadata along with partial transaction. Metadata, if available, will
+// be cached for all future invocation. The agent payload will be used to
+// create a new transaction in an event the actual transaction is not
+// reported by the agent due to unexpected termination.
+func (b *Batch) OnAgentInit(reqID, contentEncoding string, raw []byte) error {
+	payload, err := GetUncompressedBytes(raw, contentEncoding)
+	if err != nil {
+		return fmt.Errorf("failed to decompress request body: %w", err)
+	}
+
+	var metadata, txnData []byte
+	switch findEventType(payload) {
+	case metadataEvent:
+		metadata, txnData, _ = bytes.Cut(payload, newLineSep)
+	case transactionEvent:
+		txnData = payload
+	default:
 		return errors.New("invalid payload")
 	}
+
+	txnID := gjson.GetBytes(txnData, "transaction.id").String()
+	if txnID == "" {
+		return errors.New("failed to parse transaction id from registration body")
+	}
+
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.metadataBytes == 0 && len(metadata) > 0 {
+		b.metadataBytes, _ = b.buf.Write(metadata)
+	}
 	i, ok := b.invocations[reqID]
 	if !ok {
 		// It is possible that the invocation is registered at a later time
 		i = &Invocation{}
 		b.invocations[reqID] = i
 	}
-	i.TransactionID, i.AgentPayload = txnID, payload
+	i.TransactionID, i.AgentPayload = txnID, txnData
 	b.currentlyExecutingRequestID = reqID
 	return nil
 }
@@ -167,7 +198,7 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 	}
 	for {
 		data, after, _ = bytes.Cut(after, newLineSep)
-		if inc.NeedProxyTransaction() && isTransactionEvent(data) {
+		if inc.NeedProxyTransaction() && findEventType(data) == transactionEvent {
 			res := gjson.GetBytes(data, "transaction.id")
 			if res.Str != "" && inc.TransactionID == res.Str {
 				inc.TransactionObserved = true
@@ -313,21 +344,25 @@ func (b *Batch) addData(data []byte) error {
 	return nil
 }
 
-func isTransactionEvent(body []byte) bool {
+func findEventType(body []byte) eventType {
+	var quote byte
 	var key []byte
 	for i, r := range body {
 		if r == '"' || r == '\'' {
+			quote = r
 			key = body[i+1:]
 			break
 		}
 	}
-	if len(key) < len(transactionKey) {
-		return false
+	end := bytes.IndexByte(key, quote)
+	if end == -1 {
+		return otherEvent
 	}
-	for i := 0; i < len(transactionKey); i++ {
-		if transactionKey[i] != key[i] {
-			return false
-		}
+	switch string(key[:end]) {
+	case transactionKey:
+		return transactionEvent
+	case metadataKey:
+		return metadataEvent
 	}
-	return true
+	return otherEvent
 }
