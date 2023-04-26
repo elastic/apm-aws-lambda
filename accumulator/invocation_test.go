@@ -89,7 +89,7 @@ func TestCreateProxyTransaction(t *testing.T) {
 				AgentPayload:        []byte(tc.payload),
 				TransactionObserved: tc.txnObserved,
 			}
-			result, err := inc.CreateProxyTxn(tc.runtimeDoneStatus, ts.Add(txnDur))
+			result, err := inc.MaybeCreateProxyTxn(tc.runtimeDoneStatus, ts.Add(txnDur))
 			assert.Nil(t, err)
 			if len(tc.output) > 0 {
 				assert.JSONEq(t, tc.output, string(result))
@@ -100,7 +100,7 @@ func TestCreateProxyTransaction(t *testing.T) {
 	}
 }
 
-func BenchmarkCreateProxyTxn(b *testing.B) {
+func BenchmarkMaybeCreateProxyTxn(b *testing.B) {
 	ts := time.Date(2022, time.October, 1, 1, 0, 0, 0, time.UTC)
 	txnDur := ts.Add(time.Second)
 	inc := &Invocation{
@@ -114,7 +114,7 @@ func BenchmarkCreateProxyTxn(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := inc.CreateProxyTxn("success", txnDur)
+		_, err := inc.MaybeCreateProxyTxn("failure", txnDur)
 		if err != nil {
 			b.Fail()
 		}
