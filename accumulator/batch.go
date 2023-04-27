@@ -311,7 +311,7 @@ func (b *Batch) finalizeInvocation(reqID, status string, time time.Time) error {
 	if !ok {
 		return fmt.Errorf("invocation for requestID %s does not exist", reqID)
 	}
-	proxyTxn, err := inc.CreateProxyTxn(status, time)
+	proxyTxn, err := inc.MaybeCreateProxyTxn(status, time)
 	if err != nil {
 		return err
 	}

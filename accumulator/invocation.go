@@ -57,11 +57,13 @@ func (inc *Invocation) NeedProxyTransaction() bool {
 	return !inc.Finalized && inc.TransactionID != "" && !inc.TransactionObserved
 }
 
-// CreateProxyTxn creates a proxy transaction for an invocation if required.
-// A proxy transaction will be required to be created if the agent has
-// registered a transaction for the invocation but has not sent the
-// corresponding transaction to the extension.
-func (inc *Invocation) CreateProxyTxn(status string, time time.Time) ([]byte, error) {
+// MaybeCreateProxyTxn creates a proxy transaction for an invocation
+// if required. A proxy transaction will be required to be created
+// if the agent has registered a transaction for the invocation but
+// has not sent the corresponding transaction to the extension. The
+// proxy transaction will not be created if the invocation has
+// already been finalized or the agent has reported the transaction.
+func (inc *Invocation) MaybeCreateProxyTxn(status string, time time.Time) ([]byte, error) {
 	if !inc.NeedProxyTransaction() {
 		return nil, nil
 	}
