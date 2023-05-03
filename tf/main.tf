@@ -1,5 +1,8 @@
 provider "aws" {
   region = var.aws_region
+  default_tags {
+    tags = module.tags.tags
+  }
 }
 
 module "tags" {
@@ -19,45 +22,92 @@ module "ec_deployment" {
   tags                   = module.tags.tags
 }
 
-module "lambda_function" {
-  source = "terraform-aws-modules/lambda/aws"
+data "aws_iam_policy_document" "assume_role" {
+  statement {
+    effect = "Allow"
 
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_role" "lambda" {
+  name               = "iam_for_lambda"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
+
+data "archive_file" "lambda" {
+  type        = "zip"
+  source_file = "../testdata/function/index.js"
+  output_path = "lambda_function_payload.zip"
+}
+
+resource "aws_lambda_function" "test_lambda" {
+  filename      = "lambda_function_payload.zip"
   function_name = "smoke-testing-test"
-  description   = "Example Lambda function for smoke testing"
+  role          = aws_iam_role.lambda.arn
   handler       = "index.handler"
-  runtime       = "nodejs16.x"
 
-  source_path = "../testdata/function/"
+  source_code_hash = data.archive_file.lambda.output_base64sha256
+
+  runtime = "nodejs16.x"
 
   layers = [
-    module.lambda_layer_local.lambda_layer_arn,
+    aws_lambda_layer_version.lambda_layer.arn,
     "arn:aws:lambda:${var.aws_region}:267093732750:layer:elastic-apm-node-ver-3-38-0:1",
   ]
 
-  environment_variables = {
-    NODE_OPTIONS                  = "-r elastic-apm-node/start"
-    ELASTIC_APM_LOG_LEVEL         = var.log_level
-    ELASTIC_APM_LAMBDA_APM_SERVER = module.ec_deployment.apm_url
-    ELASTIC_APM_SECRET_TOKEN      = module.ec_deployment.apm_secret_token
+  environment {
+    variables = {
+      NODE_OPTIONS                                = "-r elastic-apm-node/start"
+      ELASTIC_APM_LOG_LEVEL                       = var.log_level
+      ELASTIC_APM_LAMBDA_APM_SERVER               = module.ec_deployment.apm_url
+      ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID = aws_secretsmanager_secret.apm_secret_token.id
+    }
   }
-
-  tags = merge(module.tags.tags, {
-    Name = "my-lambda"
-  })
 }
 
-module "lambda_layer_local" {
-  source = "terraform-aws-modules/lambda/aws"
+resource "aws_secretsmanager_secret" "apm_secret_token" {
+  name                    = "lambda-extension-smoke-testing-secret"
+  recovery_window_in_days = 0
+}
 
-  create_layer = true
+resource "aws_secretsmanager_secret_version" "apm_secret_token_version" {
+  secret_id     = aws_secretsmanager_secret.apm_secret_token.id
+  secret_string = module.ec_deployment.apm_secret_token
+}
 
-  layer_name          = "apm-lambda-extension-smoke-testing"
+data "aws_iam_policy_document" "policy" {
+  statement {
+    effect    = "Allow"
+    resources = [aws_secretsmanager_secret.apm_secret_token.arn]
+    actions   = ["secretsmanager:GetSecretValue"]
+  }
+}
+
+resource "aws_iam_policy" "secrets_manager_elastic_apm_policy" {
+  name        = "secrets_manager_elastic_apm_policy"
+  description = "Allows the lambda function to access the APM secret token stored in AWS Secrets Manager."
+  policy      = data.aws_iam_policy_document.policy.json
+}
+
+resource "aws_iam_role_policy_attachment" "secrets_manager_elastic_apm_policy_attach" {
+  role       = aws_iam_role.lambda.name
+  policy_arn = aws_iam_policy.secrets_manager_elastic_apm_policy.arn
+}
+
+locals {
+  zip_files = tolist(fileset("../dist/", "*-linux-amd64.zip"))
+}
+
+resource "aws_lambda_layer_version" "lambda_layer" {
+  filename   = "../dist/${local.zip_files[0]}"
+  layer_name = "lambda_layer_name"
+
   description         = "AWS Lambda Extension Layer for Elastic APM - smoke testing"
   compatible_runtimes = ["nodejs16.x"]
-
-  # The path could change when upgrading GoReleaser.
-  # https://goreleaser.com/customization/build/#a-note-about-folder-names-inside-dist
-  source_path = "../dist/apm-lambda-extension_linux_amd64_v1/"
-
-  tags = module.tags.tags
 }
