@@ -88,6 +88,38 @@ func TestInfoProxy(t *testing.T) {
 	require.NoError(t, resp.Body.Close())
 }
 
+func TestInfoProxyAuth(t *testing.T) {
+	// Create apm server and handler
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "ApiKey bar", r.Header.Get("Authorization"))
+		w.WriteHeader(http.StatusTeapot)
+	}))
+	defer apmServer.Close()
+
+	// Create extension config and start the server
+	apmClient, err := apmproxy.NewClient(
+		apmproxy.WithURL(apmServer.URL),
+		apmproxy.WithAPIKey("bar"),
+		// Use ipv4 to avoid issues in CI
+		apmproxy.WithReceiverAddress("127.0.0.1:1234"),
+		apmproxy.WithReceiverTimeout(15*time.Second),
+		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, apmClient.StartReceiver())
+	defer func() {
+		require.NoError(t, apmClient.Shutdown())
+	}()
+
+	url := "http://127.0.0.1:1234"
+
+	// Send the request to the extension
+	resp, err := http.Get(url)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+}
+
 func TestInfoProxyErrorStatusCode(t *testing.T) {
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
