@@ -17,10 +17,10 @@
 ////
 
 [float]
-[[lambda-unreleased]]
-=== Unreleased
+[[lambda-1.4.0]]
+=== 1.4.0 - 2023/05/03
 
-https://github.com/elastic/apm-aws-lambda/compare/v1.3.1...main[View commits]
+https://github.com/elastic/apm-aws-lambda/compare/v1.3.1...v1.4.0[View commits]
 
 [float]
 ===== Features
