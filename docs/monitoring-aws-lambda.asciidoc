@@ -115,7 +115,7 @@ The timeout value, for the {apm-lambda-ext}'s HTTP client sending data to the AP
 [float]
 === `ELASTIC_APM_SEND_STRATEGY`
 Whether to synchronously flush APM agent data from the {apm-lambda-ext} to the APM Server at the end of the function invocation.
-The two accepted values are `background` and `syncflush`. The _default_ is `syncflush`.
+The two accepted values are `background` and `syncflush`. The _default_ is `background`.
 
 * The `background` strategy indicates that the {apm-lambda-ext} will not flush when it receives a signal that the function invocation
 has completed. It will instead send any remaining buffered data on the next function invocation. The result is that, if the
