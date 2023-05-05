@@ -41,7 +41,7 @@ func TestInfoProxy(t *testing.T) {
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for key := range headers {
-			assert.Equal(t, 1, len(r.Header[key]))
+			assert.Equal(t, 2, len(r.Header[key]))
 			assert.Equal(t, headers[key], r.Header[key][0])
 		}
 		w.Header().Add("test", "header")

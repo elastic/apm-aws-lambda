@@ -108,12 +108,10 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 		r.Host = parsedApmServerURL.Host
 
 		// Send authorization header if the APM agent did not already forwarded it
-		if r.Header.Get("Authorization") == "" {
-			if c.ServerAPIKey != "" {
-				r.Header.Add("Authorization", "ApiKey "+c.ServerAPIKey)
-			} else if c.ServerSecretToken != "" {
-				r.Header.Add("Authorization", "Bearer "+c.ServerSecretToken)
-			}
+		if c.ServerAPIKey != "" {
+			r.Header.Add("Authorization", "ApiKey "+c.ServerAPIKey)
+		} else if c.ServerSecretToken != "" {
+			r.Header.Add("Authorization", "Bearer "+c.ServerSecretToken)
 		}
 
 		// Forward request to the APM server
