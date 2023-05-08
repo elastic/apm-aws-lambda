@@ -107,6 +107,13 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 		r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
 		r.Host = parsedApmServerURL.Host
 
+		// Override authorization header sent by the APM agents
+		if c.ServerAPIKey != "" {
+			r.Header.Add("Authorization", "ApiKey "+c.ServerAPIKey)
+		} else if c.ServerSecretToken != "" {
+			r.Header.Add("Authorization", "Bearer "+c.ServerSecretToken)
+		}
+
 		// Forward request to the APM server
 		reverseProxy.ServeHTTP(w, r)
 	}, nil
