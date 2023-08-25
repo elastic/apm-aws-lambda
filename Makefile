@@ -2,7 +2,7 @@ SHELL = /bin/bash -eo pipefail
 
 GORELEASER_VERSION = "v1.14.1"
 GO_LICENSER_VERSION = "v0.4.0"
-GOLANGCI_LINT_VERSION = "v1.48.0"
+GOLANGCI_LINT_VERSION = "v1.54.2"
 export DOCKER_IMAGE_NAME = observability/apm-lambda-extension
 export DOCKER_REGISTRY = docker.elastic.co
 
