@@ -113,7 +113,5 @@ func NewClient(opts ...Option) (*Client, error) {
 		c.serverURL = c.serverURL + "/"
 	}
 
-	rand.Seed(time.Now().UnixNano())
-
 	return &c, nil
 }
