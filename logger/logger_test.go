@@ -46,7 +46,7 @@ func TestDefaultLogger(t *testing.T) {
 	tempFileContents, err := os.ReadFile(tempFile.Name())
 	require.NoError(t, err)
 
-	assert.Regexp(t, `{"log.level":"info","@timestamp":".*","log.origin":{"file.name":"logger/logger_test.go","file.line":.*},"message":"logger-test-info","ecs.version":"1.6.0"}`, string(tempFileContents))
+	assert.Regexp(t, `{"log.level":"info","@timestamp":".*","log.origin":{"function":"github.com/elastic/apm-aws-lambda/logger_test.TestDefaultLogger","file.name":"logger/logger_test.go","file.line":.*},"message":"logger-test-info","ecs.version":"1.6.0"}`, string(tempFileContents))
 }
 
 func TestLoggerParseLogLevel(t *testing.T) {
@@ -116,7 +116,7 @@ func TestLoggerSetLogLevel(t *testing.T) {
 	tempFileContents, err := os.ReadFile(tempFile.Name())
 	require.NoError(t, err)
 
-	assert.Regexp(t, `{"log.level":"debug","@timestamp":".*","log.origin":{"file.name":"logger/logger_test.go","file.line":.*},"message":"logger-test-trace","ecs.version":"1.6.0"}`, string(tempFileContents))
+	assert.Regexp(t, `{"log.level":"debug","@timestamp":".*","log.origin":{"function":"github.com/elastic/apm-aws-lambda/logger_test.TestLoggerSetLogLevel","file.name":"logger/logger_test.go","file.line":.*},"message":"logger-test-trace","ecs.version":"1.6.0"}`, string(tempFileContents))
 }
 
 func TestLoggerSetOffLevel(t *testing.T) {
