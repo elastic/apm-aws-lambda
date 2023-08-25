@@ -20,7 +20,6 @@ package apmproxy
 import (
 	"bytes"
 	"errors"
-	"math/rand"
 	"net/http"
 	"strings"
 	"sync"
