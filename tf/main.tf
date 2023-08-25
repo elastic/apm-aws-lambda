@@ -11,15 +11,17 @@ module "tags" {
 }
 
 module "ec_deployment" {
-  source                 = "github.com/elastic/apm-server//testing/infra/terraform/modules/ec_deployment?depth=1"
-  deployment_name_prefix = "apm-aws-lambda-smoke-testing"
-  integrations_server    = true
-  apm_server_expvar      = false
-  apm_server_pprof       = false
-  region                 = var.ess_region
-  deployment_template    = var.ess_deployment_template
-  stack_version          = var.ess_version
-  tags                   = module.tags.tags
+  source                   = "github.com/elastic/apm-server//testing/infra/terraform/modules/ec_deployment?depth=1"
+  deployment_name_prefix   = "apm-aws-lambda-smoke-testing"
+  integrations_server      = true
+  elasticsearch_size       = "1g"
+  elasticsearch_zone_count = 1
+  apm_server_expvar        = false
+  apm_server_pprof         = false
+  region                   = var.ess_region
+  deployment_template      = var.ess_deployment_template
+  stack_version            = var.ess_version
+  tags                     = module.tags.tags
 }
 
 data "aws_iam_policy_document" "assume_role" {
