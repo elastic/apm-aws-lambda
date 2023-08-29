@@ -23,6 +23,10 @@
 https://github.com/elastic/apm-aws-lambda/compare/v1.4.0...main[View commits]
 
 [float]
+===== Bug fixes
+- Log a warning, instead of failing a Lambda function, if auth retrieval from AWS Secrets Manager fails. Reporting APM data will not work, but the Lambda function invocations will proceed. {lambda-pull}401[401]
+
+[float]
 [[lambda-1.4.0]]
 === 1.4.0 - 2023/05/03
 
