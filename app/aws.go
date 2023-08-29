@@ -36,22 +36,25 @@ func loadAWSOptions(ctx context.Context, cfg aws.Config, logger *zap.SugaredLogg
 	if apmServerApiKeySMSecretId, ok := os.LookupEnv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID"); ok {
 		result, err := loadSecret(ctx, manager, apmServerApiKeySMSecretId)
 		if err != nil {
-			return "", "", fmt.Errorf("failed loading APM Server ApiKey from Secrets Manager: %w", err)
+			logger.Warnf("Could not load APM API key from AWS Secrets Manager. Reporting APM data will likely fail. Is 'ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID=%s' correct? See https://www.elastic.co/guide/en/apm/lambda/current/aws-lambda-secrets-manager.html. Error message: %v", apmServerApiKeySMSecretId, err)
+			apmServerApiKey = ""
+		} else {
+			logger.Infof("Using the APM API key retrieved from AWS Secrets Manager.")
+			apmServerApiKey = result
 		}
-
-		logger.Infof("Using the APM API key retrieved from Secrets Manager.")
-		apmServerApiKey = result
 	}
 
 	apmServerSecretToken := os.Getenv("ELASTIC_APM_SECRET_TOKEN")
 	if apmServerSecretTokenSMSecretId, ok := os.LookupEnv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID"); ok {
 		result, err := loadSecret(ctx, manager, apmServerSecretTokenSMSecretId)
 		if err != nil {
-			return "", "", fmt.Errorf("failed loading APM Server Secret Token from Secrets Manager: %w", err)
+			// return "", "", fmt.Errorf("failed loading APM Server Secret Token from Secrets Manager: %w", err)
+			logger.Warnf("Could not load APM secret token from AWS Secrets Manager. Reporting APM data will likely fail. Is 'ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID=%s' correct? See https://www.elastic.co/guide/en/apm/lambda/current/aws-lambda-secrets-manager.html. Error message: %v", apmServerSecretTokenSMSecretId, err)
+			apmServerSecretToken = ""
+		} else {
+			logger.Infof("Using the APM secret token retrieved from AWS Secrets Manager.")
+			apmServerSecretToken = result
 		}
-
-		logger.Infof("Using the APM secret token retrieved from Secrets Manager.")
-		apmServerSecretToken = result
 	}
 
 	return apmServerApiKey, apmServerSecretToken, nil
