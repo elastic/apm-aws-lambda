@@ -48,7 +48,6 @@ func loadAWSOptions(ctx context.Context, cfg aws.Config, logger *zap.SugaredLogg
 	if apmServerSecretTokenSMSecretId, ok := os.LookupEnv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID"); ok {
 		result, err := loadSecret(ctx, manager, apmServerSecretTokenSMSecretId)
 		if err != nil {
-			// return "", "", fmt.Errorf("failed loading APM Server Secret Token from Secrets Manager: %w", err)
 			logger.Warnf("Could not load APM secret token from AWS Secrets Manager. Reporting APM data will likely fail. Is 'ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID=%s' correct? See https://www.elastic.co/guide/en/apm/lambda/current/aws-lambda-secrets-manager.html. Error message: %v", apmServerSecretTokenSMSecretId, err)
 			apmServerSecretToken = ""
 		} else {
