@@ -65,9 +65,9 @@ The configuration options for the APM agents are documented in the corresponding
 * {apm-py-ref}/configuration.html[Configuration options - Python APM agent]
 * {apm-java-ref}/configuration.html[Configuration options - Java APM agent]
 
-Note that not all APM agent configuration options are supported by the {apm-lambda-ext}.
-For example, configuration variables like `verify_server_cert`, `server_cert`, and `use_certifi` are not supported as they configure
-how an Elastic APM agent interacts with the APM Server. The {apm-lambda-ext} communicates with the APM agent, not the APM Server.
+NOTE: Some APM agent configuration options don't make sense when the APM agent is running in a Lambda environment.
+For example, instead of using the Python APM agent configuration variable, `verify_server_cert`, you must use the
+`ELASTIC_APM_LAMBDA_VERIFY_SERVER_CERT` varibale described below.
 
 [float]
 [[aws-lambda-config-relevant]]
