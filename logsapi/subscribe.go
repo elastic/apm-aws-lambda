@@ -25,6 +25,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+
+	"github.com/elastic/apm-aws-lambda/version"
 )
 
 // SubscribeRequest is the request body that is sent to Logs API on subscribe
@@ -131,6 +133,7 @@ func (lc *Client) sendRequest(url string, data []byte, extensionID string) (*htt
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Lambda-Extension-Identifier", extensionID)
+	req.Header.Set("User-Agent", version.UserAgent)
 
 	resp, err := lc.httpClient.Do(req)
 	if err != nil {
