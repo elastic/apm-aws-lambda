@@ -65,55 +65,63 @@ The configuration options for the APM agents are documented in the corresponding
 * {apm-py-ref}/configuration.html[Configuration options - Python APM agent]
 * {apm-java-ref}/configuration.html[Configuration options - Java APM agent]
 
-The following configuration options are particularly relevant for the {apm-lambda-ext}:
+NOTE: Some APM agent configuration options don't make sense when the APM agent is running in a Lambda environment.
+For example, instead of using the Python APM agent configuration variable, `verify_server_cert`, you must use the
+`ELASTIC_APM_LAMBDA_VERIFY_SERVER_CERT` varibale described below.
+
+[float]
+[[aws-lambda-config-relevant]]
+=== Relevant configuraiton options
+
+A list of relevant configuration options for the {apm-lambda-ext} is below.
 
 [float]
 [[aws-lambda-extension]]
-=== `ELASTIC_APM_LAMBDA_APM_SERVER`
+==== `ELASTIC_APM_LAMBDA_APM_SERVER`
 This required config option controls where the {apm-lambda-ext} will ship data. This should be the URL of the final APM Server destination for your telemetry.
 
 [float]
-=== `ELASTIC_APM_LAMBDA_AGENT_DATA_BUFFER_SIZE`
+==== `ELASTIC_APM_LAMBDA_AGENT_DATA_BUFFER_SIZE`
 The size of the buffer that stores APM agent data to be forwarded to the APM server. The _default_ is `100`.
 
 [float]
 [[aws-lambda-config-authentication-keys]]
-=== `ELASTIC_APM_SECRET_TOKEN` or `ELASTIC_APM_API_KEY`
+==== `ELASTIC_APM_SECRET_TOKEN` or `ELASTIC_APM_API_KEY`
 One of these (or, alternatively, the corresponding settings for the AWS Secrets Manager IDs) needs to be set as the authentication method that the {apm-lambda-ext} uses when sending data to the URL configured via `ELASTIC_APM_LAMBDA_APM_SERVER`. Alternatively, you can store your APM Server credentials <<aws-lambda-secrets-manager, using the AWS Secrets Manager>> and use the <<aws-lambda-config-secrets-manager-options>> config options, instead. Sending data to the APM Server if none of these options is set is possible, but your APM agent must be allowed to send data to your APM server in https://www.elastic.co/guide/en/apm/guide/current/configuration-anonymous.html[anonymous mode].
 
 [float]
 [[aws-lambda-config-secrets-manager-options]]
-=== `ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID` or `ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID`
+==== `ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID` or `ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID`
 Instead of specifying the <<aws-lambda-config-authentication-keys>> as plain text in your Lambda environment variables, you can <<aws-lambda-secrets-manager, use the AWS Secrets Manager>> to securely store your APM authetication keys. The `ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID` or `ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID` config options allow you to specify the Secrets Manager's secret id of the stored APM API key or APM secret token, respectively, to be used by the {apm-lambda-ext} for authentication.
 
 `ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID` takes precedence over <<aws-lambda-config-authentication-keys, `ELASTIC_APM_SECRET_TOKEN`>>, and `ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID` over <<aws-lambda-config-authentication-keys, `ELASTIC_APM_API_KEY`>>, respectively.
 
 [float]
-=== `ELASTIC_APM_SERVICE_NAME`
+==== `ELASTIC_APM_SERVICE_NAME`
 The configured name of your application or service.  The APM agent will use this value when reporting data to the APM Server. If unset, the APM agent will automatically set the value based on the Lambda function name. Use this config option if you want to group multiple Lambda functions under a single service entity in APM.
 
 [float]
 [[aws-lambda-config-data-receiver-timeout]]
-=== `ELASTIC_APM_DATA_RECEIVER_TIMEOUT`
+==== `ELASTIC_APM_DATA_RECEIVER_TIMEOUT`
 
 [small]#Added in: v1.2.0. Replaces `ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS`.#
 
 The {apm-lambda-ext}'s timeout value, for receiving data from the APM agent. The _default_ is `15s`.
 
 [float]
-=== `ELASTIC_APM_DATA_RECEIVER_SERVER_PORT`
+==== `ELASTIC_APM_DATA_RECEIVER_SERVER_PORT`
 The port on which the {apm-lambda-ext} listens to receive data from the APM agent. The _default_ is `8200`.
 
 [float]
 [[aws-lambda-config-data-forwarder-timeout]]
-=== `ELASTIC_APM_DATA_FORWARDER_TIMEOUT`
+==== `ELASTIC_APM_DATA_FORWARDER_TIMEOUT`
 
 [small]#Added in: v1.2.0. Replaces `ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS`.#
 
 The timeout value, for the {apm-lambda-ext}'s HTTP client sending data to the APM Server. The _default_ is `3s`. If the extension's attempt to send APM data during this time interval is not successful, the extension queues back the data. Further attempts at sending the data are governed by an exponential backoff algorithm: data will be sent after a increasingly large grace period of 0, then circa 1, 4, 9, 16, 25 and 36 seconds, provided that the Lambda function execution is ongoing.
 
 [float]
-=== `ELASTIC_APM_SEND_STRATEGY`
+==== `ELASTIC_APM_SEND_STRATEGY`
 Whether to synchronously flush APM agent data from the {apm-lambda-ext} to the APM Server at the end of the function invocation.
 The two accepted values are `background` and `syncflush`. The _default_ is `syncflush`.
 
@@ -129,39 +137,39 @@ the next request until the extension has flushed all the data. This has a negati
 though it ensures that all APM data is sent to the APM server.
 
 [float]
-=== `ELASTIC_APM_LOG_LEVEL`
+==== `ELASTIC_APM_LOG_LEVEL`
 The logging level to be used by both the APM Agent and the {apm-lambda-ext}. Supported values are `trace`, `debug`, `info`, `warning`, `error`, `critical` and `off`.
 
 [float]
-=== `ELASTIC_APM_LAMBDA_CAPTURE_LOGS`
+==== `ELASTIC_APM_LAMBDA_CAPTURE_LOGS`
 
 preview:[]
 Starting in Elastic Stack version 8.5.0, the Elastic APM lambda extension supports the collection of log events by default.
 Log events can be viewed in {kib} in the APM UI. Disable log collection by setting this to `false`.
 
 [float]
-=== `ELASTIC_APM_LAMBDA_VERIFY_SERVER_CERT`
+==== `ELASTIC_APM_LAMBDA_VERIFY_SERVER_CERT`
 
 [small]#Added in: v1.3.0.#
 
 Whether to enable {apm-lambda-ext} to verify APM Server's certificate chain and host name.
 
 [float]
-=== `ELASTIC_APM_LAMBDA_SERVER_CA_CERT_PEM`
+==== `ELASTIC_APM_LAMBDA_SERVER_CA_CERT_PEM`
 
 [small]#Added in: v1.3.0.#
 
 The certificate passed as environment variable. To be used to verify APM Server's certificate chain if verify server certificate is enabled.
 
 [float]
-=== `ELASTIC_APM_SERVER_CA_CERT_FILE`
+==== `ELASTIC_APM_SERVER_CA_CERT_FILE`
 
 [small]#Added in: v1.3.0.#
 
 The certificate passed as a file name available to the extension. To be used to verify APM Server's certificate chain if verify server certificate is enabled.
 
 [float]
-=== `ELASTIC_APM_SERVER_CA_CERT_ACM_ID`
+==== `ELASTIC_APM_SERVER_CA_CERT_ACM_ID`
 
 [small]#Added in: v1.3.0.#
 
