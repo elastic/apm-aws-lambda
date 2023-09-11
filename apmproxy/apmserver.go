@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/elastic/apm-aws-lambda/accumulator"
+	"github.com/elastic/apm-aws-lambda/version"
 	"go.uber.org/zap"
 )
 
@@ -130,6 +131,7 @@ func (c *Client) PostToApmServer(ctx context.Context, apmData accumulator.APMDat
 
 	endpointURI := "intake/v2/events"
 	encoding := apmData.ContentEncoding
+	agentInfo := apmData.AgentInfo
 
 	var r io.Reader
 	if apmData.ContentEncoding != "" {
@@ -160,6 +162,7 @@ func (c *Client) PostToApmServer(ctx context.Context, apmData accumulator.APMDat
 	}
 	req.Header.Add("Content-Encoding", encoding)
 	req.Header.Add("Content-Type", "application/x-ndjson")
+	req.Header.Set("User-Agent", version.UserAgent+" "+agentInfo)
 	if c.ServerAPIKey != "" {
 		req.Header.Add("Authorization", "ApiKey "+c.ServerAPIKey)
 	} else if c.ServerSecretToken != "" {

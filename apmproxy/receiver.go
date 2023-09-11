@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/elastic/apm-aws-lambda/accumulator"
+	"github.com/elastic/apm-aws-lambda/version"
 )
 
 const txnRegistrationContentType = "application/vnd.elastic.apm.transaction+ndjson"
@@ -105,6 +106,8 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 		r.URL.Host = parsedApmServerURL.Host
 		r.URL.Scheme = parsedApmServerURL.Scheme
 		r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
+		reqAgent := r.UserAgent()
+		r.Header.Set("User-Agent", version.UserAgent+" "+reqAgent)
 		r.Host = parsedApmServerURL.Host
 
 		// Override authorization header sent by the APM agents
@@ -136,6 +139,7 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 		agentData := accumulator.APMData{
 			Data:            rawBytes,
 			ContentEncoding: r.Header.Get("Content-Encoding"),
+			AgentInfo:       r.UserAgent(),
 		}
 
 		if len(agentData.Data) != 0 {

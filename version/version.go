@@ -15,8 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package extension
+package version
 
 const (
-	Version = "1.4.0"
+	Version   = "1.4.0"
+	UserAgent = "apm-aws-lambda/" + Version
 )

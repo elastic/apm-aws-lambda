@@ -23,4 +23,5 @@ package accumulator
 type APMData struct {
 	Data            []byte
 	ContentEncoding string
+	AgentInfo       string
 }

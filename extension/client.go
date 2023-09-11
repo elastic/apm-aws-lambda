@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/elastic/apm-aws-lambda/version"
 	"go.uber.org/zap"
 )
 
@@ -106,6 +107,7 @@ func (e *Client) Register(ctx context.Context, filename string) (*RegisterRespon
 		return nil, fmt.Errorf("failed to create register request: %w", err)
 	}
 	httpReq.Header.Set(extensionNameHeader, filename)
+	httpReq.Header.Set("User-Agent", version.UserAgent)
 	httpRes, err := e.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("extension register request failed: %w", err)
@@ -134,6 +136,7 @@ func (e *Client) NextEvent(ctx context.Context) (*NextEventResponse, error) {
 		return nil, fmt.Errorf("failed to create next event request: %w", err)
 	}
 	httpReq.Header.Set(extensionIdentiferHeader, e.ExtensionID)
+	httpReq.Header.Set("User-Agent", version.UserAgent)
 	httpRes, err := e.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("next event request failed: %w", err)
@@ -161,6 +164,7 @@ func (e *Client) InitError(ctx context.Context, errorType string) (*StatusRespon
 	}
 	httpReq.Header.Set(extensionIdentiferHeader, e.ExtensionID)
 	httpReq.Header.Set(extensionErrorType, errorType)
+	httpReq.Header.Set("User-Agent", version.UserAgent)
 	httpRes, err := e.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("initialization error request failed: %w", err)
@@ -188,6 +192,7 @@ func (e *Client) ExitError(ctx context.Context, errorType string) (*StatusRespon
 	}
 	httpReq.Header.Set(extensionIdentiferHeader, e.ExtensionID)
 	httpReq.Header.Set(extensionErrorType, errorType)
+	httpReq.Header.Set("User-Agent", version.UserAgent)
 	httpRes, err := e.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("exit error request failed: %w", err)
