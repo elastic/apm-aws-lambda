@@ -32,7 +32,7 @@ Every time there is a merge to main or any release branches the whole workflow w
 
 #### Release process
 
-This process has been fully automated and it gets triggered when a tag release has been created, Continuous Deployment based, aka no input approval required.
+This process has been fully automated and it gets triggered when a tag release has been created, for further details please refers to the [release](../../RELEASE.md) docs.
 
 #### Smoke Tests
 
