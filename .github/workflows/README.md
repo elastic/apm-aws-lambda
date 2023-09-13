@@ -36,7 +36,7 @@ This process has been fully automated and it gets triggered when a tag release h
 
 #### Smoke Tests
 
-You can run the [smoke-tests]( https://github.com/elastic/apm-aws-lambda/actions/workflows/smoke-tests.yml) using the UI if needed.
+You can run the [smoke-tests](https://github.com/elastic/apm-aws-lambda/actions/workflows/smoke-tests.yml) using the UI if needed.
 
 ### OpenTelemetry
 
