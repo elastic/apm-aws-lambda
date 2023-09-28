@@ -4,11 +4,12 @@ MACHINE_TYPE?=t2.medium
 STACK_VERSION?=latest
 LOAD_DURATION?=10
 LOAD_ARRIVAL_RATE?=50
-LAMBDA_RUNTIME?=python3.8
+LAMBDA_RUNTIME?=python3.9
 LAMBDA_TIMEOUT?=15
 LAMBDA_MEMORY_SIZE?=128
 CUSTOM_LAMBDA_EXTENSION_ARN?=
 LAMBDA_RUNTIME_NORM=$(subst '.','_',$(LAMBDA_RUNTIME))
+LAMBDA_APM_AWS_EXTENSION_PATH=$(shell echo $(wildcard ../dist/*-linux-amd64.zip) | cut -d' ' -f1)
 
 # TODO: @lahsivjar Add automation for terraform fmt and docs
 
@@ -19,7 +20,7 @@ build/$(LAMBDA_RUNTIME_NORM).zip:
 .PHONY: clean
 clean:
 	@rm -rf build/
-	@rm -rf functions/python3.8/package/
+	@rm -rf functions/python3.9/package/
 	@rm -rf functions/go1.x/main
 
 .PHONY: bench
@@ -46,4 +47,6 @@ terraform-init:
 		-var 'lambda_timeout=$(LAMBDA_TIMEOUT)' \
 		-var 'lambda_memory_size=$(LAMBDA_MEMORY_SIZE)' \
 		-var 'stack_version=$(STACK_VERSION)' \
-		-var 'custom_lambda_extension_arn=$(CUSTOM_LAMBDA_EXTENSION_ARN)'
+		-var 'custom_lambda_extension_arn=$(CUSTOM_LAMBDA_EXTENSION_ARN)' \
+		-var 'lambda_apm_aws_extension_path=../$(LAMBDA_APM_AWS_EXTENSION_PATH)'
+

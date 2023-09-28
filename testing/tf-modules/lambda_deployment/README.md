@@ -45,7 +45,7 @@ No modules.
 | <a name="input_lambda_handler"></a> [lambda\_handler](#input\_lambda\_handler) | Entrypoint for the lambda function | `string` | `"main.handler"` | no |
 | <a name="input_lambda_invoke_path"></a> [lambda\_invoke\_path](#input\_lambda\_invoke\_path) | Request path to invoke the test lambda function | `string` | `"/test"` | no |
 | <a name="input_lambda_memory_size"></a> [lambda\_memory\_size](#input\_lambda\_memory\_size) | Amount of memory (in MB) the lambda function can use | `number` | `128` | no |
-| <a name="input_lambda_runtime"></a> [lambda\_runtime](#input\_lambda\_runtime) | The language-specific lambda runtime | `string` | `"python3.8"` | no |
+| <a name="input_lambda_runtime"></a> [lambda\_runtime](#input\_lambda\_runtime) | The language-specific lambda runtime | `string` | `"python3.9"` | no |
 | <a name="input_lambda_timeout"></a> [lambda\_timeout](#input\_lambda\_timeout) | Timeout of the lambda function in seconds | `number` | `15` | no |
 | <a name="input_resource_prefix"></a> [resource\_prefix](#input\_resource\_prefix) | Prefix to add to all created resource | `string` | n/a | yes |
 

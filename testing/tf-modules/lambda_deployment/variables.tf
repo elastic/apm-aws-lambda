@@ -21,7 +21,7 @@ variable "lambda_function_name" {
 variable "lambda_runtime" {
   type        = string
   description = "The language-specific lambda runtime"
-  default     = "python3.8"
+  default     = "python3.9"
 }
 
 variable "lambda_handler" {
@@ -52,6 +52,18 @@ variable "custom_lambda_extension_arn" {
   type        = string
   description = "Specific lambda extension to use, will use the latest build if not specified"
   default     = ""
+}
+
+variable "additional_lambda_layers" {
+  type        = list(string)
+  description = "Additional lambda layer ARNs to add to the lambda function"
+  default     = []
+}
+
+variable "environment_variables" {
+  type        = map(string)
+  description = "Additional environment variables to add to the lambda function"
+  default     = {}
 }
 
 variable "apm_server_url" {

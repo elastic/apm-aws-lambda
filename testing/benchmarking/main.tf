@@ -3,7 +3,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.0"
+      version = "~> 5.18.1"
     }
     null = {
       source  = "hashicorp/null"
@@ -21,9 +21,20 @@ locals {
   name_from_runtime    = replace(var.lambda_runtime, ".", "_")
   lambda_function_zip  = "../build/${local.name_from_runtime}.zip"
   lambda_function_name = "${var.resource_prefix}_${local.name_from_runtime}_apm_aws_lambda"
-  runtimeToHandler = {
-    "python3.8" = "main.handler"
-    "go1.x"     = "main"
+  runtimeVars = {
+    "python3.9" = {
+      "handler" = "main.handler"
+      "layers"  = ["arn:aws:lambda:us-west-2:627286350134:layer:lahsivjar-dev-elastic-apm-python:2"]
+      # "layers" = ["arn:aws:lambda:${var.aws_region}:267093732750:layer:elastic-apm-python-ver-6-18-0:1"]
+      "envvars" = {
+        "AWS_LAMBDA_EXEC_WRAPPER" = "/opt/python/bin/elasticapm-lambda"
+      }
+    }
+    "go1.x" = {
+      "handler" = "main"
+      "layers" = []
+      "envvars" = {}
+    }
   }
 }
 
@@ -65,14 +76,16 @@ module "lambda_deployment" {
 
   resource_prefix = var.resource_prefix
 
-  apm_aws_extension_path = "../../bin/extension.zip"
+  apm_aws_extension_path = var.lambda_apm_aws_extension_path
 
   lambda_runtime              = var.lambda_runtime
+  lambda_memory_size          = var.lambda_memory_size
   lambda_function_zip         = local.lambda_function_zip
   lambda_function_name        = local.lambda_function_name
-  lambda_handler              = local.runtimeToHandler[var.lambda_runtime]
   lambda_invoke_path          = local.load_req_path
-  lambda_memory_size          = var.lambda_memory_size
+  additional_lambda_layers    = local.runtimeVars[var.lambda_runtime]["layers"]
+  lambda_handler              = local.runtimeVars[var.lambda_runtime]["handler"]
+  environment_variables       = local.runtimeVars[var.lambda_runtime]["envvars"]
   custom_lambda_extension_arn = var.custom_lambda_extension_arn
 
   apm_server_url   = module.ec_deployment.apm_url
