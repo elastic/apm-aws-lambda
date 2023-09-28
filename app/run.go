@@ -109,6 +109,12 @@ func (app *App) Run(ctx context.Context) error {
 				// yet. If extension doesn't have enough CPU time it is possible that
 				// the extension might not receive the shutdown signal for timeouts
 				// or runtime crashes. In these cases we will miss the transaction.
+				//
+				// TODO (lahsivjar): Any partial transaction remaining will be added
+				// to a new batch by OnShutdown and flushed from the defer call to
+				// flush all data when this function exits. This causes 2 triggers
+				// of flush, we can optimize this by clearing all buffered channel
+				// then calling OnShutdown and finally flushing any remaining data.
 				if err := app.batch.OnShutdown(event.ShutdownReason); err != nil {
 					app.logger.Errorf("Error finalizing invocation on shutdown: %v", err)
 				}
