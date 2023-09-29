@@ -96,6 +96,28 @@ func (app *App) Run(ctx context.Context) error {
 			backgroundDataSendWg.Wait()
 			if event.EventType == extension.Shutdown {
 				app.logger.Infof("Exiting due to shutdown event with reason %s", event.ShutdownReason)
+				// Since we have waited for the processEvent loop to finish we
+				// already have received all the data we can from the agent. So, we
+				// flush all the data to make sure that shutdown can correctly deduce
+				// any pending transactions.
+				app.apmClient.FlushAPMData(ctx)
+				// At shutdown we can not expect platform.runtimeDone events to be
+				// reported for the remaining invocations. If we haven't received the
+				// transaction from agents at this point then it is safe to assume
+				// that the function failed. We will create proxy transaction for all
+				// invocations that haven't received a full transaction from the agent
+				// yet. If extension doesn't have enough CPU time it is possible that
+				// the extension might not receive the shutdown signal for timeouts
+				// or runtime crashes. In these cases we will miss the transaction.
+				//
+				// TODO (lahsivjar): Any partial transaction remaining will be added
+				// to a new batch by OnShutdown and flushed from the defer call to
+				// flush all data when this function exits. This causes 2 triggers
+				// of flush, we can optimize this by clearing all buffered channel
+				// then calling OnShutdown and finally flushing any remaining data.
+				if err := app.batch.OnShutdown(event.ShutdownReason); err != nil {
+					app.logger.Errorf("Error finalizing invocation on shutdown: %v", err)
+				}
 				return nil
 			}
 			if app.apmClient.ShouldFlush() {
@@ -153,21 +175,6 @@ func (app *App) processEvent(
 			event.Timestamp,
 		)
 	case extension.Shutdown:
-		// At shutdown we can not expect platform.runtimeDone events to be reported
-		// for the remaining invocations. If we haven't received the transaction
-		// from agents at this point then it is safe to assume that the function
-		// failed. We will create proxy transaction for all invocations that
-		// haven't received a full transaction from the agent yet. If extension
-		// doesn't have enough CPU time it is possible that the extension might
-		// not receive the shutdown signal for timeouts or runtime crashes. In
-		// these cases we will miss the transaction.
-		app.logger.Debugf("Received shutdown event with reason %s", event.ShutdownReason)
-		defer func() {
-			if err := app.batch.OnShutdown(event.ShutdownReason); err != nil {
-				app.logger.Errorf("Error finalizing invocation on shutdown: %v", err)
-			}
-		}()
-
 		// platform.report metric (and some other metrics) might not have been
 		// reported by the logs API even till shutdown. At shutdown we will make
 		// a last attempt to collect and report these metrics. However, it is
