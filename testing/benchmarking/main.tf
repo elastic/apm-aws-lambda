@@ -24,8 +24,7 @@ locals {
   runtimeVars = {
     "python3.9" = {
       "handler" = "main.handler"
-      "layers"  = ["arn:aws:lambda:us-west-2:627286350134:layer:lahsivjar-dev-elastic-apm-python:2"]
-      # "layers" = ["arn:aws:lambda:${var.aws_region}:267093732750:layer:elastic-apm-python-ver-6-18-0:1"]
+      "layers" = ["arn:aws:lambda:${var.aws_region}:267093732750:layer:elastic-apm-python-ver-6-18-0:1"]
       "envvars" = {
         "AWS_LAMBDA_EXEC_WRAPPER" = "/opt/python/bin/elasticapm-lambda"
       }
