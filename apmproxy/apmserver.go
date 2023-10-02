@@ -96,10 +96,10 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 	}
 
 	// Flush lambda data
+	c.logger.Debug("Flush in progress - Processing lambda data")
 	for {
 		select {
 		case apmData := <-c.LambdaDataChannel:
-			c.logger.Debug("Flush in progress - Processing lambda data")
 			if err := c.forwardLambdaData(ctx, apmData); err != nil {
 				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
 			}

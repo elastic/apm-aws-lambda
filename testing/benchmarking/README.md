@@ -35,7 +35,7 @@ No resources.
 | <a name="input_elasticsearch_zone_count"></a> [elasticsearch\_zone\_count](#input\_elasticsearch\_zone\_count) | Optional Elasticsearch zone count | `number` | `2` | no |
 | <a name="input_ess_region"></a> [ess\_region](#input\_ess\_region) | Optional ESS region where the deployment will be created. Defaults to gcp-us-west2 | `string` | `"gcp-us-west2"` | no |
 | <a name="input_lambda_memory_size"></a> [lambda\_memory\_size](#input\_lambda\_memory\_size) | Amount of memory (in MB) the lambda function can use | `number` | `128` | no |
-| <a name="input_lambda_runtime"></a> [lambda\_runtime](#input\_lambda\_runtime) | The language-specific lambda runtime | `string` | `"python3.8"` | no |
+| <a name="input_lambda_runtime"></a> [lambda\_runtime](#input\_lambda\_runtime) | The language-specific lambda runtime | `string` | `"python3.9"` | no |
 | <a name="input_lambda_timeout"></a> [lambda\_timeout](#input\_lambda\_timeout) | Timeout of the lambda function in seconds | `number` | `15` | no |
 | <a name="input_load_arrival_rate"></a> [load\_arrival\_rate](#input\_load\_arrival\_rate) | Rate(per second) at which the virtual users are generated | `number` | `50` | no |
 | <a name="input_load_duration"></a> [load\_duration](#input\_load\_duration) | Duration over which to generate new virtual users | `number` | `10` | no |

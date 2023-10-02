@@ -42,21 +42,26 @@ resource "aws_lambda_function" "test_fn" {
   handler          = var.lambda_handler
   runtime          = var.lambda_runtime
   source_code_hash = filebase64sha256(var.lambda_function_zip)
-  layers           = [var.custom_lambda_extension_arn == "" ? aws_lambda_layer_version.extn_layer[0].arn : var.custom_lambda_extension_arn]
-  timeout          = var.lambda_timeout
-  memory_size      = var.lambda_memory_size
+  timeout     = var.lambda_timeout
+  memory_size = var.lambda_memory_size
+
+  layers = concat(
+    [var.custom_lambda_extension_arn == "" ? aws_lambda_layer_version.extn_layer[0].arn : var.custom_lambda_extension_arn],
+    var.additional_lambda_layers,
+  )
+
+  environment {
+    variables = merge({
+      ELASTIC_APM_LAMBDA_APM_SERVER   = var.apm_server_url
+      ELASTIC_APM_SECRET_TOKEN        = var.apm_secret_token
+      ELASTIC_APM_LAMBDA_CAPTURE_LOGS = "true"
+      ELASTIC_APM_SEND_STRATEGY       = "background"
+    }, var.environment_variables)
+  }
 
   depends_on = [
     aws_cloudwatch_log_group.cw_log_group,
   ]
-
-  environment {
-    variables = {
-      ELASTIC_APM_LAMBDA_APM_SERVER   = var.apm_server_url
-      ELASTIC_APM_SECRET_TOKEN        = var.apm_secret_token
-      ELASTIC_APM_LAMBDA_CAPTURE_LOGS = "true"
-    }
-  }
 }
 
 resource "aws_apigatewayv2_api" "trigger" {

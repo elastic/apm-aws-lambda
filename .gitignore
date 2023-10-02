@@ -32,3 +32,5 @@ dist/
 *arn-file.md
 
 tf/*.zip
+
+build

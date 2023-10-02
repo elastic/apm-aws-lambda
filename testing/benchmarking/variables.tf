@@ -30,7 +30,7 @@ variable "load_arrival_rate" {
 variable "lambda_runtime" {
   type        = string
   description = "The language-specific lambda runtime"
-  default     = "python3.8"
+  default     = "python3.9"
 }
 
 variable "lambda_timeout" {
@@ -43,6 +43,11 @@ variable "lambda_memory_size" {
   type        = number
   description = "Amount of memory (in MB) the lambda function can use"
   default     = 128
+}
+
+variable "lambda_apm_aws_extension_path" {
+  type        = string
+  description = "Extension path where apm-aws-lambda extension zip is created"
 }
 
 variable "custom_lambda_extension_arn" {
