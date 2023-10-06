@@ -20,13 +20,13 @@
 [[lambda-unreleased]]
 === Unreleased
 
-https://github.com/elastic/apm-aws-lambda/compare/v1.6.0...main[View commits]
+https://github.com/elastic/apm-aws-lambda/compare/v1.5.1...main[View commits]
 
 [float]
-[[lambda-1.6.0]]
-=== 1.6.0 - 2023/10/06
+[[lambda-1.5.1]]
+=== 1.5.1 - 2023/10/06
 
-https://github.com/elastic/apm-aws-lambda/compare/v1.5.0...v1.6.0[View commits]
+https://github.com/elastic/apm-aws-lambda/compare/v1.5.0...v1.5.1[View commits]
 
 [float]
 ===== Bug fixes
