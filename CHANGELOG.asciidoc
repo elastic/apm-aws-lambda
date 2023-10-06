@@ -20,12 +20,27 @@
 [[lambda-unreleased]]
 === Unreleased
 
-https://github.com/elastic/apm-aws-lambda/compare/v1.4.0...main[View commits]
+https://github.com/elastic/apm-aws-lambda/compare/v1.5.1...main[View commits]
+
+[float]
+[[lambda-1.5.1]]
+=== 1.5.1 - 2023/10/06
+
+https://github.com/elastic/apm-aws-lambda/compare/v1.5.0...v1.5.1[View commits]
+
+[float]
+===== Bug fixes
+- Fix incorrect proxy transaction handling at shutdown due to not flushing the data before processing shutdown event. {lambda-pull}412[412].
+
+[float]
+[[lambda-1.5.0]]
+=== 1.5.0 - 2023/09/13
+
+https://github.com/elastic/apm-aws-lambda/compare/v1.4.0...v1.5.0[View commits]
 
 [float]
 ===== Bug fixes
 - Log a warning, instead of failing a Lambda function, if auth retrieval from AWS Secrets Manager fails. Reporting APM data will not work, but the Lambda function invocations will proceed. {lambda-pull}401[401]
-- Fix incorrect proxy transaction handling at shutdown due to not flushing the data before processing shutdown event. {lambda-pull}412[412].
 
 [float]
 ===== Features
