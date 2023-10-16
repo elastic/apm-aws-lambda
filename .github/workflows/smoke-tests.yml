@@ -50,6 +50,9 @@ jobs:
           terraform_version: 1.2.3
       - run: make smoketest/run TEST_DIR=./tf
       - if: always()
+        name: Tear down
+        run: make smoketest/all/cleanup TEST_DIR=./tf
+      - if: always()
         uses: elastic/apm-pipeline-library/.github/actions/notify-build-status@current
         with:
           vaultUrl: ${{ secrets.VAULT_ADDR }}
