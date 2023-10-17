@@ -6,7 +6,10 @@ export TF_IN_AUTOMATION=1
 export TF_CLI_ARGS=-no-color
 
 cleanup() {
-  [ "$SKIP_DESTROY" != "1" ]; terraform destroy -auto-approve >> tf.log
+  if [ "$SKIP_DESTROY" != "1" ]; then
+    echo "-> Tearing down the underlying infrastructure..."
+    terraform destroy -auto-approve >> tf.log
+  fi
 }
 
 trap "cleanup" EXIT
