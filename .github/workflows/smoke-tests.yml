@@ -31,12 +31,12 @@ jobs:
       SMOKETEST_VERSIONS: "${{ inputs.smoketest_versions || 'latest' }}"
       SKIP_DESTROY: 0
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
         with:
           go-version-file: 'go.mod'
       - name: Import Secrets
-        uses: hashicorp/vault-action@v2.4.2
+        uses: hashicorp/vault-action@v2.7.4
         with:
           url: ${{ secrets.VAULT_ADDR }}
           method: approle
@@ -46,7 +46,7 @@ jobs:
             secret/observability-team/ci/elastic-observability-aws-account-auth access_key | AWS_ACCESS_KEY_ID ;
             secret/observability-team/ci/elastic-observability-aws-account-auth secret_key | AWS_SECRET_ACCESS_KEY ;
             secret/observability-team/ci/elastic-cloud/observability-pro apiKey | EC_API_KEY
-      - uses: hashicorp/setup-terraform@v2
+      - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.2.3
       - run: make smoketest/run TEST_DIR=./tf
