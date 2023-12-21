@@ -21,7 +21,7 @@ import (
 	"math"
 	"time"
 
-	"go.elastic.co/apm/v2/model"
+	"github.com/elastic/apm-aws-lambda/logsapi/model"
 	"go.elastic.co/fastjson"
 )
 
@@ -33,39 +33,11 @@ type PlatformMetrics struct {
 	InitDurationMs   float32 `json:"initDurationMs"`
 }
 
-type MetricsContainer struct {
-	Metrics *model.Metrics `json:"metricset"`
-}
-
-// Add adds a metric with the given name, labels, and value,
-// The labels are expected to be sorted lexicographically.
-func (mc MetricsContainer) Add(name string, value float64) {
-	mc.addMetric(name, model.Metric{Value: value})
-}
-
-// Simplified version of https://github.com/elastic/apm-agent-go/blob/675e8398c7fe546f9fd169bef971b9ccfbcdc71f/metrics.go#L89
-func (mc MetricsContainer) addMetric(name string, metric model.Metric) {
-
-	if mc.Metrics.Samples == nil {
-		mc.Metrics.Samples = make(map[string]model.Metric)
-	}
-	mc.Metrics.Samples[name] = metric
-}
-
-func (mc MetricsContainer) MarshalFastJSON(json *fastjson.Writer) error {
-	json.RawString(`{"metricset":`)
-	if err := mc.Metrics.MarshalFastJSON(json); err != nil {
-		return err
-	}
-	json.RawString(`}`)
-	return nil
-}
-
 // ProcessPlatformReport processes the `platform.report` log line from lambda logs API and
 // returns a byte array containing the JSON body for the extracted platform metrics. A non
 // nil error is returned when marshaling of platform metrics into JSON fails.
 func ProcessPlatformReport(fnARN string, deadlineMs int64, ts time.Time, platformReport LogEvent) ([]byte, error) {
-	metricsContainer := MetricsContainer{
+	metricsContainer := model.MetricsContainer{
 		Metrics: &model.Metrics{},
 	}
 	convMB2Bytes := float64(1024 * 1024)
@@ -76,7 +48,7 @@ func ProcessPlatformReport(fnARN string, deadlineMs int64, ts time.Time, platfor
 	metricsContainer.Metrics.Timestamp = model.Time(platformReport.Time)
 
 	// FaaS Fields
-	metricsContainer.Metrics.FAAS = &model.FAAS{
+	metricsContainer.Metrics.FAAS = &model.ExtendedFAAS{
 		Execution: platformReport.Record.RequestID,
 		ID:        fnARN,
 		Coldstart: platformReportMetrics.InitDurationMs > 0,
