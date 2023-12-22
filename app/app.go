@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/elastic/apm-aws-lambda/accumulator"
 	"github.com/elastic/apm-aws-lambda/apmproxy"
 	"github.com/elastic/apm-aws-lambda/extension"
@@ -53,7 +55,11 @@ type App struct {
 // New returns an App or an error if the
 // creation failed.
 func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
-	c := appConfig{}
+	// default values
+	c := appConfig{
+		enableFunctionLogSubscription: true,
+		logLevel:                      "info",
+	}
 
 	for _, opt := range opts {
 		opt(&c)
@@ -63,6 +69,20 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		extensionName: c.extensionName,
 		batch:         accumulator.NewBatch(defaultMaxBatchSize, defaultMaxBatchAge),
 	}
+	lazyConfig := func() (*aws.Config, error) {
+		if c.awsConfig != nil {
+			return c.awsConfig, nil
+		}
+
+		cfg, err := config.LoadDefaultConfig(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		c.awsConfig = &cfg
+		return c.awsConfig, nil
+
+	}
 
 	var err error
 
@@ -70,7 +90,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		return nil, err
 	}
 
-	apmServerAPIKey, apmServerSecretToken, err := loadAWSOptions(ctx, c.awsConfig, app.logger)
+	apmServerAPIKey, apmServerSecretToken, err := loadAWSOptions(ctx, lazyConfig, app.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +183,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 	}
 
 	if acmCertArn := os.Getenv("ELASTIC_APM_SERVER_CA_CERT_ACM_ID"); acmCertArn != "" {
-		cert, err := loadAcmCertificate(acmCertArn, c.awsConfig, ctx)
+		cert, err := loadAcmCertificate(acmCertArn, lazyConfig, ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -226,10 +246,6 @@ func parseStrategy(value string) (apmproxy.SendStrategy, bool) {
 }
 
 func buildLogger(level string) (*zap.SugaredLogger, error) {
-	if level == "" {
-		level = "info"
-	}
-
 	l, err := logger.ParseLogLevel(level)
 	if err != nil {
 		return nil, err

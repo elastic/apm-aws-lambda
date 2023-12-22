@@ -26,7 +26,6 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/elastic/apm-aws-lambda/app"
 )
 
@@ -35,32 +34,19 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
-	cfg, err := config.LoadDefaultConfig(ctx)
-	if err != nil {
-		log.Fatalf("failed to load AWS default config: %v", err)
-	}
-
 	appConfigs := []app.ConfigOption{
 		app.WithExtensionName(filepath.Base(os.Args[0])),
 		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
 		app.WithLogLevel(os.Getenv("ELASTIC_APM_LOG_LEVEL")),
-		app.WithAWSConfig(cfg),
 	}
 
 	// ELASTIC_APM_LAMBDA_CAPTURE_LOGS indicate if the lambda extension
 	// should capture logs, the value defaults to true i.e. the extension
 	// will capture function logs by default
-	rawLambdaCaptureLogs := os.Getenv("ELASTIC_APM_LAMBDA_CAPTURE_LOGS")
-	captureLogs, err := strconv.ParseBool(rawLambdaCaptureLogs)
-	if err != nil {
-		if rawLambdaCaptureLogs != "" {
-			log.Printf("failed to parse env var ELASTIC_APM_LAMBDA_CAPTURE_LOGS, defaulting to true")
+	if rawLambdaCaptureLogs, ok := os.LookupEnv("ELASTIC_APM_LAMBDA_CAPTURE_LOGS"); ok {
+		if captureLogs, err := strconv.ParseBool(rawLambdaCaptureLogs); err != nil {
+			appConfigs = append(appConfigs, app.WithFunctionLogSubscription(captureLogs))
 		}
-		captureLogs = true
-	}
-
-	if captureLogs {
-		appConfigs = append(appConfigs, app.WithFunctionLogSubscription())
 	}
 
 	app, err := app.New(ctx, appConfigs...)

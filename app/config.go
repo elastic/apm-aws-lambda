@@ -23,7 +23,7 @@ import (
 
 type appConfig struct {
 	awsLambdaRuntimeAPI           string
-	awsConfig                     aws.Config
+	awsConfig                     *aws.Config
 	extensionName                 string
 	disableLogsAPI                bool
 	enableFunctionLogSubscription bool
@@ -60,9 +60,9 @@ func WithoutLogsAPI() ConfigOption {
 // WithFunctionLogSubscription enables the logs api subscription
 // to function log stream. This option will only work if LogsAPI
 // is not disabled by the WithoutLogsAPI config option.
-func WithFunctionLogSubscription() ConfigOption {
+func WithFunctionLogSubscription(toggl bool) ConfigOption {
 	return func(c *appConfig) {
-		c.enableFunctionLogSubscription = true
+		c.enableFunctionLogSubscription = toggl
 	}
 }
 
@@ -78,12 +78,5 @@ func WithLogLevel(level string) ConfigOption {
 func WithLogsapiAddress(s string) ConfigOption {
 	return func(c *appConfig) {
 		c.logsapiAddr = s
-	}
-}
-
-// WithAWSConfig sets the AWS config.
-func WithAWSConfig(awsConfig aws.Config) ConfigOption {
-	return func(c *appConfig) {
-		c.awsConfig = awsConfig
 	}
 }
