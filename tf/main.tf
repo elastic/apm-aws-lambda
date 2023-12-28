@@ -60,7 +60,7 @@ resource "aws_lambda_function" "test_lambda" {
 
   layers = [
     aws_lambda_layer_version.lambda_layer.arn,
-    "arn:aws:lambda:${var.aws_region}:267093732750:layer:elastic-apm-node-ver-3-38-0:1",
+    "arn:aws:lambda:${var.aws_region}:267093732750:layer:elastic-apm-node-ver-4-3-0:1",
   ]
 
   environment {
