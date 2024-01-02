@@ -78,7 +78,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 	app.extensionClient = extension.NewClient(c.awsLambdaRuntimeAPI, app.logger)
 
 	if !c.disableLogsAPI {
-		addr := "sandbox:0"
+		addr := "sandbox.localdomain:0"
 		if c.logsapiAddr != "" {
 			addr = c.logsapiAddr
 		}
