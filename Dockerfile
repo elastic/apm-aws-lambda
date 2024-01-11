@@ -1,7 +1,7 @@
-# Pin to Alpine 3.16.2
+# Pin to Alpine 3.16.8
 # For a complete list of hashes, see:
 # https://github.com/docker-library/repo-info/tree/master/repos/alpine/remote
-FROM --platform=$BUILDPLATFORM alpine@sha256:b95359c2505145f16c6aa384f9cc74eeff78eb36d308ca4fd902eeeb0a0b161b
+FROM --platform=$BUILDPLATFORM alpine@sha256:e4cdb7d47b06ba0a062ad2a97a7d154967c8f83934594d9f2bd3efa89292996b
 ARG EXTENSION_FILE
 ARG COMMIT_TIMESTAMP
 COPY ${EXTENSION_FILE} /opt/elastic-apm-extension
