@@ -47,6 +47,10 @@ func main() {
 		app.WithAWSConfig(cfg),
 	}
 
+	if os.Getenv("ELASTIC_APM_LAMBDA_DISABLE_LOGS_API") == "true" {
+		appConfigs = append(appConfigs, app.WithoutLogsAPI())
+	}
+
 	// ELASTIC_APM_LAMBDA_CAPTURE_LOGS indicate if the lambda extension
 	// should capture logs, the value defaults to true i.e. the extension
 	// will capture function logs by default
