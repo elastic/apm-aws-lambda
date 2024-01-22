@@ -47,7 +47,8 @@ func main() {
 		app.WithAWSConfig(cfg),
 	}
 
-	if os.Getenv("ELASTIC_APM_LAMBDA_DISABLE_LOGS_API") == "true" {
+	rawDisableLogsAPI := os.Getenv("ELASTIC_APM_LAMBDA_DISABLE_LOGS_API")
+	if disableLogsAPI, _ := strconv.ParseBool(rawDisableLogsAPI); disableLogsAPI {
 		appConfigs = append(appConfigs, app.WithoutLogsAPI())
 	}
 
