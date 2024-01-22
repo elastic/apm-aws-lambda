@@ -69,6 +69,8 @@ NOTE: Some APM agent configuration options don't make sense when the APM agent i
 For example, instead of using the Python APM agent configuration variable, `verify_server_cert`, you must use the
 `ELASTIC_APM_LAMBDA_VERIFY_SERVER_CERT` varibale described below.
 
+NOTE: APM Central configuration is not supported when using the Elastic APM AWS Lambda extension
+
 [float]
 [[aws-lambda-config-relevant]]
 === Relevant configuraiton options
