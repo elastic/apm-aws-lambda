@@ -25,10 +25,11 @@ if [[ -z "${GITHUB_WORKFLOW}" ]]; then
 fi
 
 AWS_REGION=$($TERRAFORM_WRAPPER output -raw aws_region)
+FUNCTION_NAME=$($TERRAFORM_WRAPPER output -raw user_name)-smoke-testing-test
 
 echo "-> Calling the lambda function..."
-aws lambda invoke --region="${AWS_REGION}" --function-name smoke-testing-test response.json
-aws lambda invoke --region="${AWS_REGION}" --function-name smoke-testing-test response.json
+aws lambda invoke --region="${AWS_REGION}" --function-name "${FUNCTION_NAME}" response.json
+aws lambda invoke --region="${AWS_REGION}" --function-name "${FUNCTION_NAME}" response.json
 
 echo "-> Waiting for the agent documents to be indexed in Elasticsearch..."
 

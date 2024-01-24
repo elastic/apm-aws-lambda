@@ -38,7 +38,7 @@ data "aws_iam_policy_document" "assume_role" {
 }
 
 resource "aws_iam_role" "lambda" {
-  name               = "iam_for_lambda"
+  name_prefix        = "apm-aws-lambda-smoke-testing-iam-role"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
 }
 
@@ -50,7 +50,7 @@ data "archive_file" "lambda" {
 
 resource "aws_lambda_function" "test_lambda" {
   filename      = "lambda_function_payload.zip"
-  function_name = "smoke-testing-test"
+  function_name = "${var.user_name}-smoke-testing-test"
   role          = aws_iam_role.lambda.arn
   handler       = "index.handler"
 
@@ -74,7 +74,7 @@ resource "aws_lambda_function" "test_lambda" {
 }
 
 resource "aws_secretsmanager_secret" "apm_secret_token" {
-  name                    = "lambda-extension-smoke-testing-secret"
+  name_prefix             = "apm-aws-lambda-smoke-testing-secret"
   recovery_window_in_days = 0
 }
 
@@ -92,7 +92,7 @@ data "aws_iam_policy_document" "policy" {
 }
 
 resource "aws_iam_policy" "secrets_manager_elastic_apm_policy" {
-  name        = "secrets_manager_elastic_apm_policy"
+  name_prefix = "apm-aws-lambda-smoke-testing-iam-policy"
   description = "Allows the lambda function to access the APM secret token stored in AWS Secrets Manager."
   policy      = data.aws_iam_policy_document.policy.json
 }
