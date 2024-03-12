@@ -39,7 +39,7 @@ jobs:
           go-version-file: 'go.mod'
       - name: Test
         run: make test junitfile="${{ matrix.platform }}-junit-report.xml"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         if: success() || failure()
         with:
           name: test-results-${{ matrix.platform }}
