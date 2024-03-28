@@ -18,69 +18,9 @@
 package logsapi
 
 import (
-	"go.elastic.co/apm/v2/model"
+	"github.com/elastic/apm-aws-lambda/logsapi/model"
 	"go.elastic.co/fastjson"
 )
-
-type logContainer struct {
-	Log *logLine
-}
-
-type logLine struct {
-	Timestamp model.Time
-	Message   string
-	FAAS      *faas
-}
-
-func (l *logLine) MarshalFastJSON(w *fastjson.Writer) error {
-	var firstErr error
-	w.RawString("{\"message\":")
-	w.String(l.Message)
-	w.RawString(",\"@timestamp\":")
-	if err := l.Timestamp.MarshalFastJSON(w); err != nil && firstErr == nil {
-		firstErr = err
-	}
-	if l.FAAS != nil {
-		w.RawString(",\"faas\":")
-		if err := l.FAAS.MarshalFastJSON(w); err != nil && firstErr == nil {
-			firstErr = err
-		}
-	}
-	w.RawByte('}')
-	return firstErr
-}
-
-// faas struct is a subset of go.elastic.co/apm/v2/model#FAAS
-//
-// The purpose of having a separate struct is to have a custom
-// marshalling logic that is targeted for the faas fields
-// available for function logs. For example: `coldstart` value
-// cannot be inferred for function logs so this struct drops
-// the field entirely.
-type faas struct {
-	// ID holds a unique identifier of the invoked serverless function.
-	ID string `json:"id,omitempty"`
-	// Execution holds the request ID of the function invocation.
-	Execution string `json:"execution,omitempty"`
-}
-
-func (f *faas) MarshalFastJSON(w *fastjson.Writer) error {
-	w.RawString("{\"id\":")
-	w.String(f.ID)
-	w.RawString(",\"execution\":")
-	w.String(f.Execution)
-	w.RawByte('}')
-	return nil
-}
-
-func (lc logContainer) MarshalFastJSON(json *fastjson.Writer) error {
-	json.RawString(`{"log":`)
-	if err := lc.Log.MarshalFastJSON(json); err != nil {
-		return err
-	}
-	json.RawByte('}')
-	return nil
-}
 
 // ProcessFunctionLog processes the `function` log line from lambda logs API and returns
 // a byte array containing the JSON body for the extracted log along with the timestamp.
@@ -90,14 +30,14 @@ func ProcessFunctionLog(
 	invokedFnArn string,
 	log LogEvent,
 ) ([]byte, error) {
-	lc := logContainer{
-		Log: &logLine{
+	lc := model.LogContainer{
+		Log: &model.LogLine{
 			Timestamp: model.Time(log.Time),
 			Message:   log.StringRecord,
 		},
 	}
 
-	lc.Log.FAAS = &faas{
+	lc.Log.FAAS = &model.FAAS{
 		ID:        invokedFnArn,
 		Execution: requestID,
 	}
