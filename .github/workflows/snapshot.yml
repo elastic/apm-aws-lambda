@@ -45,7 +45,7 @@ jobs:
         uses: anchore/sbom-action/download-syft@v0.15.10
 
       - name: Snapshot
-        run: make snapshot
+        run: make dist
 
       - name: generate build provenance (binaries)
         uses: github-early-access/generate-build-provenance@main

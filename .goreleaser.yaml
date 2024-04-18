@@ -88,8 +88,3 @@ publishers:
 release:
   # Custom GitHub release
   disable: true
-
-# creates SBOMs of all archives and the source tarball using syft
-# https://goreleaser.com/customization/sbom
-sboms:
-  - artifacts: archive
