@@ -1,6 +1,6 @@
 SHELL = /bin/bash -eo pipefail
 
-GORELEASER_VERSION = "v1.14.1"
+GORELEASER_VERSION = "v1.26.0-nightly"
 GO_LICENSER_VERSION = "v0.4.0"
 GOLANGCI_LINT_VERSION = "v1.54.2"
 export DOCKER_IMAGE_NAME = observability/apm-lambda-extension
@@ -19,6 +19,10 @@ zip:
 
 build:
 	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) build --snapshot --rm-dist
+
+.PHONY: snapshot
+snapshot:
+	go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --skip=publish --snapshot --clean
 
 .PHONY: release
 release:
