@@ -34,7 +34,6 @@ archives:
           mtime: '{{ .CommitDate }}'
     builds_info:
       mtime: "{{ .CommitTimestamp }}"
-    rlcp: true # https://goreleaser.com/deprecations/#archivesrlcp
 
 dockers:
 
