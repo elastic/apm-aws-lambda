@@ -44,7 +44,7 @@ jobs:
       - name: installs syft for generating the SBOM with goreleaser
         uses: anchore/sbom-action/download-syft@v0.15.10
 
-      - name: Release
+      - name: Snapshot
         run: make snapshot
 
       - name: generate build provenance (binaries)

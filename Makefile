@@ -1,6 +1,6 @@
 SHELL = /bin/bash -eo pipefail
 
-GORELEASER_VERSION = "v1.26.0-nightly"
+GORELEASER_VERSION = "v1.25.1"
 GO_LICENSER_VERSION = "v0.4.0"
 GOLANGCI_LINT_VERSION = "v1.54.2"
 export DOCKER_IMAGE_NAME = observability/apm-lambda-extension
