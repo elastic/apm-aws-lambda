@@ -14,6 +14,7 @@ concurrency: ${{ github.workflow }}
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   test:
@@ -23,7 +24,6 @@ jobs:
       TF_VAR_private_key: "./id_rsa_terraform"
       TF_VAR_public_key: "./id_rsa_terraform.pub"
       TF_VAR_user_name: "apm-aws-lambda-${{ github.run_id }}"
-
       TF_VAR_BUILD_ID: "${{ github.run_id }}"
       TF_VAR_ENVIRONMENT: 'ci'
       TF_VAR_BRANCH: "${{ github.ref_name }}"
@@ -43,9 +43,16 @@ jobs:
           roleId: ${{ secrets.VAULT_ROLE_ID }}
           secretId: ${{ secrets.VAULT_SECRET_ID }}
           secrets: |
-            secret/observability-team/ci/elastic-observability-aws-account-auth access_key | AWS_ACCESS_KEY_ID ;
-            secret/observability-team/ci/elastic-observability-aws-account-auth secret_key | AWS_SECRET_ACCESS_KEY ;
             secret/observability-team/ci/elastic-cloud/observability-team-pro apiKey | EC_API_KEY
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.SMOKE_TESTS_ROLE_ARN }}
+          aws-region: ${{ vars.SMOKE_TESTS_AWS_REGION }}
+          # NOTE: If smoke-tests takes longer than 2 hours then:
+          #         - change here
+          #         - and in the AWS terraform configuration in the oblt-infra repository.
+          role-duration-seconds: 9000
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.2.3
