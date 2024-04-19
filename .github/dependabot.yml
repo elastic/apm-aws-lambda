@@ -1,5 +1,19 @@
 version: 2
 updates:
+  # go dependencies
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    groups:
+      aws:
+        patterns:
+        - "github.com/aws/*"
+  # go tools
+  - package-ecosystem: "gomod"
+    directory: "tools/"
+    schedule:
+      interval: "weekly"
 
   # GitHub actions
   - package-ecosystem: "github-actions"
