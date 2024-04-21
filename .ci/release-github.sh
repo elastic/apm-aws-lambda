@@ -18,5 +18,5 @@ gh release \
   --title="${VERSION}" \
   --generate-notes \
   --notes-file="${SUFFIX_ARN_FILE}" \
-  ./dist/${VERSION}*.zip
-
+  ./dist/${VERSION}*.zip \
+  ./dist/*checksums.txt
