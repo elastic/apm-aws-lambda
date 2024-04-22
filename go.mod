@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/acm v1.25.4
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.28.6
 	github.com/google/uuid v1.6.0
-	github.com/joho/godotenv v1.4.0
+	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/gjson v1.17.1
 	github.com/tidwall/sjson v1.2.5
