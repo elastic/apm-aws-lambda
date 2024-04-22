@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.4.0
 	github.com/stretchr/testify v1.9.0
-	github.com/tidwall/gjson v1.17.0
+	github.com/tidwall/gjson v1.17.1
 	github.com/tidwall/sjson v1.2.5
 	go.elastic.co/apm/v2 v2.4.3
 	go.elastic.co/ecszap v1.0.2
