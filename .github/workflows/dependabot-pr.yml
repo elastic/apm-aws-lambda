@@ -20,9 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
+
+      - name: Bootstrap Action Workspace
+        uses: ./.github/actions/bootstrap
+
       - name: Update NOTICE.txt
         run: make NOTICE.txt
         # inspired by https://gist.github.com/swinton/03e84635b45c78353b1f71e41007fc7c

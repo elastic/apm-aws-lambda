@@ -32,9 +32,6 @@ jobs:
       SKIP_DESTROY: 0
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
       - name: Import Secrets
         uses: hashicorp/vault-action@v3.0.0
         with:
