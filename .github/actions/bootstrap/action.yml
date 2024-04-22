@@ -1,0 +1,31 @@
+---
+name: Bootstrap Checkout
+description: Ensures all actions bootstrap the same
+
+inputs:
+  goreleaser:
+    description: 'Install goreleaser toolchain ("true" or "false")'
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version-file: 'go.mod'
+
+    - uses: docker/setup-qemu-action@v3
+      if: "${{ inputs.goreleaser == 'true' }}"
+      with:
+        platforms: linux/arm64, linux/amd64
+
+    - name: Set up Docker Buildx
+      if: "${{ inputs.goreleaser == 'true' }}"
+      uses: docker/setup-buildx-action@v3
+
+    # See https://goreleaser.com/blog/supply-chain-security/
+    - name: installs syft for generating the SBOM with goreleaser
+      if: "${{ inputs.goreleaser == 'true' }}"
+      uses: anchore/sbom-action/download-syft@v0.15.10
