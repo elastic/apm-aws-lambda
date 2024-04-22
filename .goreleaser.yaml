@@ -34,7 +34,6 @@ archives:
           mtime: '{{ .CommitDate }}'
     builds_info:
       mtime: "{{ .CommitTimestamp }}"
-    rlcp: true # https://goreleaser.com/deprecations/#archivesrlcp
 
 dockers:
 
@@ -88,3 +87,8 @@ publishers:
 release:
   # Custom GitHub release
   disable: true
+
+# creates SBOMs of all archives and the source tarball using syft
+# https://goreleaser.com/customization/sbom
+sboms:
+  - artifacts: archive
