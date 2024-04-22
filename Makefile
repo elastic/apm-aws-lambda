@@ -1,6 +1,6 @@
 SHELL = /bin/bash -eo pipefail
 
-GORELEASER_VERSION = "v1.14.1"
+GORELEASER_VERSION = "v1.19.2"
 GO_LICENSER_VERSION = "v0.4.0"
 GOLANGCI_LINT_VERSION = "v1.54.2"
 export DOCKER_IMAGE_NAME = observability/apm-lambda-extension
@@ -10,19 +10,20 @@ clean:
 	@rm -rf dist/
 	@docker image ls "$(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME)*" -aq | xargs -I {} docker rmi --force {} || true
 
+.PHONY: dist
 dist:
-	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --snapshot --rm-dist
+	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --snapshot --clean
 
 .PHONY: zip
 zip:
-	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --snapshot --rm-dist --skip-docker
+	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --snapshot --clean --skip-docker
 
 build:
-	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) build --snapshot --rm-dist
+	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) build --snapshot --clean
 
 .PHONY: release
 release:
-	go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --rm-dist
+	go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --clean
 
 .PHONY: release-notes
 release-notes:

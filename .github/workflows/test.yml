@@ -46,6 +46,9 @@ jobs:
           path: '*-junit-report.xml'
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -56,8 +59,25 @@ jobs:
           platforms: linux/arm64, linux/amd64
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+      # See https://goreleaser.com/blog/supply-chain-security/
+      - name: installs syft for generating the SBOM with goreleaser
+        uses: anchore/sbom-action/download-syft@v0.15.10
+
       - name: Build
         run: make dist
+
+      - name: generate build provenance (binaries)
+        uses: github-early-access/generate-build-provenance@main
+        with:
+          subject-path: "${{ github.workspace }}/dist/*.zip"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: snapshots
+          path: "dist/*.*"
+          retention-days: 5
+
   lint:
     runs-on: ubuntu-latest
     steps:
