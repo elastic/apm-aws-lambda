@@ -55,6 +55,14 @@ jobs:
       - name: Release
         run: make release
 
+      # Store artifacts to help with troubleshooting
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release
+          path: "dist/*.*"
+          retention-days: 5
+
       - name: generate build provenance (binaries)
         uses: github-early-access/generate-build-provenance@main
         with:
