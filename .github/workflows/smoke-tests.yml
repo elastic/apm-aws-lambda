@@ -32,6 +32,10 @@ jobs:
       SKIP_DESTROY: 0
     steps:
       - uses: actions/checkout@v4
+      - name: Bootstrap Action Workspace
+        uses: ./.github/actions/bootstrap
+        with:
+          goreleaser: 'true'
       - name: Import Secrets
         uses: hashicorp/vault-action@v3.0.0
         with:
