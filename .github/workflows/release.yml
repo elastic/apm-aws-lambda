@@ -78,8 +78,8 @@ jobs:
           image_1=$(echo $image | head -n1)
           image_2=$(echo $image | tail -n1)
           # Fetch the digest for the container image (amd64 and arm64)
-          digest_1=$(docker images --format "{{.Digest}}" --no-trunc $image | sed -n 1p)
-          digest_2=$(docker images --format "{{.Digest}}" --no-trunc $image | sed -n 2p)
+          digest_1=$(docker images --format "{{.Digest}}" --no-trunc $image_1 | sed -n 1p)
+          digest_2=$(docker images --format "{{.Digest}}" --no-trunc $image_2 | sed -n 2p)
           echo "name_1=$image" >> "$GITHUB_OUTPUT"
           echo "name_2=$image" >> "$GITHUB_OUTPUT"
           echo "digest_1=$digest_1" >> "$GITHUB_OUTPUT"
