@@ -72,6 +72,16 @@ dockers:
       - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
       - "--label=org.opencontainers.image.version={{ .Version }}"
 
+docker_manifests:
+  - name_template: '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}:{{ trimprefix .Tag "v" }}'
+    image_templates:
+    - '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-x86_64:{{ trimprefix .Tag "v" }}'
+    - '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-arm64:{{ trimprefix .Tag "v" }}'
+  - name_template: '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}:latest'
+    image_templates:
+    - "{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-x86_64:latest"
+    - "{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-arm64:latest"
+
 publishers:
   - name: publish-aws
     cmd: ./.ci/publish-aws.sh
