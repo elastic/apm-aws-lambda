@@ -45,9 +45,6 @@ jobs:
           path: '*-junit-report.xml'
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -58,11 +55,6 @@ jobs:
 
       - name: Build
         run: make dist
-
-      - name: generate build provenance (binaries)
-        uses: github-early-access/generate-build-provenance@main
-        with:
-          subject-path: "${{ github.workspace }}/dist/*.zip"
 
       - uses: actions/upload-artifact@v4
         if: always()
