@@ -23,12 +23,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate tag does not exist on current commit
+      - name: Validate GitHub release is not available yet
         run: |
-          if [ $(git tag -l "${{ github.ref_name }}") ]; then
-            echo "The tag ${{ github.ref_name  }} already exists"
+          if gh release view "${{ github.ref_name }} > /dev/null ; then
+            echo "The GitHub release ${{ github.ref_name  }} already exists"
             exit 1
           fi
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - uses: elastic/apm-pipeline-library/.github/actions/docker-login@current
         with:
