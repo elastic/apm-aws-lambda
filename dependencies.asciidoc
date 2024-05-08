@@ -35,7 +35,6 @@ This page lists the third-party dependencies used to build {n}.
 | link:https://github.com/tidwall/match[$$github.com/tidwall/match$$] | v1.1.1 | MIT
 | link:https://github.com/tidwall/pretty[$$github.com/tidwall/pretty$$] | v1.2.1 | MIT
 | link:https://github.com/tidwall/sjson[$$github.com/tidwall/sjson$$] | v1.2.5 | MIT
-| link:https://go.elastic.co/apm/v2[$$go.elastic.co/apm/v2$$] | v2.4.3 | Apache-2.0
 | link:https://go.elastic.co/ecszap[$$go.elastic.co/ecszap$$] | v1.0.2 | Apache-2.0
 | link:https://go.elastic.co/fastjson[$$go.elastic.co/fastjson$$] | v1.3.0 | MIT
 | link:https://go.uber.org/multierr[$$go.uber.org/multierr$$] | v1.10.0 | MIT
