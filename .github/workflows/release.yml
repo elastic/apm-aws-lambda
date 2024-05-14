@@ -67,7 +67,7 @@ jobs:
           retention-days: 5
 
       - name: generate build provenance (binaries)
-        uses: github-early-access/generate-build-provenance@main
+        uses: actions/attest-build-provenance@951c0c5f8e375ad4efad33405ab77f7ded2358e4  # v1.1.1
         with:
           subject-path: "${{ github.workspace }}/dist/*.*"
 
@@ -77,13 +77,13 @@ jobs:
         run: .ci/get-docker-provenance.sh
 
       - name: generate build provenance (containers x86_64)
-        uses: github-early-access/generate-build-provenance@main
+        uses: actions/attest-build-provenance@951c0c5f8e375ad4efad33405ab77f7ded2358e4  # v1.1.1
         with:
           subject-name: ${{ steps.image.outputs.name_1 }}
           subject-digest: ${{ steps.image.outputs.digest_1 }}
 
       - name: generate build provenance (containers arm64)
-        uses: github-early-access/generate-build-provenance@main
+        uses: actions/attest-build-provenance@951c0c5f8e375ad4efad33405ab77f7ded2358e4  # v1.1.1
         with:
           subject-name: ${{ steps.image.outputs.name_2 }}
           subject-digest: ${{ steps.image.outputs.digest_2 }}
