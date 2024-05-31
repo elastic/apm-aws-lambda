@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/aws/aws-sdk-go-v2 v1.27.0
 	github.com/aws/aws-sdk-go-v2/config v1.27.16
-	github.com/aws/aws-sdk-go-v2/service/acm v1.25.8
+	github.com/aws/aws-sdk-go-v2/service/acm v1.26.0
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.29.1
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
