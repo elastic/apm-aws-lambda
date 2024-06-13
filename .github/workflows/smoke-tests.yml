@@ -36,6 +36,7 @@ jobs:
         uses: ./.github/actions/bootstrap
         with:
           goreleaser: 'true'
+      # TODO: replace with keyless (likely AWS and Google Secrets Manager)
       - name: Import Secrets
         uses: hashicorp/vault-action@v3.0.0
         with:
