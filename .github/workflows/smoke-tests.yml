@@ -57,7 +57,7 @@ jobs:
         run: make smoketest/all/cleanup TEST_DIR=./tf
 
       - if: always()
-        uses: elastic/oblt-actions/slack/notify-result@v1.9.1
+        uses: elastic/oblt-actions/slack/notify-result@v1.9.2
         with:
           bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
           channel-id: "#apm-aws-lambda"

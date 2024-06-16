@@ -61,7 +61,7 @@ jobs:
           retention-days: 5
 
       - name: generate build provenance (binaries)
-        uses: actions/attest-build-provenance@49df96e17e918a15956db358890b08e61c704919  # v1.2.0
+        uses: actions/attest-build-provenance@534b352d658f90498fd148d231fdbf88f3886a3a  # v1.3.1
         with:
           subject-path: "${{ github.workspace }}/dist/*.*"
 
@@ -71,13 +71,13 @@ jobs:
         run: .ci/get-docker-provenance.sh
 
       - name: generate build provenance (containers x86_64)
-        uses: actions/attest-build-provenance@49df96e17e918a15956db358890b08e61c704919  # v1.2.0
+        uses: actions/attest-build-provenance@534b352d658f90498fd148d231fdbf88f3886a3a  # v1.3.1
         with:
           subject-name: ${{ steps.image.outputs.name_1 }}
           subject-digest: ${{ steps.image.outputs.digest_1 }}
 
       - name: generate build provenance (containers arm64)
-        uses: actions/attest-build-provenance@49df96e17e918a15956db358890b08e61c704919  # v1.2.0
+        uses: actions/attest-build-provenance@534b352d658f90498fd148d231fdbf88f3886a3a  # v1.3.1
         with:
           subject-name: ${{ steps.image.outputs.name_2 }}
           subject-digest: ${{ steps.image.outputs.digest_2 }}
@@ -89,7 +89,7 @@ jobs:
           VERSION: ${{ github.ref_name }}
 
       - if: ${{ success() }}
-        uses: elastic/oblt-actions/slack/send@v1.9.1
+        uses: elastic/oblt-actions/slack/send@v1.9.2
         with:
           bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
           channel-id: "#apm-aws-lambda"
@@ -98,7 +98,7 @@ jobs:
             Build: (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|here>)
 
       - if: ${{ failure() }}
-        uses: elastic/oblt-actions/slack/send@v1.9.1
+        uses: elastic/oblt-actions/slack/send@v1.9.2
         with:
           bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
           channel-id: "#apm-aws-lambda"
