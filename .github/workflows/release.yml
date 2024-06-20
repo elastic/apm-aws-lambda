@@ -1,10 +1,11 @@
 name: release
 
 on:
-  workflow_dispatch:
-  push:
-    tags:
-      - v*.*.*
+  pull_request: ~
+#  workflow_dispatch:
+#  push:
+#    tags:
+#      - v*.*.*
 
 env:
   DOCKER_BUILDKIT: 1
@@ -17,91 +18,11 @@ permissions:
   pull-requests: read
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
-    env:
-      # TODO: use keyless
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
     steps:
       - uses: actions/checkout@v4
+      - uses: elastic/oblt-actions/aws/auth@feature/aws-auth
         with:
-          fetch-depth: 0
-
-      - name: Validate GitHub release is not available yet
-        run: |
-          if gh release view "${{ github.ref_name }} > /dev/null ; then
-            echo "The GitHub release ${{ github.ref_name  }} already exists"
-            exit 1
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Log in to the Elastic Container registry
-        uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
-        with:
-          registry: ${{ secrets.ELASTIC_DOCKER_REGISTRY }}
-          username: ${{ secrets.ELASTIC_DOCKER_USERNAME }}
-          password: ${{ secrets.ELASTIC_DOCKER_PASSWORD }}
-
-      - name: Bootstrap Action Workspace
-        uses: ./.github/actions/bootstrap
-        with:
-          goreleaser: 'true'
-
-      - name: Release
-        run: make release
-
-      # Store artifacts to help with troubleshooting
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: release
-          path: "dist/*.*"
-          retention-days: 5
-
-      - name: generate build provenance (binaries)
-        uses: actions/attest-build-provenance@534b352d658f90498fd148d231fdbf88f3886a3a  # v1.3.1
-        with:
-          subject-path: "${{ github.workspace }}/dist/*.*"
-
-      # See https://github.com/github-early-access/generate-build-provenance/issues/162
-      - name: container image digest
-        id: image
-        run: .ci/get-docker-provenance.sh
-
-      - name: generate build provenance (containers x86_64)
-        uses: actions/attest-build-provenance@534b352d658f90498fd148d231fdbf88f3886a3a  # v1.3.1
-        with:
-          subject-name: ${{ steps.image.outputs.name_1 }}
-          subject-digest: ${{ steps.image.outputs.digest_1 }}
-
-      - name: generate build provenance (containers arm64)
-        uses: actions/attest-build-provenance@534b352d658f90498fd148d231fdbf88f3886a3a  # v1.3.1
-        with:
-          subject-name: ${{ steps.image.outputs.name_2 }}
-          subject-digest: ${{ steps.image.outputs.digest_2 }}
-
-      - name: GitHub Release
-        run: make release-notes
-        env:
-          GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ github.ref_name }}
-
-      - if: ${{ success() }}
-        uses: elastic/oblt-actions/slack/send@v1.9.2
-        with:
-          bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-          channel-id: "#apm-aws-lambda"
-          message: |
-            :large_green_circle: [${{ github.repository }}] Release *${{ github.ref_name }}* published."
-            Build: (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|here>)
-
-      - if: ${{ failure() }}
-        uses: elastic/oblt-actions/slack/send@v1.9.2
-        with:
-          bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-          channel-id: "#apm-aws-lambda"
-          message: |
-            :large_yellow_circle: [${{ github.repository }}] Release *${{ github.ref_name }}* could not be published."
-            Build: (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|here>)
+          aws-region: us-east-1
+      - run: aws ec2 describe-regions
