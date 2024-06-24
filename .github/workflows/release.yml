@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: elastic/oblt-actions/aws/auth@feature/aws-auth
+      - uses: elastic/oblt-actions/aws/auth@v1.10.0
         with:
           aws-account-id: "267093732750"
       - run: aws ec2 describe-regions
