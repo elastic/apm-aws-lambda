@@ -30,9 +30,6 @@ jobs:
       TF_VAR_REPO: "${{ github.repository }}"
       SMOKETEST_VERSIONS: "${{ inputs.smoketest_versions || 'latest' }}"
       SKIP_DESTROY: 0
-      # TODO: replace with keyless (likely AWS and Google Secrets Manager)
-      AWS_ACCESS_KEY_ID: ${{ secrets.OBSERVABILITY_AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.OBSERVABILITY_AWS_SECRET_ACCESS_KEY }}
       EC_API_KEY: ${{ secrets.OBSERVABILITY_EC_API_KEY }}
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +40,7 @@ jobs:
       - uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.2.3
+      - uses: elastic/oblt-actions/aws/auth@v1.10.0
       - run: make smoketest/run TEST_DIR=./tf
       - if: always()
         name: Tear down
