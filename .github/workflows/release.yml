@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: elastic/oblt-actions/aws/auth@feature/aws-auth
         with:
-          aws-region: eu-west-1
+          aws-account-id: "267093732750"
       - run: aws ec2 describe-regions
   oidc_debug_test:
     permissions:
