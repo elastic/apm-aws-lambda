@@ -108,7 +108,7 @@ locals {
 
 resource "aws_lambda_layer_version" "lambda_layer" {
   filename   = "../dist/${local.zip_files[0]}"
-  layer_name = "lambda_layer_name"
+  layer_name = "apm-aws-lambda-smoke-testing-lambda_layer_name"
 
   description         = "AWS Lambda Extension Layer for Elastic APM - smoke testing"
   compatible_runtimes = ["nodejs16.x"]
