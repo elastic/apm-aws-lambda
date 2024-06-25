@@ -30,7 +30,7 @@ jobs:
 
       - name: Validate GitHub release is not available yet
         run: |
-          if gh release view "${{ github.ref_name }} > /dev/null ; then
+          if gh release view "${{ github.ref_name }}" > /dev/null ; then
             echo "The GitHub release ${{ github.ref_name  }} already exists"
             exit 1
           fi
