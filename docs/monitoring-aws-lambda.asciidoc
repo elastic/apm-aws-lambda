@@ -73,7 +73,7 @@ NOTE: APM Central configuration is not supported when using the Elastic APM AWS 
 
 [float]
 [[aws-lambda-config-relevant]]
-=== Relevant configuraiton options
+=== Relevant configuration options
 
 A list of relevant configuration options for the {apm-lambda-ext} is below.
 
