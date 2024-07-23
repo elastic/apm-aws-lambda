@@ -24,7 +24,7 @@ variable "ess_region" {
 variable "ess_deployment_template" {
   type        = string
   description = "Elastic Cloud deployment template"
-  default     = "gcp-compute-optimized-v3"
+  default     = "gcp-vector-search-optimized"
 }
 
 variable "ess_version" {

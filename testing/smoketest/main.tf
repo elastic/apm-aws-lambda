@@ -44,7 +44,7 @@ resource "aws_iam_role" "lambda" {
 
 data "archive_file" "lambda" {
   type        = "zip"
-  source_file = "../testdata/function/index.js"
+  source_file = "./function/index.js"
   output_path = "lambda_function_payload.zip"
 }
 
@@ -103,11 +103,11 @@ resource "aws_iam_role_policy_attachment" "secrets_manager_elastic_apm_policy_at
 }
 
 locals {
-  zip_files = tolist(fileset("../dist/", "*-linux-amd64.zip"))
+  zip_files = tolist(fileset("../../dist/", "*-linux-amd64.zip"))
 }
 
 resource "aws_lambda_layer_version" "lambda_layer" {
-  filename   = "../dist/${local.zip_files[0]}"
+  filename   = "../../dist/${local.zip_files[0]}"
   layer_name = "apm-aws-lambda-smoke-testing-lambda_layer_name"
 
   description         = "AWS Lambda Extension Layer for Elastic APM - smoke testing"
