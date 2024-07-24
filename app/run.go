@@ -96,6 +96,8 @@ func (app *App) Run(ctx context.Context) error {
 			backgroundDataSendWg.Wait()
 			if event.EventType == extension.Shutdown {
 				app.logger.Infof("Exiting due to shutdown event with reason %s", event.ShutdownReason)
+				// Flush buffered logs if any
+				app.logsClient.FlushData(ctx, event.RequestID, event.InvokedFunctionArn, app.apmClient.LambdaDataChannel, true)
 				// Since we have waited for the processEvent loop to finish we
 				// already have received all the data we can from the agent. So, we
 				// flush all the data to make sure that shutdown can correctly deduce
@@ -125,6 +127,8 @@ func (app *App) Run(ctx context.Context) error {
 				// that the underlying transport is reset for next invocation without
 				// waiting for grace period if it got to unhealthy state.
 				flushCtx, cancel := context.WithCancel(ctx)
+				// Flush buffered logs if any
+				app.logsClient.FlushData(ctx, event.RequestID, event.InvokedFunctionArn, app.apmClient.LambdaDataChannel, false)
 				// Flush APM data now that the function invocation has completed
 				app.apmClient.FlushAPMData(flushCtx)
 				cancel()

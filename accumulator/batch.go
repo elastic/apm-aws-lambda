@@ -68,11 +68,12 @@ type Batch struct {
 	buf bytes.Buffer
 	// invocations holds the data for a specific invocation with
 	// request ID as the key.
-	invocations map[string]*Invocation
-	count       int
-	age         time.Time
-	maxSize     int
-	maxAge      time.Duration
+	invocations            map[string]*Invocation
+	count                  int
+	age                    time.Time
+	maxSize                int
+	maxAge                 time.Duration
+	platformStartRequestID string
 	// currentlyExecutingRequestID represents the request ID of the currently
 	// executing lambda invocation. The ID can be set either on agent init or
 	// when extension receives the invoke event. If the agent hooks into the
@@ -221,6 +222,18 @@ func (b *Batch) OnLambdaLogRuntimeDone(reqID, status string, time time.Time) err
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	return b.finalizeInvocation(reqID, status, time)
+}
+
+func (b *Batch) OnPlatformStart(reqID string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.platformStartRequestID = reqID
+}
+
+func (b *Batch) PlatformStartReqID() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.platformStartRequestID
 }
 
 // OnPlatformReport should be the last event for a request ID. On receiving the
