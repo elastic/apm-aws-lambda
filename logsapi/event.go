@@ -66,7 +66,9 @@ func (lc *Client) ProcessLogs(
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
-			lc.handleEvent(logEvent, ctx, requestID, invokedFnArn, dataChan, isShutdown)
+			if shouldExit := lc.handleEvent(logEvent, ctx, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
+				return
+			}
 		case <-ctx.Done():
 			lc.logger.Debug("Current invocation over. Interrupting logs processing goroutine")
 			return
