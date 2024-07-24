@@ -63,79 +63,114 @@ func (lc *Client) ProcessLogs(
 	dataChan chan []byte,
 	isShutdown bool,
 ) {
-	// platformStartReqID is to identify the requestID for the function
-	// logs under the assumption that function logs for a specific request
-	// ID will be bounded by PlatformStart and PlatformEnd events.
-	var platformStartReqID string
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
-			lc.logger.Debugf("Received log event %v for request ID %s", logEvent.Type, logEvent.Record.RequestID)
-			switch logEvent.Type {
-			case PlatformStart:
-				platformStartReqID = logEvent.Record.RequestID
-			case PlatformRuntimeDone:
-				if err := lc.invocationLifecycler.OnLambdaLogRuntimeDone(
-					logEvent.Record.RequestID,
-					logEvent.Record.Status,
-					logEvent.Time,
-				); err != nil {
-					lc.logger.Warnf("Failed to finalize invocation with request ID %s: %v", logEvent.Record.RequestID, err)
-				}
-				// For invocation events the platform.runtimeDone would be the last possible event.
-				if !isShutdown && logEvent.Record.RequestID == requestID {
-					lc.logger.Debugf(
-						"Processed runtime done event for reqID %s as the last log event for the invocation",
-						logEvent.Record.RequestID,
-					)
-					return
-				}
-			case PlatformReport:
-				fnARN, deadlineMs, ts, err := lc.invocationLifecycler.OnPlatformReport(logEvent.Record.RequestID)
-				if err != nil {
-					lc.logger.Warnf("Failed to process platform report: %v", err)
-				} else {
-					lc.logger.Debugf("Received platform report for %s", logEvent.Record.RequestID)
-					processedMetrics, err := ProcessPlatformReport(fnARN, deadlineMs, ts, logEvent)
-					if err != nil {
-						lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
-					} else {
-						select {
-						case dataChan <- processedMetrics:
-						case <-ctx.Done():
-						}
-					}
-				}
-				// For shutdown event the platform report metrics for the previous log event
-				// would be the last possible log event. After processing this metric the
-				// invocation lifecycler's cache should be empty.
-				if isShutdown && lc.invocationLifecycler.Size() == 0 {
-					lc.logger.Debugf(
-						"Processed platform report event for reqID %s as the last log event before shutdown",
-						logEvent.Record.RequestID,
-					)
-					return
-				}
-			case PlatformLogsDropped:
-				lc.logger.Warnf("Logs dropped due to extension falling behind: %v", logEvent.Record)
-			case FunctionLog:
-				processedLog, err := ProcessFunctionLog(
-					platformStartReqID,
-					invokedFnArn,
-					logEvent,
-				)
-				if err != nil {
-					lc.logger.Warnf("Error processing function log : %v", err)
-				} else {
-					select {
-					case dataChan <- processedLog:
-					case <-ctx.Done():
-					}
-				}
+			if shouldExit := lc.handleEvent(logEvent, ctx, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
+				return
 			}
 		case <-ctx.Done():
 			lc.logger.Debug("Current invocation over. Interrupting logs processing goroutine")
 			return
 		}
 	}
+}
+
+func (lc *Client) FlushData(
+	ctx context.Context,
+	requestID string,
+	invokedFnArn string,
+	dataChan chan []byte,
+	isShutdown bool,
+) {
+	lc.logger.Infof("flushing %d buffered logs", len(lc.logsChannel))
+	for {
+		select {
+		case logEvent := <-lc.logsChannel:
+			if shouldExit := lc.handleEvent(logEvent, ctx, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
+				return
+			}
+		case <-ctx.Done():
+			lc.logger.Debug("Current invocation over. Interrupting logs flushing")
+			return
+		default:
+			if len(lc.logsChannel) == 0 {
+				lc.logger.Debug("Flush ended for logs - no data in buffer")
+				return
+			}
+		}
+	}
+}
+
+func (lc *Client) handleEvent(logEvent LogEvent,
+	ctx context.Context,
+	requestID string,
+	invokedFnArn string,
+	dataChan chan []byte,
+	isShutdown bool,
+) bool {
+	lc.logger.Debugf("Received log event %v for request ID %s", logEvent.Type, logEvent.Record.RequestID)
+	switch logEvent.Type {
+	case PlatformStart:
+		lc.invocationLifecycler.OnPlatformStart(logEvent.Record.RequestID)
+	case PlatformRuntimeDone:
+		if err := lc.invocationLifecycler.OnLambdaLogRuntimeDone(
+			logEvent.Record.RequestID,
+			logEvent.Record.Status,
+			logEvent.Time,
+		); err != nil {
+			lc.logger.Warnf("Failed to finalize invocation with request ID %s: %v", logEvent.Record.RequestID, err)
+		}
+		// For invocation events the platform.runtimeDone would be the last possible event.
+		if !isShutdown && logEvent.Record.RequestID == requestID {
+			lc.logger.Debugf(
+				"Processed runtime done event for reqID %s as the last log event for the invocation",
+				logEvent.Record.RequestID,
+			)
+			return true
+		}
+	case PlatformReport:
+		fnARN, deadlineMs, ts, err := lc.invocationLifecycler.OnPlatformReport(logEvent.Record.RequestID)
+		if err != nil {
+			lc.logger.Warnf("Failed to process platform report: %v", err)
+		} else {
+			lc.logger.Debugf("Received platform report for %s", logEvent.Record.RequestID)
+			processedMetrics, err := ProcessPlatformReport(fnARN, deadlineMs, ts, logEvent)
+			if err != nil {
+				lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
+			} else {
+				select {
+				case dataChan <- processedMetrics:
+				case <-ctx.Done():
+				}
+			}
+		}
+		// For shutdown event the platform report metrics for the previous log event
+		// would be the last possible log event. After processing this metric the
+		// invocation lifecycler's cache should be empty.
+		if isShutdown && lc.invocationLifecycler.Size() == 0 {
+			lc.logger.Debugf(
+				"Processed platform report event for reqID %s as the last log event before shutdown",
+				logEvent.Record.RequestID,
+			)
+			return true
+		}
+	case PlatformLogsDropped:
+		lc.logger.Warnf("Logs dropped due to extension falling behind: %v", logEvent.Record)
+	case FunctionLog:
+		processedLog, err := ProcessFunctionLog(
+			lc.invocationLifecycler.PlatformStartReqID(),
+			invokedFnArn,
+			logEvent,
+		)
+		if err != nil {
+			lc.logger.Warnf("Error processing function log : %v", err)
+		} else {
+			select {
+			case dataChan <- processedLog:
+			case <-ctx.Done():
+			}
+		}
+	}
+	return false
 }

@@ -48,7 +48,12 @@ type ClientOption func(*Client)
 
 type invocationLifecycler interface {
 	OnLambdaLogRuntimeDone(requestID, status string, time time.Time) error
+	OnPlatformStart(reqID string)
 	OnPlatformReport(reqID string) (fnARN string, deadlineMs int64, ts time.Time, err error)
+	// PlatformStartReqID is to identify the requestID for the function
+	// logs under the assumption that function logs for a specific request
+	// ID will be bounded by PlatformStart and PlatformEnd events.
+	PlatformStartReqID() string
 	// Size should return the number of invocations waiting on platform.report
 	Size() int
 }
