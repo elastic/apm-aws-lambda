@@ -85,7 +85,9 @@ func (lc *Client) FlushData(
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
-			lc.handleEvent(logEvent, ctx, requestID, invokedFnArn, dataChan, isShutdown)
+			if shouldExit := lc.handleEvent(logEvent, ctx, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
+				return
+			}
 		case <-ctx.Done():
 			lc.logger.Debug("Current invocation over. Interrupting logs flushing")
 			return
@@ -104,7 +106,7 @@ func (lc *Client) handleEvent(logEvent LogEvent,
 	invokedFnArn string,
 	dataChan chan []byte,
 	isShutdown bool,
-) {
+) bool {
 	lc.logger.Debugf("Received log event %v for request ID %s", logEvent.Type, logEvent.Record.RequestID)
 	switch logEvent.Type {
 	case PlatformStart:
@@ -123,7 +125,7 @@ func (lc *Client) handleEvent(logEvent LogEvent,
 				"Processed runtime done event for reqID %s as the last log event for the invocation",
 				logEvent.Record.RequestID,
 			)
-			return
+			return true
 		}
 	case PlatformReport:
 		fnARN, deadlineMs, ts, err := lc.invocationLifecycler.OnPlatformReport(logEvent.Record.RequestID)
@@ -149,7 +151,7 @@ func (lc *Client) handleEvent(logEvent LogEvent,
 				"Processed platform report event for reqID %s as the last log event before shutdown",
 				logEvent.Record.RequestID,
 			)
-			return
+			return true
 		}
 	case PlatformLogsDropped:
 		lc.logger.Warnf("Logs dropped due to extension falling behind: %v", logEvent.Record)
@@ -168,4 +170,5 @@ func (lc *Client) handleEvent(logEvent LogEvent,
 			}
 		}
 	}
+	return false
 }
