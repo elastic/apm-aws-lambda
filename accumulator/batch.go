@@ -225,14 +225,10 @@ func (b *Batch) OnLambdaLogRuntimeDone(reqID, status string, time time.Time) err
 }
 
 func (b *Batch) OnPlatformStart(reqID string) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
 	b.platformStartRequestID = reqID
 }
 
 func (b *Batch) PlatformStartReqID() string {
-	b.mu.Lock()
-	defer b.mu.Unlock()
 	return b.platformStartRequestID
 }
 
