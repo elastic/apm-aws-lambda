@@ -215,7 +215,6 @@ func (app *App) processEvent(
 		}()
 	} else {
 		app.logger.Warn("Logs collection not started due to earlier subscription failure")
-		close(logProcessingDone)
 	}
 
 	// Calculate how long to wait for a runtimeDoneSignal or AgentDoneSignal signal
