@@ -485,6 +485,29 @@ func TestStandardEventsChain(t *testing.T) {
 	}
 }
 
+// TestStandardEventsChainWithoutLogs checks a nominal sequence of events (fast APM server, only one standard event)
+// with logs collection disabled
+func TestStandardEventsChainWithoutLogs(t *testing.T) {
+	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
+	require.NoError(t, err)
+
+	eventsChannel := newTestStructs(t)
+	apmServerInternals, _ := newMockApmServer(t, l)
+	logsapiAddr := randomAddr()
+	newMockLambdaServer(t, logsapiAddr, eventsChannel, l)
+
+	eventsChain := []MockEvent{
+		{Type: InvokeStandard, APMServerBehavior: TimelyResponse, ExecutionDuration: 1, Timeout: 5},
+	}
+	eventQueueGenerator(eventsChain, eventsChannel)
+	select {
+	case <-runAppFull(t, logsapiAddr, true):
+		assert.Contains(t, apmServerInternals.Data, TimelyResponse)
+	case <-time.After(timeout):
+		t.Fatalf("timed out waiting for app to finish")
+	}
+}
+
 // TestFlush checks if the flushed param does not cause a panic or an unexpected behavior
 func TestFlush(t *testing.T) {
 	l, err := logger.New(logger.WithLevel(zapcore.DebugLevel))
@@ -821,13 +844,21 @@ func TestMetrics(t *testing.T) {
 }
 
 func runApp(t *testing.T, logsapiAddr string) <-chan struct{} {
+	return runAppFull(t, logsapiAddr, false)
+}
+
+func runAppFull(t *testing.T, logsapiAddr string, disableLogsAPI bool) <-chan struct{} {
 	ctx, cancel := context.WithCancel(context.Background())
-	app, err := app.New(ctx,
+	opts := []app.ConfigOption{
 		app.WithExtensionName("apm-lambda-extension"),
 		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
 		app.WithLogLevel("debug"),
 		app.WithLogsapiAddress(logsapiAddr),
-	)
+	}
+	if disableLogsAPI {
+		opts = append(opts, app.WithoutLogsAPI())
+	}
+	app, err := app.New(ctx, opts...)
 	require.NoError(t, err)
 
 	go func() {
