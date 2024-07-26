@@ -3349,11 +3349,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Module  : go.elastic.co/ecszap
-Version : v1.0.2
-Time    : 2023-08-25T13:17:00Z
+Version : v1.0.3
+Time    : 2024-07-25T20:45:49Z
 Licence : Apache-2.0
 
-Contents of probable licence file $GOMODCACHE/go.elastic.co/ecszap@v1.0.2/LICENSE:
+Contents of probable licence file $GOMODCACHE/go.elastic.co/ecszap@v1.0.3/LICENSE:
 
 
                                  Apache License
