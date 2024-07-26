@@ -12,7 +12,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/tidwall/gjson v1.17.1
 	github.com/tidwall/sjson v1.2.5
-	go.elastic.co/ecszap v1.0.2
+	go.elastic.co/ecszap v1.0.3
 	go.elastic.co/fastjson v1.3.0
 	go.uber.org/zap v1.27.0
 )
