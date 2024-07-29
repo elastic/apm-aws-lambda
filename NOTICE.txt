@@ -3228,11 +3228,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 Module  : github.com/tidwall/gjson
-Version : v1.17.1
-Time    : 2024-02-15T03:51:40Z
+Version : v1.17.2
+Time    : 2024-07-29T14:08:06Z
 Licence : MIT
 
-Contents of probable licence file $GOMODCACHE/github.com/tidwall/gjson@v1.17.1/LICENSE:
+Contents of probable licence file $GOMODCACHE/github.com/tidwall/gjson@v1.17.2/LICENSE:
 
 The MIT License (MIT)
 
