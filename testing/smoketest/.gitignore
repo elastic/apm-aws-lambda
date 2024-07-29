@@ -9,3 +9,4 @@ response.json
 tf.log
 
 builds/
+*.zip

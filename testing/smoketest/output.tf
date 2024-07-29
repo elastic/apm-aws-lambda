@@ -23,3 +23,7 @@ output "aws_region" {
 output "user_name" {
   value = var.user_name
 }
+
+output "agent_name" {
+  value = var.function_runtime
+}
