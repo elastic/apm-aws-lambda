@@ -9,6 +9,12 @@ variable "user_name" {
   type        = string
 }
 
+variable "function_runtime" {
+  description = "function runtime and apm agent "
+  type        = string
+  default     = "nodejs"
+}
+
 variable "log_level" {
   type        = string
   description = "lambda extension log level"
@@ -24,7 +30,7 @@ variable "ess_region" {
 variable "ess_deployment_template" {
   type        = string
   description = "Elastic Cloud deployment template"
-  default     = "gcp-compute-optimized-v3"
+  default     = "gcp-vector-search-optimized"
 }
 
 variable "ess_version" {

@@ -31,6 +31,4 @@ dist/
 .aws-*/
 *arn-file.md
 
-tf/*.zip
-
 build

@@ -24,6 +24,30 @@ module "ec_deployment" {
   tags                     = module.tags.tags
 }
 
+locals {
+  runtimeVars = {
+    "nodejs" = {
+      "source_file" = "./function/index.js"
+      "handler"     = "index.handler"
+      "runtime"     = "nodejs18.x"
+      "agent_layer" = "arn:aws:lambda:${var.aws_region}:267093732750:layer:elastic-apm-node-ver-4-3-0:1"
+      "envvars" = {
+        "NODE_OPTIONS" = "-r elastic-apm-node/start"
+      }
+    }
+    "python" = {
+      "source_file" = "./function/main.py"
+      "handler"     = "main.handler"
+      "runtime"     = "python3.9"
+      "agent_layer" = "arn:aws:lambda:${var.aws_region}:267093732750:layer:elastic-apm-python-ver-6-22-3:1"
+      "envvars" = {
+        "AWS_LAMBDA_EXEC_WRAPPER" = "/opt/python/bin/elasticapm-lambda"
+      }
+    }
+  }
+}
+
+
 data "aws_iam_policy_document" "assume_role" {
   statement {
     effect = "Allow"
@@ -44,7 +68,7 @@ resource "aws_iam_role" "lambda" {
 
 data "archive_file" "lambda" {
   type        = "zip"
-  source_file = "../testdata/function/index.js"
+  source_file = local.runtimeVars[var.function_runtime]["source_file"]
   output_path = "lambda_function_payload.zip"
 }
 
@@ -52,25 +76,61 @@ resource "aws_lambda_function" "test_lambda" {
   filename      = "lambda_function_payload.zip"
   function_name = "${var.user_name}-smoke-testing-test"
   role          = aws_iam_role.lambda.arn
-  handler       = "index.handler"
+  handler       = local.runtimeVars[var.function_runtime]["handler"]
+
+  runtime = local.runtimeVars[var.function_runtime]["runtime"]
 
   source_code_hash = data.archive_file.lambda.output_base64sha256
 
-  runtime = "nodejs16.x"
-
   layers = [
     aws_lambda_layer_version.lambda_layer.arn,
-    "arn:aws:lambda:${var.aws_region}:267093732750:layer:elastic-apm-node-ver-4-3-0:1",
+    local.runtimeVars[var.function_runtime]["agent_layer"]
   ]
 
   environment {
-    variables = {
-      NODE_OPTIONS                                = "-r elastic-apm-node/start"
+    variables = merge({
       ELASTIC_APM_LOG_LEVEL                       = var.log_level
       ELASTIC_APM_LAMBDA_APM_SERVER               = module.ec_deployment.apm_url
       ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID = aws_secretsmanager_secret.apm_secret_token.id
-    }
+    }, local.runtimeVars[var.function_runtime]["envvars"])
   }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_logs,
+    aws_iam_role_policy_attachment.secrets_manager_elastic_apm_policy_attach,
+    aws_cloudwatch_log_group.example,
+  ]
+}
+
+resource "aws_cloudwatch_log_group" "example" {
+  name              = "/aws/lambda/${var.user_name}-smoke-testing-test"
+  retention_in_days = 1
+}
+
+data "aws_iam_policy_document" "lambda_logging" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ]
+
+    resources = ["arn:aws:logs:*:*:*"]
+  }
+}
+
+resource "aws_iam_policy" "lambda_logging" {
+  name        = "smoketest_extension_lambda_logging"
+  path        = "/"
+  description = "IAM policy for logging during smoketest for apm aws lambda extension"
+  policy      = data.aws_iam_policy_document.lambda_logging.json
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_logs" {
+  role       = aws_iam_role.lambda.name
+  policy_arn = aws_iam_policy.lambda_logging.arn
 }
 
 resource "aws_secretsmanager_secret" "apm_secret_token" {
@@ -103,13 +163,12 @@ resource "aws_iam_role_policy_attachment" "secrets_manager_elastic_apm_policy_at
 }
 
 locals {
-  zip_files = tolist(fileset("../dist/", "*-linux-amd64.zip"))
+  zip_files = tolist(fileset("../../dist/", "*-linux-amd64.zip"))
 }
 
 resource "aws_lambda_layer_version" "lambda_layer" {
-  filename   = "../dist/${local.zip_files[0]}"
+  filename   = "../../dist/${local.zip_files[0]}"
   layer_name = "apm-aws-lambda-smoke-testing-lambda_layer_name"
 
-  description         = "AWS Lambda Extension Layer for Elastic APM - smoke testing"
-  compatible_runtimes = ["nodejs16.x"]
+  description = "AWS Lambda Extension Layer for Elastic APM - smoke testing"
 }

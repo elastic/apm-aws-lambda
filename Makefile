@@ -62,29 +62,13 @@ check-notice:
 ##############################################################################
 
 SMOKETEST_VERSIONS ?= latest
-SMOKETEST_DIRS = $$(find ./tf -mindepth 0 -maxdepth 0 -type d)
-
-.PHONY: smoketest/discover
-smoketest/discover:
-	@echo "$(SMOKETEST_DIRS)"
 
 .PHONY: smoketest/run
 smoketest/run: zip
-	@ for version in $(shell echo $(SMOKETEST_VERSIONS) | tr ',' ' '); do \
-		echo "-> Running $(TEST_DIR) smoke tests for version $${version}..."; \
-		cd $(TEST_DIR) && ./test.sh $${version}; \
-	done
+	@echo "-> Running smoke tests for version $${version}..."
+	cd testing/smoketest && ./test.sh $${version}
 
 .PHONY: smoketest/cleanup
-smoketest/cleanup:
-	@ cd $(TEST_DIR); \
-	if [ -f "./cleanup.sh" ]; then \
-		./cleanup.sh; \
-	fi
-
-.PHONY: smoketest/all
-smoketest/all/cleanup:
-	@ for test_dir in $(SMOKETEST_DIRS); do \
-		echo "-> Cleanup $${test_dir} smoke tests..."; \
-		$(MAKE) smoketest/cleanup TEST_DIR=$${test_dir}; \
-	done
+smoketest/cleanup: zip
+	@echo "-> Running cleanup"
+	cd testing/smoketest && ./cleanup.sh
