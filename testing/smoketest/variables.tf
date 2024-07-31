@@ -4,11 +4,6 @@ variable "aws_region" {
   default     = "eu-central-1"
 }
 
-variable "user_name" {
-  description = "Required username to use for prefixes"
-  type        = string
-}
-
 variable "function_runtime" {
   description = "function runtime and apm agent "
   type        = string

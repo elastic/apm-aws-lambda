@@ -7,7 +7,7 @@ provider "aws" {
 
 module "tags" {
   source  = "github.com/elastic/apm-server//testing/infra/terraform/modules/tags?depth=1"
-  project = var.user_name
+  project = local.user_name
 }
 
 module "ec_deployment" {
@@ -74,7 +74,7 @@ data "archive_file" "lambda" {
 
 resource "aws_lambda_function" "test_lambda" {
   filename      = "lambda_function_payload.zip"
-  function_name = "${var.user_name}-smoke-testing-test"
+  function_name = "${local.user_name}-smoke-testing-test"
   role          = aws_iam_role.lambda.arn
   handler       = local.runtimeVars[var.function_runtime]["handler"]
 
@@ -103,7 +103,7 @@ resource "aws_lambda_function" "test_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "example" {
-  name              = "/aws/lambda/${var.user_name}-smoke-testing-test"
+  name              = "/aws/lambda/${local.user_name}-smoke-testing-test"
   retention_in_days = 1
 }
 
