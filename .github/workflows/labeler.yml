@@ -27,7 +27,7 @@ jobs:
       id: checkUserMember
       with:
         username: ${{ github.actor }}
-        team: 'apm'
+        team: 'apm,obs-ds-ebpf-go'
         usernamesToExclude: |
           apmmachine
           dependabot
