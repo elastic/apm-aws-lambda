@@ -21,7 +21,7 @@ output "aws_region" {
 }
 
 output "user_name" {
-  value = var.user_name
+  value = local.user_name
 }
 
 output "agent_name" {
