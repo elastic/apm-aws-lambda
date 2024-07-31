@@ -1,4 +1,4 @@
-name: "Issue Labeler"
+name: "Issue+PR Labeler"
 on:
   issues:
     types: [opened]
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Add aws-λ-extension label
-      uses: AlexanderWert/issue-labeler@v2.3
+      uses: github/issue-labeler@v3.4
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         configuration-path: .github/labeler-config.yml
@@ -38,7 +38,7 @@ jobs:
         echo "::debug::isExcluded: ${{ steps.checkUserMember.outputs.isExcluded }}"
     - name: Add community and triage labels
       if: steps.checkUserMember.outputs.isTeamMember != 'true' && steps.checkUserMember.outputs.isExcluded != 'true'
-      uses: AlexanderWert/issue-labeler@v2.3
+      uses: github/issue-labeler@v3.4
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         configuration-path: .github/community-label.yml
