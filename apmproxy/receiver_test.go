@@ -41,12 +41,12 @@ func TestInfoProxy(t *testing.T) {
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for key := range headers {
-			assert.Equal(t, 2, len(r.Header[key]))
+			assert.Len(t, r.Header[key], 2)
 			assert.Equal(t, headers[key], r.Header[key][0])
 		}
 		w.Header().Add("test", "header")
 		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}))
 	defer apmServer.Close()
 
@@ -83,7 +83,7 @@ func TestInfoProxy(t *testing.T) {
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	assert.Equal(t, string(body), wantResp)
+	assert.Equal(t, wantResp, string(body))
 	assert.Equal(t, "header", resp.Header.Get("test"))
 	require.NoError(t, resp.Body.Close())
 }
@@ -267,7 +267,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	client := &http.Client{}
 	go func() {
 		_, err := client.Do(req)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}()
 
 	select {
@@ -350,7 +350,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	client := &http.Client{}
 	go func() {
 		_, err := client.Do(req)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}()
 
 	select {
@@ -368,7 +368,7 @@ func TestWithVerifyCerts(t *testing.T) {
 	apmServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("test", "header")
 		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		clientConnected = true
 	}))
 	defer apmServer.Close()
@@ -416,7 +416,7 @@ func TestWithRootCerts(t *testing.T) {
 	apmServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("test", "header")
 		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		clientConnected = true
 	}))
 	defer apmServer.Close()

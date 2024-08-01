@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/elastic/apm-aws-lambda/logsapi"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
@@ -97,9 +98,9 @@ func TestSubscribe(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				var subRequest logsapi.SubscribeRequest
-				require.NoError(t, json.NewDecoder(r.Body).Decode(&subRequest))
+				assert.NoError(t, json.NewDecoder(r.Body).Decode(&subRequest))
 				_, err := url.ParseRequestURI(subRequest.Destination.URI)
-				require.NoError(t, err)
+				assert.NoError(t, err)
 				w.WriteHeader(tc.responseHeader)
 			}))
 			defer s.Close()
@@ -136,9 +137,9 @@ func TestSubscribeAWSRequest(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				var subRequest logsapi.SubscribeRequest
-				require.NoError(t, json.NewDecoder(r.Body).Decode(&subRequest))
+				assert.NoError(t, json.NewDecoder(r.Body).Decode(&subRequest))
 				_, err := url.ParseRequestURI(subRequest.Destination.URI)
-				require.NoError(t, err)
+				assert.NoError(t, err)
 				w.WriteHeader(http.StatusOK)
 			}))
 			defer s.Close()

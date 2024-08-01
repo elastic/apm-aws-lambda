@@ -32,7 +32,7 @@ const metadata = `{"metadata":{"service":{"agent":{"name":"apm-lambda-extension"
 func TestAdd(t *testing.T) {
 	t.Run("empty-without-metadata", func(t *testing.T) {
 		b := NewBatch(1, time.Hour)
-		assert.Error(t, b.AddLambdaData([]byte(`{"log":{}}`)), ErrMetadataUnavailable)
+		assert.ErrorIs(t, b.AddLambdaData([]byte(`{"log":{}}`)), ErrMetadataUnavailable)
 	})
 	t.Run("empty-with-metadata", func(t *testing.T) {
 		b := NewBatch(1, time.Hour)
@@ -276,12 +276,12 @@ func TestFindEventType(t *testing.T) {
 func generateCompleteTxn(t *testing.T, src, result, outcome string, d time.Duration) string {
 	t.Helper()
 	tmp, err := sjson.SetBytes([]byte(src), "transaction.result", result)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	tmp, err = sjson.SetBytes(tmp, "transaction.duration", d.Milliseconds())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	if outcome != "" {
 		tmp, err = sjson.SetBytes(tmp, "transaction.outcome", outcome)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 	return string(tmp)
 }
