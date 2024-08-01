@@ -122,7 +122,7 @@ func TestInfoProxyAuth(t *testing.T) {
 
 func TestInfoProxyErrorStatusCode(t *testing.T) {
 	// Create apm server and handler
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
 	defer apmServer.Close()
@@ -159,7 +159,7 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 
 func TestInfoProxyUnreachable(t *testing.T) {
 	// Create apm server and handler
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	apmServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	// Shutdown
 	apmServer.Close()
 
@@ -243,8 +243,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	body := []byte(`{"metadata": {}`)
 
 	// Create apm server and handler
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	}))
+	apmServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer apmServer.Close()
 
 	// Create extension config and start the server
@@ -287,8 +286,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 	body := []byte(`{"metadata": {}`)
 
 	// Create apm server and handler
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	}))
+	apmServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer apmServer.Close()
 
 	// Create extension config and start the server
@@ -330,8 +328,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	body := []byte(``)
 
 	// Create apm server and handler
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	}))
+	apmServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer apmServer.Close()
 
 	// Create extension config and start the server
@@ -375,7 +372,7 @@ func TestWithVerifyCerts(t *testing.T) {
 	clientConnected := false
 
 	// Create apm server and handler
-	apmServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apmServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("test", "header")
 		_, err := w.Write([]byte(`{"foo": "bar"}`))
 		assert.NoError(t, err)
@@ -423,7 +420,7 @@ func TestWithRootCerts(t *testing.T) {
 	clientConnected := false
 
 	// Create apm server and handler
-	apmServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apmServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("test", "header")
 		_, err := w.Write([]byte(`{"foo": "bar"}`))
 		assert.NoError(t, err)

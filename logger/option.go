@@ -22,21 +22,21 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type option func(*zap.Config)
+type Option func(*zap.Config)
 
-func WithLevel(level zapcore.Level) option {
+func WithLevel(level zapcore.Level) Option {
 	return func(c *zap.Config) {
 		c.Level.SetLevel(level)
 	}
 }
 
-func WithEncoderConfig(encoderConfig zapcore.EncoderConfig) option {
+func WithEncoderConfig(encoderConfig zapcore.EncoderConfig) Option {
 	return func(c *zap.Config) {
 		c.EncoderConfig = encoderConfig
 	}
 }
 
-func WithOutputPaths(path string) option {
+func WithOutputPaths(path string) Option {
 	return func(c *zap.Config) {
 		c.OutputPaths = append(c.OutputPaths, path)
 	}

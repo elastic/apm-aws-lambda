@@ -100,7 +100,7 @@ func WithBatch(batch *accumulator.Batch) Option {
 
 func WithRootCerts(certs string) Option {
 	return func(c *Client) {
-		EnsureTlsConfig(c)
+		EnsureTlSConfig(c)
 		transportClient := c.client.Transport.(*http.Transport)
 		if transportClient.TLSClientConfig.RootCAs == nil {
 			transportClient.TLSClientConfig.RootCAs = DefaultCertPool()
@@ -111,7 +111,7 @@ func WithRootCerts(certs string) Option {
 
 func WithVerifyCerts(verify bool) Option {
 	return func(c *Client) {
-		EnsureTlsConfig(c)
+		EnsureTlSConfig(c)
 		transportClient := c.client.Transport.(*http.Transport)
 		transportClient.TLSClientConfig.InsecureSkipVerify = !verify
 	}
@@ -124,7 +124,7 @@ func DefaultCertPool() *x509.CertPool {
 	}
 	return certPool
 }
-func EnsureTlsConfig(c *Client) {
+func EnsureTlSConfig(c *Client) {
 	transportClient := c.client.Transport.(*http.Transport)
 	if transportClient.TLSClientConfig == nil {
 		transportClient.TLSClientConfig = &tls.Config{}

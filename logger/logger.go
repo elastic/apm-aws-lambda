@@ -27,7 +27,7 @@ import (
 )
 
 // New returns a logger.
-func New(opts ...option) (*zap.SugaredLogger, error) {
+func New(opts ...Option) (*zap.SugaredLogger, error) {
 	conf := zap.NewProductionConfig()
 
 	for _, opt := range opts {

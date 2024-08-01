@@ -32,23 +32,23 @@ import (
 func loadAWSOptions(ctx context.Context, cfg aws.Config, logger *zap.SugaredLogger) (string, string, error) {
 	manager := secretsmanager.NewFromConfig(cfg)
 
-	apmServerApiKey := os.Getenv("ELASTIC_APM_API_KEY")
-	if apmServerApiKeySMSecretId, ok := os.LookupEnv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID"); ok {
-		result, err := loadSecret(ctx, manager, apmServerApiKeySMSecretId)
+	apmServerAPIKey := os.Getenv("ELASTIC_APM_API_KEY")
+	if apmServerAPIKeySMSecretID, ok := os.LookupEnv("ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID"); ok {
+		result, err := loadSecret(ctx, manager, apmServerAPIKeySMSecretID)
 		if err != nil {
-			logger.Warnf("Could not load APM API key from AWS Secrets Manager. Reporting APM data will likely fail. Is 'ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID=%s' correct? See https://www.elastic.co/guide/en/apm/lambda/current/aws-lambda-secrets-manager.html. Error message: %v", apmServerApiKeySMSecretId, err)
-			apmServerApiKey = ""
+			logger.Warnf("Could not load APM API key from AWS Secrets Manager. Reporting APM data will likely fail. Is 'ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID=%s' correct? See https://www.elastic.co/guide/en/apm/lambda/current/aws-lambda-secrets-manager.html. Error message: %v", apmServerAPIKeySMSecretID, err)
+			apmServerAPIKey = ""
 		} else {
 			logger.Infof("Using the APM API key retrieved from AWS Secrets Manager.")
-			apmServerApiKey = result
+			apmServerAPIKey = result
 		}
 	}
 
 	apmServerSecretToken := os.Getenv("ELASTIC_APM_SECRET_TOKEN")
-	if apmServerSecretTokenSMSecretId, ok := os.LookupEnv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID"); ok {
-		result, err := loadSecret(ctx, manager, apmServerSecretTokenSMSecretId)
+	if apmServerSecretTokenSMSecretID, ok := os.LookupEnv("ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID"); ok {
+		result, err := loadSecret(ctx, manager, apmServerSecretTokenSMSecretID)
 		if err != nil {
-			logger.Warnf("Could not load APM secret token from AWS Secrets Manager. Reporting APM data will likely fail. Is 'ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID=%s' correct? See https://www.elastic.co/guide/en/apm/lambda/current/aws-lambda-secrets-manager.html. Error message: %v", apmServerSecretTokenSMSecretId, err)
+			logger.Warnf("Could not load APM secret token from AWS Secrets Manager. Reporting APM data will likely fail. Is 'ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID=%s' correct? See https://www.elastic.co/guide/en/apm/lambda/current/aws-lambda-secrets-manager.html. Error message: %v", apmServerSecretTokenSMSecretID, err)
 			apmServerSecretToken = ""
 		} else {
 			logger.Infof("Using the APM secret token retrieved from AWS Secrets Manager.")
@@ -56,7 +56,7 @@ func loadAWSOptions(ctx context.Context, cfg aws.Config, logger *zap.SugaredLogg
 		}
 	}
 
-	return apmServerApiKey, apmServerSecretToken, nil
+	return apmServerAPIKey, apmServerSecretToken, nil
 }
 
 func loadSecret(ctx context.Context, manager *secretsmanager.Client, secretID string) (string, error) {
@@ -82,7 +82,7 @@ func loadSecret(ctx context.Context, manager *secretsmanager.Client, secretID st
 	return string(decodedBinarySecretBytes), nil
 }
 
-func loadAcmCertificate(arn string, cfg aws.Config, ctx context.Context) (*string, error) {
+func loadAcmCertificate(ctx context.Context, arn string, cfg aws.Config) (*string, error) {
 	acmClient := acm.NewFromConfig(cfg)
 	getCertificateInput := acm.GetCertificateInput{
 		CertificateArn: &arn,

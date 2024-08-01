@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package e2eTesting
+package e2etesting
 
 import (
 	"flag"
@@ -87,7 +87,7 @@ func TestEndToEnd(t *testing.T) {
 
 	// Initialize Mock APM Server
 	mockAPMServerLog := ""
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/intake/v2/events" {
 			bytesRes, _ := GetDecompressedBytesFromRequest(r)
 			mockAPMServerLog += fmt.Sprintf("%s\n", bytesRes)
@@ -97,13 +97,13 @@ func TestEndToEnd(t *testing.T) {
 
 	resultsChan := make(chan string, 1)
 
-	testUuid := runTestWithTimer(l, samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
-	l.Infof("UUID generated during the test : %s", testUuid)
-	if testUuid == "" {
+	testUUID := runTestWithTimer(l, samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
+	l.Infof("UUID generated during the test : %s", testUUID)
+	if testUUID == "" {
 		t.Fail()
 	}
 	l.Infof("Querying the mock server for transaction bound to %s...", samServiceName)
-	assert.True(t, strings.Contains(mockAPMServerLog, testUuid))
+	assert.True(t, strings.Contains(mockAPMServerLog, testUUID))
 }
 
 func runTestWithTimer(l *zap.SugaredLogger, path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) string {
@@ -111,8 +111,8 @@ func runTestWithTimer(l *zap.SugaredLogger, path string, serviceName string, ser
 	defer timer.Stop()
 	go runTest(l, path, serviceName, serverURL, buildFlag, lambdaFuncTimeout, resultsChan)
 	select {
-	case testUuid := <-resultsChan:
-		return testUuid
+	case testUUID := <-resultsChan:
+		return testUUID
 	case <-timer.C:
 		return ""
 	}

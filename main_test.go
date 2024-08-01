@@ -233,7 +233,7 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 	return &lambdaServerInternals
 }
 
-func newTestStructs(t *testing.T) chan MockEvent {
+func newTestStructs(_ *testing.T) chan MockEvent {
 	http.DefaultServeMux = new(http.ServeMux)
 	eventsChannel := make(chan MockEvent, 100)
 	return eventsChannel

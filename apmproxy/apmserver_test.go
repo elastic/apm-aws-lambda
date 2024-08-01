@@ -417,7 +417,7 @@ func TestAPMServerAuthFails(t *testing.T) {
 	agentData := accumulator.APMData{Data: data, ContentEncoding: "gzip"}
 
 	// Create apm server and handler
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
 	defer apmServer.Close()
@@ -462,7 +462,7 @@ func TestAPMServerRatelimit(t *testing.T) {
 
 	// Create apm server and handler
 	var shouldSucceed atomic.Bool
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Fail the first request
 		if shouldSucceed.CompareAndSwap(false, true) {
 			w.WriteHeader(http.StatusTooManyRequests)
@@ -514,7 +514,7 @@ func TestAPMServerClientFail(t *testing.T) {
 
 	// Create apm server and handler
 	var shouldSucceed atomic.Bool
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Fail the first request
 		if shouldSucceed.CompareAndSwap(false, true) {
 			w.WriteHeader(http.StatusRequestEntityTooLarge)

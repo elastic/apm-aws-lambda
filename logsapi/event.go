@@ -66,7 +66,7 @@ func (lc *Client) ProcessLogs(
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
-			if shouldExit := lc.handleEvent(logEvent, ctx, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
+			if shouldExit := lc.handleEvent(ctx, logEvent, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
 				return
 			}
 		case <-ctx.Done():
@@ -87,7 +87,7 @@ func (lc *Client) FlushData(
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
-			if shouldExit := lc.handleEvent(logEvent, ctx, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
+			if shouldExit := lc.handleEvent(ctx, logEvent, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
 				return
 			}
 		case <-ctx.Done():
@@ -102,8 +102,8 @@ func (lc *Client) FlushData(
 	}
 }
 
-func (lc *Client) handleEvent(logEvent LogEvent,
-	ctx context.Context,
+func (lc *Client) handleEvent(ctx context.Context,
+	logEvent LogEvent,
 	requestID string,
 	invokedFnArn string,
 	dataChan chan []byte,

@@ -35,9 +35,9 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	defaultMaxBatchSize int           = 50
-	defaultMaxBatchAge  time.Duration = 2 * time.Second
+const (
+	defaultMaxBatchSize = 50
+	defaultMaxBatchAge  = 2 * time.Second
 )
 
 // App is the main application.
@@ -163,7 +163,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 	}
 
 	if acmCertArn := os.Getenv("ELASTIC_APM_SERVER_CA_CERT_ACM_ID"); acmCertArn != "" {
-		cert, err := loadAcmCertificate(acmCertArn, c.awsConfig, ctx)
+		cert, err := loadAcmCertificate(ctx, acmCertArn, c.awsConfig)
 		if err != nil {
 			return nil, err
 		}
