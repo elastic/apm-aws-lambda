@@ -154,6 +154,8 @@ func (e *Client) NextEvent(ctx context.Context) (*NextEventResponse, error) {
 }
 
 // InitError reports an initialization error to the platform. Call it when you registered but failed to initialize
+//
+//nolint:dupl
 func (e *Client) InitError(ctx context.Context, errorType string) (*StatusResponse, error) {
 	const action = "/init/error"
 	url := e.baseURL + action
@@ -182,6 +184,8 @@ func (e *Client) InitError(ctx context.Context, errorType string) (*StatusRespon
 }
 
 // ExitError reports an error to the platform before exiting. Call it when you encounter an unexpected failure
+//
+//nolint:dupl
 func (e *Client) ExitError(ctx context.Context, errorType string) (*StatusResponse, error) {
 	const action = "/exit/error"
 	url := e.baseURL + action
