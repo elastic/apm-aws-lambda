@@ -425,7 +425,7 @@ func startLogSender(ctx context.Context, q <-chan logsapi.LogEvent, logsapiAddr 
 	}
 	doSend := func(events []logsapi.LogEvent) error {
 		var buf bytes.Buffer
-		if err := json.NewEncoder(&buf).Encode(events); err != nil {
+		if err := json.NewEncoder(&buf).Encode(events); err != nil { //nolint:musttag
 			return err
 		}
 
