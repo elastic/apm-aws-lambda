@@ -52,7 +52,7 @@ type LogEventRecord struct {
 }
 
 // ProcessLogs consumes log events until there are no more log events that
-// can be consumed or ctx is cancelled. For INVOKE event this state is
+// can be consumed or ctx is canceled. For INVOKE event this state is
 // reached when runtimeDone event for the current requestID is processed
 // whereas for SHUTDOWN event this state is reached when the platformReport
 // event for the previous requestID is processed.

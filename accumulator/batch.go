@@ -31,7 +31,7 @@ var (
 	// ErrMetadataUnavailable is returned when a lambda data is added to
 	// the batch without metadata being set.
 	ErrMetadataUnavailable = errors.New("metadata is not yet available")
-	// ErrBatchFull signfies that the batch has reached full capacity
+	// ErrBatchFull signifies that the batch has reached full capacity
 	// and cannot accept more entries.
 	ErrBatchFull = errors.New("batch is full")
 	// ErrInvalidEncoding is returned for any APMData that is encoded
@@ -249,7 +249,7 @@ func (b *Batch) OnPlatformReport(reqID string) (string, int64, time.Time, error)
 
 // OnShutdown flushes the data for shipping to APM Server by finalizing all
 // the invocation in the batch. If we haven't received a platform.runtimeDone
-// event for an invocation so far we won't be able to recieve it in time thus
+// event for an invocation so far we won't be able to receive it in time thus
 // the status needs to be guessed based on the available information.
 func (b *Batch) OnShutdown(status string) error {
 	b.mu.Lock()

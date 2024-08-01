@@ -58,7 +58,7 @@ type StatusResponse struct {
 	Status string `json:"status"`
 }
 
-// EventType represents the type of events recieved from /event/next
+// EventType represents the type of events received from /event/next
 type EventType string
 
 const (

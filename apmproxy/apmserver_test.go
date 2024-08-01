@@ -484,7 +484,7 @@ func TestAPMServerRatelimit(t *testing.T) {
 	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
 	assert.Equal(t, apmproxy.RateLimited, apmClient.Status)
 
-	// Followup request is succesful
+	// Followup request is successful
 	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
 	assert.Equal(t, apmproxy.Healthy, apmClient.Status)
 
@@ -537,7 +537,7 @@ func TestAPMServerClientFail(t *testing.T) {
 	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
 	assert.Equal(t, apmproxy.ClientFailing, apmClient.Status)
 
-	// Followup request is succesful
+	// Followup request is successful
 	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
 	assert.Equal(t, apmproxy.Healthy, apmClient.Status)
 }

@@ -56,7 +56,7 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			c.logger.Debug("Invocation context cancelled, not processing any more agent data")
+			c.logger.Debug("Invocation context canceled, not processing any more agent data")
 			return nil
 		case data := <-c.AgentDataChannel:
 			if err := c.forwardAgentData(ctx, data); err != nil {
@@ -334,7 +334,7 @@ func (c *Client) ResetFlush() {
 	c.flushCh = make(chan struct{})
 }
 
-// WaitForFlush returns a channel that is closed when the agent has signalled that
+// WaitForFlush returns a channel that is closed when the agent has signaled that
 // the Lambda invocation has completed, and there is no more APM data coming.
 func (c *Client) WaitForFlush() <-chan struct{} {
 	c.flushMutex.Lock()
