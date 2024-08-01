@@ -284,9 +284,11 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 		time.Sleep(delay)
 		reqData, _ := http.NewRequest(http.MethodPost,
 			fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), buf)
-		if _, err := client.Do(reqData); err != nil {
+		res, err := client.Do(reqData)
+		if err != nil {
 			l.Error(err.Error())
 		}
+		res.Body.Close()
 	case InvokeLateFlush:
 		time.Sleep(delay)
 		reqData, _ := http.NewRequest(http.MethodPost,
@@ -436,6 +438,7 @@ func startLogSender(ctx context.Context, q <-chan logsapi.LogEvent, logsapiAddr 
 		if err != nil {
 			return err
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode/100 != 2 { //nolint:usestdlibvars
 			return fmt.Errorf("received a non 2xx status code: %d", resp.StatusCode)
 		}

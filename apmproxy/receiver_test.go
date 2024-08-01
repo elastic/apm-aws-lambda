@@ -153,6 +153,7 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
@@ -188,6 +189,7 @@ func TestInfoProxyUnreachable(t *testing.T) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 
 	// Make sure we don't get a 200 OK
 	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
@@ -233,6 +235,7 @@ func Test_handleInfoRequest(t *testing.T) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 }
 
@@ -266,8 +269,11 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	// Send the request to the extension
 	client := &http.Client{}
 	go func() {
-		_, err := client.Do(req)
+		resp, err := client.Do(req)
 		assert.NoError(t, err)
+		if err == nil {
+			resp.Body.Close()
+		}
 	}()
 
 	select {
@@ -310,6 +316,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	select {
 	case <-apmClient.AgentDataChannel:
 	case <-time.After(1 * time.Second):
@@ -349,8 +356,11 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	// Send the request to the extension
 	client := &http.Client{}
 	go func() {
-		_, err := client.Do(req)
+		resp, err := client.Do(req)
 		assert.NoError(t, err)
+		if err == nil {
+			resp.Body.Close()
+		}
 	}()
 
 	select {
