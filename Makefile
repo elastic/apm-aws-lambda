@@ -39,7 +39,7 @@ lint-prep:
 
 .PHONY: lint
 lint:
-	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) version
+	@if [ "$(CI)" != "" ]; then go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) version; fi
 	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run
 
 NOTICE.txt: go.mod
