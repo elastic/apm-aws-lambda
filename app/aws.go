@@ -29,7 +29,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func loadAWSOptions(ctx context.Context, cfg aws.Config, logger *zap.SugaredLogger) (string, string, error) {
+func loadAWSOptions(ctx context.Context, cfg aws.Config, logger *zap.SugaredLogger) (string, string) {
 	manager := secretsmanager.NewFromConfig(cfg)
 
 	apmServerAPIKey := os.Getenv("ELASTIC_APM_API_KEY")
@@ -56,7 +56,7 @@ func loadAWSOptions(ctx context.Context, cfg aws.Config, logger *zap.SugaredLogg
 		}
 	}
 
-	return apmServerAPIKey, apmServerSecretToken, nil
+	return apmServerAPIKey, apmServerSecretToken
 }
 
 func loadSecret(ctx context.Context, manager *secretsmanager.Client, secretID string) (string, error) {

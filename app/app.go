@@ -71,10 +71,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		return nil, err
 	}
 
-	apmServerAPIKey, apmServerSecretToken, err := loadAWSOptions(ctx, c.awsConfig, app.logger)
-	if err != nil {
-		return nil, err
-	}
+	apmServerAPIKey, apmServerSecretToken := loadAWSOptions(ctx, c.awsConfig, app.logger)
 
 	app.extensionClient = extension.NewClient(c.awsLambdaRuntimeAPI, app.logger)
 
