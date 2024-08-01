@@ -114,7 +114,7 @@ func Unzip(l *zap.SugaredLogger, archivePath string, destinationFolderPath strin
 		}
 
 		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(path, f.Mode()); err != nil {
+			if err = os.MkdirAll(path, f.Mode()); err != nil {
 				l.Errorf("Could not unzip folder : %v", err)
 			}
 		} else {

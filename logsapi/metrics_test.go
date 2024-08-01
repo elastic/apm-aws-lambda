@@ -55,9 +55,7 @@ func TestProcessPlatformReport_Coldstart(t *testing.T) {
 
 	event := extension.NextEventResponse{
 		Timestamp:          timestamp,
-		EventType:          extension.Invoke,
 		DeadlineMs:         timestamp.UnixNano()/1e6 + 4584, // Milliseconds
-		RequestID:          "8476a536-e9f4-11e8-9739-2dfe598c3fcd",
 		InvokedFunctionArn: "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime",
 		Tracing: extension.Tracing{
 			Type:  "None",
@@ -99,9 +97,7 @@ func TestProcessPlatformReport_NoColdstart(t *testing.T) {
 
 	event := extension.NextEventResponse{
 		Timestamp:          timestamp,
-		EventType:          extension.Invoke,
 		DeadlineMs:         timestamp.UnixNano()/1e6 + 4584, // Milliseconds
-		RequestID:          "8476a536-e9f4-11e8-9739-2dfe598c3fcd",
 		InvokedFunctionArn: "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime",
 		Tracing: extension.Tracing{
 			Type:  "None",
@@ -137,8 +133,6 @@ func BenchmarkPlatformReport(b *testing.B) {
 	}
 	nextEventResp := &extension.NextEventResponse{
 		Timestamp:          timestamp,
-		EventType:          extension.Invoke,
-		RequestID:          reqID,
 		InvokedFunctionArn: invokedFnArn,
 	}
 

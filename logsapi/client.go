@@ -109,16 +109,16 @@ func (lc *Client) StartService(extensionID string) error {
 
 	_, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		if err := lc.Shutdown(); err != nil {
-			lc.logger.Warnf("failed to shutdown the server: %v", err)
+		if err2 := lc.Shutdown(); err2 != nil {
+			lc.logger.Warnf("failed to shutdown the server: %v", err2)
 		}
 		return fmt.Errorf("failed to retrieve port from address %s: %w", addr, err)
 	}
 
 	host, _, err := net.SplitHostPort(lc.listenerAddr)
 	if err != nil {
-		if err := lc.Shutdown(); err != nil {
-			lc.logger.Warnf("failed to shutdown the server: %v", err)
+		if err2 := lc.Shutdown(); err2 != nil {
+			lc.logger.Warnf("failed to shutdown the server: %v", err2)
 		}
 		return fmt.Errorf("failed to retrieve host from address %s: %w", lc.listenerAddr, err)
 	}
@@ -126,8 +126,8 @@ func (lc *Client) StartService(extensionID string) error {
 	uri := "http://" + net.JoinHostPort(host, port)
 
 	if err := lc.subscribe(lc.logsAPISubscriptionTypes, extensionID, uri); err != nil {
-		if err := lc.Shutdown(); err != nil {
-			lc.logger.Warnf("failed to shutdown the server: %v", err)
+		if err2 := lc.Shutdown(); err2 != nil {
+			lc.logger.Warnf("failed to shutdown the server: %v", err2)
 		}
 		return err
 	}

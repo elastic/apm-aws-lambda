@@ -199,7 +199,7 @@ func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *
 		if err := c.batch.OnAgentInit(
 			reqID, r.Header.Get("Content-Encoding"), rawBytes,
 		); err != nil {
-			c.logger.Warnf("Failed to update invocation: %w", err)
+			c.logger.Warnf("Failed to update invocation: %v", err)
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			return
 		}

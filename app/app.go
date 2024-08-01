@@ -50,8 +50,9 @@ type App struct {
 	batch           *accumulator.Batch
 }
 
-// New returns an App or an error if the
-// creation failed.
+// New returns an App or an error if the creation failed.
+//
+//nolint:govet
 func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 	c := appConfig{}
 
@@ -88,7 +89,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 			subscriptionLogStreams = append(subscriptionLogStreams, logsapi.Function)
 		}
 
-		lc, err := logsapi.NewClient(
+		app.logsClient, err = logsapi.NewClient(
 			logsapi.WithLogsAPIBaseURL("http://"+c.awsLambdaRuntimeAPI),
 			logsapi.WithListenerAddress(addr),
 			logsapi.WithLogBuffer(100),
@@ -99,8 +100,6 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		app.logsClient = lc
 	}
 
 	var apmOpts []apmproxy.Option
