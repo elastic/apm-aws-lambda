@@ -2,7 +2,7 @@
 
 : ${CI:=""}
 
-if [ -z "$CI" ]; then
+if [ "$CI" != "" ]; then
   user_name="github-actions"
 # The gh command is faster and not as hacky as the fallback solution
 elif which gh >/dev/null; then
