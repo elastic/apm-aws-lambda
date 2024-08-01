@@ -614,7 +614,8 @@ func TestForwardApmData(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expected, string(out))
 	}
-	agentData := fmt.Sprintf("%s\n%s", metadata, `{"transaction":{"id":"0102030405060708","trace_id":"0102030405060708090a0b0c0d0e0f10"}}`)
+	agentData := fmt.Sprintf("%s\n%s", metadata,
+		`{"transaction":{"id":"0102030405060708","trace_id":"0102030405060708090a0b0c0d0e0f10"}}`)
 	lambdaData := `{"log": {"message": "test"}}`
 	maxBatchAge := 1 * time.Second
 	apmClient, err := apmproxy.NewClient(
@@ -670,7 +671,7 @@ func BenchmarkFlushAPMData(b *testing.B) {
 		if err := r.Body.Close(); err != nil {
 			return
 		}
-		w.WriteHeader(202)
+		w.WriteHeader(http.StatusAccepted)
 		if _, err := w.Write([]byte(`{}`)); err != nil {
 			return
 		}
@@ -715,7 +716,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 		if err := r.Body.Close(); err != nil {
 			return
 		}
-		w.WriteHeader(202)
+		w.WriteHeader(http.StatusAccepted)
 		if _, err := w.Write([]byte(`{}`)); err != nil {
 			return
 		}

@@ -59,6 +59,7 @@ linters:
     - inamedparam
     - interfacebloat
     - ireturn
+    - lll
     - maintidx
     - makezero
     - mnd
@@ -124,9 +125,5 @@ linters-settings:
           - log,logf,logln
           - warn,warnf,warnln
           - print,printf,println,sprint,sprintf,sprintln,fprint,fprintf,fprintln
-  lll:
-    tab-width: 4
   misspell:
     locale: US
-    ignore-words:
-      - rela
