@@ -66,7 +66,6 @@ func RunCommandInDir(l *zap.SugaredLogger, command string, args []string, dir st
 	if err := e.Wait(); err != nil {
 		l.Errorf("Could not wait for the execution of %s : %v", command, err)
 	}
-
 }
 
 // FolderExists returns true if the specified folder exists, and false else.
@@ -85,7 +84,6 @@ func ProcessError(l *zap.SugaredLogger, err error) {
 
 // Unzip is a utility function that unzips a specified zip archive to a specified destination.
 func Unzip(l *zap.SugaredLogger, archivePath string, destinationFolderPath string) {
-
 	openedArchive, err := zip.OpenReader(archivePath)
 	ProcessError(l, err)
 	defer openedArchive.Close()

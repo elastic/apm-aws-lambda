@@ -57,7 +57,6 @@ func TestLogEventUnmarshalReport(t *testing.T) {
 		},
 	}
 	assert.Equal(t, rec, le.Record)
-
 }
 
 func TestLogEventUnmarshalFault(t *testing.T) {
@@ -74,7 +73,6 @@ func TestLogEventUnmarshalFault(t *testing.T) {
 	assert.Equal(t, "2020-08-20T12:31:32.123Z", le.Time.Format(time.RFC3339Nano))
 	rec := "RequestId: d783b35e-a91d-4251-af17-035953428a2c Process exited before completing request"
 	assert.Equal(t, rec, le.StringRecord)
-
 }
 
 func Test_unmarshalRuntimeDoneRecordObject(t *testing.T) {

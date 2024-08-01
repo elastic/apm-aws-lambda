@@ -145,7 +145,6 @@ func runTest(l *zap.SugaredLogger, path string, serviceName string, serverURL st
 }
 
 func retrieveJavaAgent(l *zap.SugaredLogger, samJavaPath string, version string) {
-
 	agentFolderPath := filepath.Join(samJavaPath, "agent")
 	agentArchivePath := filepath.Join(samJavaPath, "agent.zip")
 

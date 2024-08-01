@@ -679,7 +679,6 @@ func TestAPMServerRecovery(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatalf("timed out waiting for app to finish")
 	}
-
 }
 
 // TestGracePeriodHangs verifies that the WaitforGracePeriod goroutine ends when main() ends.
@@ -704,7 +703,6 @@ func TestGracePeriodHangs(t *testing.T) {
 	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
-
 }
 
 // TestAPMServerCrashesDuringExecution tests that main does not panic nor runs indefinitely when the APM server crashes
