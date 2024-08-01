@@ -109,7 +109,7 @@ func NewClient(opts ...Option) (*Client, error) {
 
 	// normalize server URL
 	if !strings.HasSuffix(c.serverURL, "/") {
-		c.serverURL = c.serverURL + "/"
+		c.serverURL += "/"
 	}
 
 	return &c, nil

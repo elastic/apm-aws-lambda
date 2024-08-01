@@ -29,7 +29,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func loadAWSOptions(ctx context.Context, cfg aws.Config, logger *zap.SugaredLogger) (string, string) {
+func loadAWSOptions(ctx context.Context, cfg aws.Config, logger *zap.SugaredLogger) (string, string) { //nolint:gocritic
 	manager := secretsmanager.NewFromConfig(cfg)
 
 	apmServerAPIKey := os.Getenv("ELASTIC_APM_API_KEY")

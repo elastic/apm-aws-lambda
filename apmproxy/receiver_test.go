@@ -71,7 +71,7 @@ func TestInfoProxy(t *testing.T) {
 	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	require.NoError(t, err)
 	for name, value := range headers {
 		req.Header.Add(name, value)
@@ -147,7 +147,7 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	require.NoError(t, err)
 
 	// Send the request to the extension
@@ -183,7 +183,7 @@ func TestInfoProxyUnreachable(t *testing.T) {
 	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	require.NoError(t, err)
 
 	// Send the request to the extension
@@ -401,7 +401,7 @@ func TestWithVerifyCerts(t *testing.T) {
 	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	require.NoError(t, err)
 	for name, value := range headers {
 		req.Header.Add(name, value)
@@ -451,7 +451,7 @@ func TestWithRootCerts(t *testing.T) {
 	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	require.NoError(t, err)
 	for name, value := range headers {
 		req.Header.Add(name, value)

@@ -218,10 +218,10 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 // OnLambdaLogRuntimeDone prepares the data for the invocation to be shipped
 // to APM Server. It accepts requestID and status of the invocation both of
 // which can be retrieved after parsing `platform.runtimeDone` event.
-func (b *Batch) OnLambdaLogRuntimeDone(reqID, status string, time time.Time) error {
+func (b *Batch) OnLambdaLogRuntimeDone(reqID, status string, endTime time.Time) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return b.finalizeInvocation(reqID, status, time)
+	return b.finalizeInvocation(reqID, status, endTime)
 }
 
 func (b *Batch) OnPlatformStart(reqID string) {
@@ -236,6 +236,8 @@ func (b *Batch) PlatformStartReqID() string {
 // platform.report event the batch will cleanup any datastructure for the request
 // ID. It will return some of the function metadata to allow the caller to enrich
 // the report metrics.
+//
+//nolint:gocritic
 func (b *Batch) OnPlatformReport(reqID string) (string, int64, time.Time, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -259,8 +261,8 @@ func (b *Batch) OnShutdown(status string) error {
 		// TODO: @lahsivjar Is it possible to tweak the extension lifecycle in
 		// a way that we receive the platform.report metric for a invocation
 		// consistently and enrich the metrics with reported values?
-		time := time.Unix(0, inc.DeadlineMs*int64(time.Millisecond))
-		if err := b.finalizeInvocation(inc.RequestID, status, time); err != nil {
+		endTime := time.Unix(0, inc.DeadlineMs*int64(time.Millisecond))
+		if err := b.finalizeInvocation(inc.RequestID, status, endTime); err != nil {
 			return err
 		}
 		delete(b.invocations, inc.RequestID)
@@ -315,12 +317,12 @@ func (b *Batch) ToAPMData() APMData {
 	}
 }
 
-func (b *Batch) finalizeInvocation(reqID, status string, time time.Time) error {
+func (b *Batch) finalizeInvocation(reqID, status string, endTime time.Time) error {
 	inc, ok := b.invocations[reqID]
 	if !ok {
 		return fmt.Errorf("invocation for requestID %s does not exist", reqID)
 	}
-	proxyTxn, err := inc.MaybeCreateProxyTxn(status, time)
+	proxyTxn, err := inc.MaybeCreateProxyTxn(status, endTime)
 	if err != nil {
 		return err
 	}

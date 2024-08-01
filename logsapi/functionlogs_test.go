@@ -35,7 +35,7 @@ func TestProcessFunctionLog(t *testing.T) {
 	reqID := "8476a536-e9f4-11e8-9739-2dfe598c3fcd"
 	invokedFnArn := "arn:aws:lambda:us-east-2:123456789012:function:custom-runtime"
 	expectedData := fmt.Sprintf(
-		"{\"log\":{\"@timestamp\":%d,\"message\":\"%s\",\"faas\":{\"execution\":\"%s\",\"id\":\"%s\"}}}",
+		"{\"log\":{\"@timestamp\":%d,\"message\":%q,\"faas\":{\"execution\":%q,\"id\":%q}}}",
 		event.Time.UnixNano()/int64(time.Microsecond),
 		event.StringRecord,
 		reqID,

@@ -131,7 +131,7 @@ func (e *Client) NextEvent(ctx context.Context) (*NextEventResponse, error) {
 	const action = "/event/next"
 	url := e.baseURL + action
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create next event request: %w", err)
 	}
@@ -160,7 +160,7 @@ func (e *Client) InitError(ctx context.Context, errorType string) (*StatusRespon
 	const action = "/init/error"
 	url := e.baseURL + action
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create init error request: %w", err)
 	}
@@ -190,7 +190,7 @@ func (e *Client) ExitError(ctx context.Context, errorType string) (*StatusRespon
 	const action = "/exit/error"
 	url := e.baseURL + action
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create exit error request: %w", err)
 	}

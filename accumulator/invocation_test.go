@@ -92,7 +92,7 @@ func TestCreateProxyTransaction(t *testing.T) {
 			}
 			result, err := inc.MaybeCreateProxyTxn(tc.runtimeDoneStatus, ts.Add(txnDur))
 			require.NoError(t, err)
-			if len(tc.output) > 0 {
+			if tc.output != "" {
 				assert.JSONEq(t, tc.output, string(result))
 			} else {
 				assert.Nil(t, result)

@@ -879,11 +879,11 @@ func runAppFull(t *testing.T, logsapiAddr string, disableLogsAPI bool) <-chan st
 	if disableLogsAPI {
 		opts = append(opts, app.WithoutLogsAPI())
 	}
-	app, err := app.New(ctx, opts...)
+	application, err := app.New(ctx, opts...)
 	require.NoError(t, err)
 
 	go func() {
-		assert.NoError(t, app.Run(ctx))
+		assert.NoError(t, application.Run(ctx))
 		cancel()
 	}()
 

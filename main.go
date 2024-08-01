@@ -19,6 +19,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -31,13 +32,19 @@ import (
 )
 
 func main() {
+	if err := mainWithError(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func mainWithError() error {
 	// Global context
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		log.Fatalf("failed to load AWS default config: %v", err)
+		return fmt.Errorf("failed to load AWS default config: %v", err)
 	}
 
 	appConfigs := []app.ConfigOption{
@@ -68,12 +75,14 @@ func main() {
 		appConfigs = append(appConfigs, app.WithFunctionLogSubscription())
 	}
 
-	app, err := app.New(ctx, appConfigs...)
+	application, err := app.New(ctx, appConfigs...)
 	if err != nil {
-		log.Fatalf("failed to create the app: %v", err)
+		return fmt.Errorf("failed to create the app: %v", err)
 	}
 
-	if err := app.Run(ctx); err != nil {
-		log.Fatalf("error while running: %v", err)
+	if err := application.Run(ctx); err != nil {
+		return fmt.Errorf("error while running: %v", err)
 	}
+
+	return nil
 }

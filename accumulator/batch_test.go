@@ -96,7 +96,7 @@ func TestLifecycle(t *testing.T) {
 	reqID := "test-req-id"
 	fnARN := "test-fn-arn"
 	lambdaData := `{"log":{"message":"this is log"}}`
-	txnData := fmt.Sprintf(`{"transaction":{"id":"%s"}}`, "023d90ff77f13b9f")
+	txnData := `{"transaction":{"id":"023d90ff77f13b9f"}}`
 	ts := time.Date(2022, time.October, 1, 1, 1, 1, 0, time.UTC)
 	txnDur := time.Second
 
