@@ -312,11 +312,11 @@ func (c *Client) ComputeGracePeriod() time.Duration {
 	// The grace period for the first reconnection count was 0 but that
 	// leads to collisions with multiple environments.
 	if c.ReconnectionCount == 0 {
-		gracePeriod := rand.Float64() * 5
+		gracePeriod := rand.Float64() * 5 //nolint:gosec
 		return time.Duration(gracePeriod * float64(time.Second))
 	}
 	gracePeriodWithoutJitter := math.Pow(math.Min(float64(c.ReconnectionCount), 6), 2)
-	jitter := rand.Float64()/5 - 0.1
+	jitter := rand.Float64()/5 - 0.1 //nolint:gosec
 	return time.Duration((gracePeriodWithoutJitter + jitter*gracePeriodWithoutJitter) * float64(time.Second))
 }
 

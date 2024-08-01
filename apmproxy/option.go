@@ -127,6 +127,8 @@ func DefaultCertPool() *x509.CertPool {
 func EnsureTlSConfig(c *Client) {
 	transportClient := c.client.Transport.(*http.Transport)
 	if transportClient.TLSClientConfig == nil {
-		transportClient.TLSClientConfig = &tls.Config{}
+		transportClient.TLSClientConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
 	}
 }

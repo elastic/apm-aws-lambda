@@ -106,7 +106,7 @@ func Unzip(l *zap.SugaredLogger, archivePath string, destinationFolderPath strin
 			}
 		}()
 
-		path := filepath.Join(destinationFolderPath, f.Name)
+		path := filepath.Join(destinationFolderPath, f.Name) //nolint:gosec
 
 		// Check for ZipSlip (Directory traversal)
 		if !strings.HasPrefix(path, filepath.Clean(destinationFolderPath)+string(os.PathSeparator)) {
@@ -124,7 +124,7 @@ func Unzip(l *zap.SugaredLogger, archivePath string, destinationFolderPath strin
 			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 			ProcessError(l, err)
 			defer f.Close()
-			_, err = io.Copy(f, rc)
+			_, err = io.Copy(f, rc) //nolint:gosec
 			ProcessError(l, err)
 		}
 		return nil

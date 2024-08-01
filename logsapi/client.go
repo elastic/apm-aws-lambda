@@ -73,7 +73,10 @@ type Client struct {
 // NewClient returns a new Client with the given URL.
 func NewClient(opts ...ClientOption) (*Client, error) {
 	c := Client{
-		server:     &http.Server{},
+		server: &http.Server{
+			// Fixes "Potential Slowloris Attack because ReadHeaderTimeout is not configured in the http.Server"
+			ReadHeaderTimeout: time.Second * 5,
+		},
 		httpClient: &http.Client{},
 	}
 
