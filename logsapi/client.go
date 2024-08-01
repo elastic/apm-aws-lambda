@@ -120,7 +120,7 @@ func (lc *Client) StartService(extensionID string) error {
 		return fmt.Errorf("failed to retrieve host from address %s: %w", lc.listenerAddr, err)
 	}
 
-	uri := fmt.Sprintf("http://%s", net.JoinHostPort(host, port))
+	uri := "http://" + net.JoinHostPort(host, port)
 
 	if err := lc.subscribe(lc.logsAPISubscriptionTypes, extensionID, uri); err != nil {
 		if err := lc.Shutdown(); err != nil {

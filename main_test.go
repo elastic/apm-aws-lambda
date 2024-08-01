@@ -27,6 +27,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -226,7 +227,7 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 		l.Errorf("Could not find free port for the extension to listen on : %v", err)
 		extensionPort = 8200
 	}
-	t.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort))
+	t.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", strconv.Itoa(extensionPort))
 
 	t.Cleanup(func() { lambdaServer.Close() })
 	return &lambdaServerInternals
@@ -426,7 +427,7 @@ func startLogSender(ctx context.Context, q <-chan logsapi.LogEvent, logsapiAddr 
 			return err
 		}
 
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s", logsapiAddr), &buf)
+		req, err := http.NewRequest(http.MethodPost, "http://"+logsapiAddr, &buf)
 		if err != nil {
 			return err
 		}

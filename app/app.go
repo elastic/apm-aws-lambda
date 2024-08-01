@@ -89,7 +89,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		}
 
 		lc, err := logsapi.NewClient(
-			logsapi.WithLogsAPIBaseURL(fmt.Sprintf("http://%s", c.awsLambdaRuntimeAPI)),
+			logsapi.WithLogsAPIBaseURL("http://"+c.awsLambdaRuntimeAPI),
 			logsapi.WithListenerAddress(addr),
 			logsapi.WithLogBuffer(100),
 			logsapi.WithLogger(app.logger),
@@ -120,7 +120,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 	}
 
 	if port := os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"); port != "" {
-		apmOpts = append(apmOpts, apmproxy.WithReceiverAddress(fmt.Sprintf(":%s", port)))
+		apmOpts = append(apmOpts, apmproxy.WithReceiverAddress(":"+port))
 	}
 
 	if strategy, ok := parseStrategy(os.Getenv("ELASTIC_APM_SEND_STRATEGY")); ok {

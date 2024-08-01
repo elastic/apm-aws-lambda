@@ -18,7 +18,6 @@
 package e2eTesting
 
 import (
-	"github.com/elastic/apm-aws-lambda/logger"
 	"flag"
 	"fmt"
 	"io"
@@ -26,9 +25,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/elastic/apm-aws-lambda/logger"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -65,7 +67,7 @@ func TestEndToEnd(t *testing.T) {
 	languageName := strings.ToLower(*langPtr)
 	supportedLanguages := []string{"nodejs", "python", "java"}
 	if !IsStringInSlice(languageName, supportedLanguages) {
-		ProcessError(l, fmt.Errorf(fmt.Sprintf("Unsupported language %s ! Supported languages are %v", languageName, supportedLanguages)))
+		ProcessError(l, fmt.Errorf("unsupported language %s ! Supported languages are %v", languageName, supportedLanguages))
 	}
 
 	samPath := "sam-" + languageName
@@ -133,9 +135,9 @@ func runTest(l *zap.SugaredLogger, path string, serviceName string, serverURL st
 	urlSlice := strings.Split(serverURL, ":")
 	port := urlSlice[len(urlSlice)-1]
 	RunCommandInDir(l, "sam", []string{"local", "invoke", "--parameter-overrides",
-		fmt.Sprintf("ParameterKey=ApmServerURL,ParameterValue=http://host.docker.internal:%s", port),
-		fmt.Sprintf("ParameterKey=TestUUID,ParameterValue=%s", uuidWithHyphen),
-		fmt.Sprintf("ParameterKey=TimeoutParam,ParameterValue=%d", lambdaFuncTimeout)},
+		"ParameterKey=ApmServerURL,ParameterValue=http://host.docker.internal:" + port,
+		"ParameterKey=TestUUID,ParameterValue=" + uuidWithHyphen,
+		"ParameterKey=TimeoutParam,ParameterValue=" + strconv.Itoa(lambdaFuncTimeout)},
 		path)
 	l.Infof("%s execution complete", serviceName)
 

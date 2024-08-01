@@ -102,7 +102,7 @@ func (lc *Client) subscribe(types []SubscriptionType, extensionID string, uri st
 		return fmt.Errorf("failed to marshal SubscribeRequest: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/2020-08-15/logs", lc.logsAPIBaseURL)
+	url := lc.logsAPIBaseURL + "/2020-08-15/logs"
 	resp, err := lc.sendRequest(url, data, extensionID)
 	if err != nil {
 		return err

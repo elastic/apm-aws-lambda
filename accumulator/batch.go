@@ -184,7 +184,7 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 		return ErrBatchFull
 	}
 	if b.currentlyExecutingRequestID == "" {
-		return fmt.Errorf("lifecycle error, currently executing requestID is not set")
+		return errors.New("lifecycle error, currently executing requestID is not set")
 	}
 	inc, ok := b.invocations[b.currentlyExecutingRequestID]
 	if !ok {
