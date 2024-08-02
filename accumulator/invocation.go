@@ -63,7 +63,7 @@ func (inc *Invocation) NeedProxyTransaction() bool {
 // has not sent the corresponding transaction to the extension. The
 // proxy transaction will not be created if the invocation has
 // already been finalized or the agent has reported the transaction.
-func (inc *Invocation) MaybeCreateProxyTxn(status string, time time.Time) ([]byte, error) {
+func (inc *Invocation) MaybeCreateProxyTxn(status string, endTime time.Time) ([]byte, error) {
 	if !inc.NeedProxyTransaction() {
 		return nil, nil
 	}
@@ -74,7 +74,7 @@ func (inc *Invocation) MaybeCreateProxyTxn(status string, time time.Time) ([]byt
 	// Transaction duration cannot be known in partial transaction payload. Estimate
 	// the duration based on the time provided. Time can be based on the runtimeDone
 	// log record or function deadline.
-	duration := time.Sub(inc.Timestamp)
+	duration := endTime.Sub(inc.Timestamp)
 	txn, err = sjson.SetBytes(txn, "transaction.duration", duration.Milliseconds())
 	if err != nil {
 		return nil, err

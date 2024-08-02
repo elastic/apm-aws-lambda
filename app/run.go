@@ -57,10 +57,10 @@ func (app *App) Run(ctx context.Context) error {
 
 	// Flush all data before shutting down.
 	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		flushCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		app.apmClient.FlushAPMData(ctx)
+		app.apmClient.FlushAPMData(flushCtx)
 	}()
 
 	if app.logsClient != nil {

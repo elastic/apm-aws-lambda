@@ -31,7 +31,7 @@ var (
 	// ErrMetadataUnavailable is returned when a lambda data is added to
 	// the batch without metadata being set.
 	ErrMetadataUnavailable = errors.New("metadata is not yet available")
-	// ErrBatchFull signfies that the batch has reached full capacity
+	// ErrBatchFull signifies that the batch has reached full capacity
 	// and cannot accept more entries.
 	ErrBatchFull = errors.New("batch is full")
 	// ErrInvalidEncoding is returned for any APMData that is encoded
@@ -184,7 +184,7 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 		return ErrBatchFull
 	}
 	if b.currentlyExecutingRequestID == "" {
-		return fmt.Errorf("lifecycle error, currently executing requestID is not set")
+		return errors.New("lifecycle error, currently executing requestID is not set")
 	}
 	inc, ok := b.invocations[b.currentlyExecutingRequestID]
 	if !ok {
@@ -218,10 +218,10 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 // OnLambdaLogRuntimeDone prepares the data for the invocation to be shipped
 // to APM Server. It accepts requestID and status of the invocation both of
 // which can be retrieved after parsing `platform.runtimeDone` event.
-func (b *Batch) OnLambdaLogRuntimeDone(reqID, status string, time time.Time) error {
+func (b *Batch) OnLambdaLogRuntimeDone(reqID, status string, endTime time.Time) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return b.finalizeInvocation(reqID, status, time)
+	return b.finalizeInvocation(reqID, status, endTime)
 }
 
 func (b *Batch) OnPlatformStart(reqID string) {
@@ -236,6 +236,8 @@ func (b *Batch) PlatformStartReqID() string {
 // platform.report event the batch will cleanup any datastructure for the request
 // ID. It will return some of the function metadata to allow the caller to enrich
 // the report metrics.
+//
+//nolint:gocritic
 func (b *Batch) OnPlatformReport(reqID string) (string, int64, time.Time, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -249,7 +251,7 @@ func (b *Batch) OnPlatformReport(reqID string) (string, int64, time.Time, error)
 
 // OnShutdown flushes the data for shipping to APM Server by finalizing all
 // the invocation in the batch. If we haven't received a platform.runtimeDone
-// event for an invocation so far we won't be able to recieve it in time thus
+// event for an invocation so far we won't be able to receive it in time thus
 // the status needs to be guessed based on the available information.
 func (b *Batch) OnShutdown(status string) error {
 	b.mu.Lock()
@@ -259,8 +261,8 @@ func (b *Batch) OnShutdown(status string) error {
 		// TODO: @lahsivjar Is it possible to tweak the extension lifecycle in
 		// a way that we receive the platform.report metric for a invocation
 		// consistently and enrich the metrics with reported values?
-		time := time.Unix(0, inc.DeadlineMs*int64(time.Millisecond))
-		if err := b.finalizeInvocation(inc.RequestID, status, time); err != nil {
+		endTime := time.Unix(0, inc.DeadlineMs*int64(time.Millisecond))
+		if err := b.finalizeInvocation(inc.RequestID, status, endTime); err != nil {
 			return err
 		}
 		delete(b.invocations, inc.RequestID)
@@ -315,12 +317,12 @@ func (b *Batch) ToAPMData() APMData {
 	}
 }
 
-func (b *Batch) finalizeInvocation(reqID, status string, time time.Time) error {
+func (b *Batch) finalizeInvocation(reqID, status string, endTime time.Time) error {
 	inc, ok := b.invocations[reqID]
 	if !ok {
 		return fmt.Errorf("invocation for requestID %s does not exist", reqID)
 	}
-	proxyTxn, err := inc.MaybeCreateProxyTxn(status, time)
+	proxyTxn, err := inc.MaybeCreateProxyTxn(status, endTime)
 	if err != nil {
 		return err
 	}

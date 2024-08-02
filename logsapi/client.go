@@ -73,7 +73,10 @@ type Client struct {
 // NewClient returns a new Client with the given URL.
 func NewClient(opts ...ClientOption) (*Client, error) {
 	c := Client{
-		server:     &http.Server{},
+		server: &http.Server{
+			// Fixes "Potential Slowloris Attack because ReadHeaderTimeout is not configured in the http.Server"
+			ReadHeaderTimeout: time.Second * 5,
+		},
 		httpClient: &http.Client{},
 	}
 
@@ -106,25 +109,25 @@ func (lc *Client) StartService(extensionID string) error {
 
 	_, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		if err := lc.Shutdown(); err != nil {
-			lc.logger.Warnf("failed to shutdown the server: %v", err)
+		if err2 := lc.Shutdown(); err2 != nil {
+			lc.logger.Warnf("failed to shutdown the server: %v", err2)
 		}
 		return fmt.Errorf("failed to retrieve port from address %s: %w", addr, err)
 	}
 
 	host, _, err := net.SplitHostPort(lc.listenerAddr)
 	if err != nil {
-		if err := lc.Shutdown(); err != nil {
-			lc.logger.Warnf("failed to shutdown the server: %v", err)
+		if err2 := lc.Shutdown(); err2 != nil {
+			lc.logger.Warnf("failed to shutdown the server: %v", err2)
 		}
 		return fmt.Errorf("failed to retrieve host from address %s: %w", lc.listenerAddr, err)
 	}
 
-	uri := fmt.Sprintf("http://%s", net.JoinHostPort(host, port))
+	uri := "http://" + net.JoinHostPort(host, port)
 
 	if err := lc.subscribe(lc.logsAPISubscriptionTypes, extensionID, uri); err != nil {
-		if err := lc.Shutdown(); err != nil {
-			lc.logger.Warnf("failed to shutdown the server: %v", err)
+		if err2 := lc.Shutdown(); err2 != nil {
+			lc.logger.Warnf("failed to shutdown the server: %v", err2)
 		}
 		return err
 	}

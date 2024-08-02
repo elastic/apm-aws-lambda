@@ -43,7 +43,7 @@ func (t Time) MarshalFastJSON(w *fastjson.Writer) error {
 // faas struct is a subset of go.elastic.co/apm/v2/model#FAAS
 //
 // The purpose of having a separate struct is to have a custom
-// marshalling logic that is targeted for the faas fields
+// marshaling logic that is targeted for the faas fields
 // available for function logs. For example: `coldstart` value
 // cannot be inferred for function logs so this struct drops
 // the field entirely.

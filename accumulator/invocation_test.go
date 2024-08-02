@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCreateProxyTransaction(t *testing.T) {
@@ -90,8 +91,8 @@ func TestCreateProxyTransaction(t *testing.T) {
 				TransactionObserved: tc.txnObserved,
 			}
 			result, err := inc.MaybeCreateProxyTxn(tc.runtimeDoneStatus, ts.Add(txnDur))
-			assert.Nil(t, err)
-			if len(tc.output) > 0 {
+			require.NoError(t, err)
+			if tc.output != "" {
 				assert.JSONEq(t, tc.output, string(result))
 			} else {
 				assert.Nil(t, result)

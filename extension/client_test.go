@@ -76,7 +76,7 @@ func TestNextEvent(t *testing.T) {
 		}
 	`)
 
-	runtimeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	runtimeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		if _, err := w.Write(response); err != nil {
 			t.Fail()
 			return

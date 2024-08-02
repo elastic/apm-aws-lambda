@@ -85,12 +85,12 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 
 	reverseProxy.Transport = c.client.Transport.(*http.Transport).Clone()
 
-	reverseProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+	reverseProxy.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, err error) {
 		// Don't update the status of the transport as it is possible that the extension
 		// is frozen while processing the request and context is canceled due to timeout.
 		c.logger.Errorf("Error querying version from the APM server: %v", err)
 
-		// Server is unreachable, return StatusBadGateway (default behaviour) to avoid
+		// Server is unreachable, return StatusBadGateway (default behavior) to avoid
 		// returning a Status OK.
 		w.WriteHeader(http.StatusBadGateway)
 	}
@@ -199,7 +199,7 @@ func (c *Client) handleTransactionRegistration() func(w http.ResponseWriter, r *
 		if err := c.batch.OnAgentInit(
 			reqID, r.Header.Get("Content-Encoding"), rawBytes,
 		); err != nil {
-			c.logger.Warnf("Failed to update invocation: %w", err)
+			c.logger.Warnf("Failed to update invocation: %v", err)
 			w.WriteHeader(http.StatusUnprocessableEntity)
 			return
 		}

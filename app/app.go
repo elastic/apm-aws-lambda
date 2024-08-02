@@ -35,9 +35,9 @@ import (
 	"go.uber.org/zap"
 )
 
-var (
-	defaultMaxBatchSize int           = 50
-	defaultMaxBatchAge  time.Duration = 2 * time.Second
+const (
+	defaultMaxBatchSize = 50
+	defaultMaxBatchAge  = 2 * time.Second
 )
 
 // App is the main application.
@@ -50,8 +50,9 @@ type App struct {
 	batch           *accumulator.Batch
 }
 
-// New returns an App or an error if the
-// creation failed.
+// New returns an App or an error if the creation failed.
+//
+//nolint:govet
 func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 	c := appConfig{}
 
@@ -70,10 +71,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		return nil, err
 	}
 
-	apmServerAPIKey, apmServerSecretToken, err := loadAWSOptions(ctx, c.awsConfig, app.logger)
-	if err != nil {
-		return nil, err
-	}
+	apmServerAPIKey, apmServerSecretToken := loadAWSOptions(ctx, c.awsConfig, app.logger)
 
 	app.extensionClient = extension.NewClient(c.awsLambdaRuntimeAPI, app.logger)
 
@@ -88,8 +86,8 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 			subscriptionLogStreams = append(subscriptionLogStreams, logsapi.Function)
 		}
 
-		lc, err := logsapi.NewClient(
-			logsapi.WithLogsAPIBaseURL(fmt.Sprintf("http://%s", c.awsLambdaRuntimeAPI)),
+		app.logsClient, err = logsapi.NewClient(
+			logsapi.WithLogsAPIBaseURL("http://"+c.awsLambdaRuntimeAPI),
 			logsapi.WithListenerAddress(addr),
 			logsapi.WithLogBuffer(100),
 			logsapi.WithLogger(app.logger),
@@ -99,8 +97,6 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		app.logsClient = lc
 	}
 
 	var apmOpts []apmproxy.Option
@@ -120,7 +116,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 	}
 
 	if port := os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"); port != "" {
-		apmOpts = append(apmOpts, apmproxy.WithReceiverAddress(fmt.Sprintf(":%s", port)))
+		apmOpts = append(apmOpts, apmproxy.WithReceiverAddress(":"+port))
 	}
 
 	if strategy, ok := parseStrategy(os.Getenv("ELASTIC_APM_SEND_STRATEGY")); ok {
@@ -163,7 +159,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 	}
 
 	if acmCertArn := os.Getenv("ELASTIC_APM_SERVER_CA_CERT_ACM_ID"); acmCertArn != "" {
-		cert, err := loadAcmCertificate(acmCertArn, c.awsConfig, ctx)
+		cert, err := loadAcmCertificate(ctx, acmCertArn, c.awsConfig)
 		if err != nil {
 			return nil, err
 		}

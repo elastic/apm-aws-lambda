@@ -18,10 +18,10 @@
 package logger_test
 
 import (
-	"github.com/elastic/apm-aws-lambda/logger"
 	"os"
 	"testing"
 
+	"github.com/elastic/apm-aws-lambda/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.elastic.co/ecszap"

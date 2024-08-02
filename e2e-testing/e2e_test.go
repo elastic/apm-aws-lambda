@@ -15,10 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package e2eTesting
+package e2etesting
 
 import (
-	"github.com/elastic/apm-aws-lambda/logger"
 	"flag"
 	"fmt"
 	"io"
@@ -26,9 +25,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/elastic/apm-aws-lambda/logger"
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
@@ -65,7 +67,7 @@ func TestEndToEnd(t *testing.T) {
 	languageName := strings.ToLower(*langPtr)
 	supportedLanguages := []string{"nodejs", "python", "java"}
 	if !IsStringInSlice(languageName, supportedLanguages) {
-		ProcessError(l, fmt.Errorf(fmt.Sprintf("Unsupported language %s ! Supported languages are %v", languageName, supportedLanguages)))
+		ProcessError(l, fmt.Errorf("unsupported language %s ! Supported languages are %v", languageName, supportedLanguages))
 	}
 
 	samPath := "sam-" + languageName
@@ -85,7 +87,7 @@ func TestEndToEnd(t *testing.T) {
 
 	// Initialize Mock APM Server
 	mockAPMServerLog := ""
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		if r.RequestURI == "/intake/v2/events" {
 			bytesRes, _ := GetDecompressedBytesFromRequest(r)
 			mockAPMServerLog += fmt.Sprintf("%s\n", bytesRes)
@@ -95,13 +97,13 @@ func TestEndToEnd(t *testing.T) {
 
 	resultsChan := make(chan string, 1)
 
-	testUuid := runTestWithTimer(l, samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
-	l.Infof("UUID generated during the test : %s", testUuid)
-	if testUuid == "" {
+	testUUID := runTestWithTimer(l, samPath, samServiceName, ts.URL, *rebuildPtr, *timerPtr, resultsChan)
+	l.Infof("UUID generated during the test : %s", testUUID)
+	if testUUID == "" {
 		t.Fail()
 	}
 	l.Infof("Querying the mock server for transaction bound to %s...", samServiceName)
-	assert.True(t, strings.Contains(mockAPMServerLog, testUuid))
+	assert.True(t, strings.Contains(mockAPMServerLog, testUUID))
 }
 
 func runTestWithTimer(l *zap.SugaredLogger, path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) string {
@@ -109,8 +111,8 @@ func runTestWithTimer(l *zap.SugaredLogger, path string, serviceName string, ser
 	defer timer.Stop()
 	go runTest(l, path, serviceName, serverURL, buildFlag, lambdaFuncTimeout, resultsChan)
 	select {
-	case testUuid := <-resultsChan:
-		return testUuid
+	case testUUID := <-resultsChan:
+		return testUUID
 	case <-timer.C:
 		return ""
 	}
@@ -133,9 +135,9 @@ func runTest(l *zap.SugaredLogger, path string, serviceName string, serverURL st
 	urlSlice := strings.Split(serverURL, ":")
 	port := urlSlice[len(urlSlice)-1]
 	RunCommandInDir(l, "sam", []string{"local", "invoke", "--parameter-overrides",
-		fmt.Sprintf("ParameterKey=ApmServerURL,ParameterValue=http://host.docker.internal:%s", port),
-		fmt.Sprintf("ParameterKey=TestUUID,ParameterValue=%s", uuidWithHyphen),
-		fmt.Sprintf("ParameterKey=TimeoutParam,ParameterValue=%d", lambdaFuncTimeout)},
+		"ParameterKey=ApmServerURL,ParameterValue=http://host.docker.internal:" + port,
+		"ParameterKey=TestUUID,ParameterValue=" + uuidWithHyphen,
+		"ParameterKey=TimeoutParam,ParameterValue=" + strconv.Itoa(lambdaFuncTimeout)},
 		path)
 	l.Infof("%s execution complete", serviceName)
 
@@ -143,7 +145,6 @@ func runTest(l *zap.SugaredLogger, path string, serviceName string, serverURL st
 }
 
 func retrieveJavaAgent(l *zap.SugaredLogger, samJavaPath string, version string) {
-
 	agentFolderPath := filepath.Join(samJavaPath, "agent")
 	agentArchivePath := filepath.Join(samJavaPath, "agent.zip")
 

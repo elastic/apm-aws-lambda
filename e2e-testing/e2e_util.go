@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package e2eTesting
+package e2etesting
 
 import (
 	"archive/zip"
@@ -66,7 +66,6 @@ func RunCommandInDir(l *zap.SugaredLogger, command string, args []string, dir st
 	if err := e.Wait(); err != nil {
 		l.Errorf("Could not wait for the execution of %s : %v", command, err)
 	}
-
 }
 
 // FolderExists returns true if the specified folder exists, and false else.
@@ -85,7 +84,6 @@ func ProcessError(l *zap.SugaredLogger, err error) {
 
 // Unzip is a utility function that unzips a specified zip archive to a specified destination.
 func Unzip(l *zap.SugaredLogger, archivePath string, destinationFolderPath string) {
-
 	openedArchive, err := zip.OpenReader(archivePath)
 	ProcessError(l, err)
 	defer openedArchive.Close()
@@ -108,7 +106,7 @@ func Unzip(l *zap.SugaredLogger, archivePath string, destinationFolderPath strin
 			}
 		}()
 
-		path := filepath.Join(destinationFolderPath, f.Name)
+		path := filepath.Join(destinationFolderPath, f.Name) //nolint:gosec
 
 		// Check for ZipSlip (Directory traversal)
 		if !strings.HasPrefix(path, filepath.Clean(destinationFolderPath)+string(os.PathSeparator)) {
@@ -116,7 +114,7 @@ func Unzip(l *zap.SugaredLogger, archivePath string, destinationFolderPath strin
 		}
 
 		if f.FileInfo().IsDir() {
-			if err := os.MkdirAll(path, f.Mode()); err != nil {
+			if err = os.MkdirAll(path, f.Mode()); err != nil {
 				l.Errorf("Could not unzip folder : %v", err)
 			}
 		} else {
@@ -126,7 +124,7 @@ func Unzip(l *zap.SugaredLogger, archivePath string, destinationFolderPath strin
 			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 			ProcessError(l, err)
 			defer f.Close()
-			_, err = io.Copy(f, rc)
+			_, err = io.Copy(f, rc) //nolint:gosec
 			ProcessError(l, err)
 		}
 		return nil

@@ -52,7 +52,7 @@ type LogEventRecord struct {
 }
 
 // ProcessLogs consumes log events until there are no more log events that
-// can be consumed or ctx is cancelled. For INVOKE event this state is
+// can be consumed or ctx is canceled. For INVOKE event this state is
 // reached when runtimeDone event for the current requestID is processed
 // whereas for SHUTDOWN event this state is reached when the platformReport
 // event for the previous requestID is processed.
@@ -66,7 +66,7 @@ func (lc *Client) ProcessLogs(
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
-			if shouldExit := lc.handleEvent(logEvent, ctx, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
+			if shouldExit := lc.handleEvent(ctx, logEvent, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
 				return
 			}
 		case <-ctx.Done():
@@ -87,7 +87,7 @@ func (lc *Client) FlushData(
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
-			if shouldExit := lc.handleEvent(logEvent, ctx, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
+			if shouldExit := lc.handleEvent(ctx, logEvent, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
 				return
 			}
 		case <-ctx.Done():
@@ -102,8 +102,8 @@ func (lc *Client) FlushData(
 	}
 }
 
-func (lc *Client) handleEvent(logEvent LogEvent,
-	ctx context.Context,
+func (lc *Client) handleEvent(ctx context.Context,
+	logEvent LogEvent,
 	requestID string,
 	invokedFnArn string,
 	dataChan chan []byte,

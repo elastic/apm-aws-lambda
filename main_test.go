@@ -27,6 +27,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -195,7 +196,9 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 			case nextEvent := <-eventsChannel:
 				sendNextEventInfo(w, currID, nextEvent.Timeout, nextEvent.Type == Shutdown, l)
 				wg.Add(1)
-				go processMockEvent(mockLogEventQ, currID, nextEvent, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals, l, &wg)
+				go processMockEvent(mockLogEventQ, currID, nextEvent,
+					os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals, l,
+					&wg)
 			default:
 				finalShutDown := MockEvent{
 					Type:              Shutdown,
@@ -204,7 +207,9 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 				}
 				sendNextEventInfo(w, currID, finalShutDown.Timeout, true, l)
 				wg.Add(1)
-				go processMockEvent(mockLogEventQ, currID, finalShutDown, os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals, l, &wg)
+				go processMockEvent(mockLogEventQ, currID, finalShutDown,
+					os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals, l,
+					&wg)
 			}
 		// Logs API subscription request
 		case "/2020-08-15/logs":
@@ -222,13 +227,13 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 		l.Errorf("Could not find free port for the extension to listen on : %v", err)
 		extensionPort = 8200
 	}
-	t.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", fmt.Sprint(extensionPort))
+	t.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", strconv.Itoa(extensionPort))
 
 	t.Cleanup(func() { lambdaServer.Close() })
 	return &lambdaServerInternals
 }
 
-func newTestStructs(t *testing.T) chan MockEvent {
+func newTestStructs(_ *testing.T) chan MockEvent {
 	http.DefaultServeMux = new(http.ServeMux)
 	eventsChannel := make(chan MockEvent, 100)
 	return eventsChannel
@@ -264,7 +269,8 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 		time.Sleep(time.Duration(event.Timeout * float64(time.Second)))
 	case InvokeStandard:
 		time.Sleep(delay)
-		req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), buf)
+		req, err := http.NewRequest(http.MethodPost,
+			fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), buf)
 		if err != nil {
 			l.Error(err.Error())
 		}
@@ -276,13 +282,17 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 		l.Debugf("Response seen by the agent : %d", res.StatusCode)
 	case InvokeStandardFlush:
 		time.Sleep(delay)
-		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), buf)
-		if _, err := client.Do(reqData); err != nil {
+		reqData, _ := http.NewRequest(http.MethodPost,
+			fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), buf)
+		res, err := client.Do(reqData)
+		if err != nil {
 			l.Error(err.Error())
 		}
+		res.Body.Close()
 	case InvokeLateFlush:
 		time.Sleep(delay)
-		reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), buf)
+		reqData, _ := http.NewRequest(http.MethodPost,
+			fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), buf)
 		internals.WaitGroup.Add(1)
 		go func() {
 			<-ch
@@ -300,8 +310,12 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 		// we can't share a bytes.Buffer with two http requests
 		// create two bytes.Reader to avoid a race condition
 		body := buf.Bytes()
-		reqData0, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewReader(body))
-		reqData1, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewReader(body))
+		reqData0, _ := http.NewRequest(http.MethodPost,
+			fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort),
+			bytes.NewReader(body))
+		reqData1, _ := http.NewRequest(http.MethodPost,
+			fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort),
+			bytes.NewReader(body))
 		res, err := client.Do(reqData0)
 		if err != nil {
 			l.Error(err.Error())
@@ -322,7 +336,9 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 			wg.Add(1)
 			go func() {
 				time.Sleep(delay)
-				reqData, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), bytes.NewReader(body))
+				reqData, _ := http.NewRequest(http.MethodPost,
+					fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort),
+					bytes.NewReader(body))
 				res, err := client.Do(reqData)
 				if err != nil {
 					l.Error(err.Error())
@@ -334,7 +350,9 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 		wg.Wait()
 	case InvokeStandardInfo:
 		time.Sleep(delay)
-		req, _ := http.NewRequest("POST", fmt.Sprintf("http://localhost:%s/", extensionPort), bytes.NewBuffer([]byte(event.APMServerBehavior)))
+		req, _ := http.NewRequest(http.MethodPost,
+			fmt.Sprintf("http://localhost:%s/", extensionPort),
+			bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		res, err := client.Do(req)
 		if err != nil {
 			l.Errorf("No response following info request : %v", err)
@@ -407,11 +425,11 @@ func startLogSender(ctx context.Context, q <-chan logsapi.LogEvent, logsapiAddr 
 	}
 	doSend := func(events []logsapi.LogEvent) error {
 		var buf bytes.Buffer
-		if err := json.NewEncoder(&buf).Encode(events); err != nil {
+		if err := json.NewEncoder(&buf).Encode(events); err != nil { //nolint:musttag
 			return err
 		}
 
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s", logsapiAddr), &buf)
+		req, err := http.NewRequest(http.MethodPost, "http://"+logsapiAddr, &buf)
 		if err != nil {
 			return err
 		}
@@ -420,7 +438,8 @@ func startLogSender(ctx context.Context, q <-chan logsapi.LogEvent, logsapiAddr 
 		if err != nil {
 			return err
 		}
-		if resp.StatusCode/100 != 2 {
+		defer resp.Body.Close()
+		if resp.StatusCode/100 != 2 { //nolint:usestdlibvars
 			return fmt.Errorf("received a non 2xx status code: %d", resp.StatusCode)
 		}
 		return nil
@@ -550,7 +569,8 @@ func TestLateFlush(t *testing.T) {
 	case <-runApp(t, logsapiAddr):
 		assert.Regexp(
 			t,
-			regexp.MustCompile(fmt.Sprintf(".*\n%s.*\n%s", TimelyResponse, TimelyResponse)), // metadata followed by TimelyResponsex2
+			regexp.MustCompile(fmt.Sprintf(".*\n%s.*\n%s", TimelyResponse,
+				TimelyResponse)), // metadata followed by TimelyResponsex2
 			apmServerInternals.Data,
 		)
 	case <-time.After(timeout):
@@ -662,7 +682,6 @@ func TestAPMServerRecovery(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatalf("timed out waiting for app to finish")
 	}
-
 }
 
 // TestGracePeriodHangs verifies that the WaitforGracePeriod goroutine ends when main() ends.
@@ -687,7 +706,6 @@ func TestGracePeriodHangs(t *testing.T) {
 	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
-
 }
 
 // TestAPMServerCrashesDuringExecution tests that main does not panic nor runs indefinitely when the APM server crashes
@@ -805,7 +823,8 @@ func TestInfoRequestHangs(t *testing.T) {
 	select {
 	case <-runApp(t, logsapiAddr):
 		time.Sleep(2 * time.Second)
-		assert.NotContains(t, lambdaServerInternals.Data, "7814d524d3602e70b703539c57568cba6964fc20")
+		assert.NotContains(t, lambdaServerInternals.Data,
+			"7814d524d3602e70b703539c57568cba6964fc20")
 		apmServerInternals.UnlockSignalChannel <- struct{}{}
 	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
@@ -830,14 +849,16 @@ func TestMetrics(t *testing.T) {
 
 	select {
 	case <-runApp(t, logsapiAddr):
-		assert.Contains(t, apmServerInternals.Data, `{"metadata":{"service":{"name":"1234_service-12a3","version":"5.1.3","environment":"staging","agent":{"name":"elastic-node","version":"3.14.0"},"framework":{"name":"Express","version":"1.2.3"},"language":{"name":"ecmascript","version":"8"},"runtime":{"name":"node","version":"8.0.0"},"node":{"configured_name":"node-123"}},"user":{"username":"bar","id":"123user","email":"bar@user.com"},"labels":{"tag0":null,"tag1":"one","tag2":2},"process":{"pid":1234,"ppid":6789,"title":"node","argv":["node","server.js"]},"system":{"architecture":"x64","hostname":"prod1.example.com","platform":"darwin","container":{"id":"container-id"},"kubernetes":{"namespace":"namespace1","node":{"name":"node-name"},"pod":{"name":"pod-name","uid":"pod-uid"}}},"cloud":{"provider":"cloud_provider","region":"cloud_region","availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"account":{"id":"account_id","name":"account_name"},"project":{"id":"project_id","name":"project_name"},"service":{"name":"lambda"}}}}`)
+		assert.Contains(t, apmServerInternals.Data,
+			`{"metadata":{"service":{"name":"1234_service-12a3","version":"5.1.3","environment":"staging","agent":{"name":"elastic-node","version":"3.14.0"},"framework":{"name":"Express","version":"1.2.3"},"language":{"name":"ecmascript","version":"8"},"runtime":{"name":"node","version":"8.0.0"},"node":{"configured_name":"node-123"}},"user":{"username":"bar","id":"123user","email":"bar@user.com"},"labels":{"tag0":null,"tag1":"one","tag2":2},"process":{"pid":1234,"ppid":6789,"title":"node","argv":["node","server.js"]},"system":{"architecture":"x64","hostname":"prod1.example.com","platform":"darwin","container":{"id":"container-id"},"kubernetes":{"namespace":"namespace1","node":{"name":"node-name"},"pod":{"name":"pod-name","uid":"pod-uid"}}},"cloud":{"provider":"cloud_provider","region":"cloud_region","availability_zone":"cloud_availability_zone","instance":{"id":"instance_id","name":"instance_name"},"machine":{"type":"machine_type"},"account":{"id":"account_id","name":"account_name"},"project":{"id":"project_id","name":"project_name"},"service":{"name":"lambda"}}}}`)
 		assert.Contains(t, apmServerInternals.Data, `faas.billed_duration":{"value":60`)
 		assert.Contains(t, apmServerInternals.Data, `faas.duration":{"value":59.9`)
 		assert.Contains(t, apmServerInternals.Data, `faas.coldstart_duration":{"value":500`)
 		assert.Contains(t, apmServerInternals.Data, `faas.timeout":{"value":5000}`)
 		assert.Contains(t, apmServerInternals.Data, `coldstart":true`)
 		assert.Contains(t, apmServerInternals.Data, `execution"`)
-		assert.Contains(t, apmServerInternals.Data, `id":"arn:aws:lambda:eu-central-1:627286350134:function:main_unit_test"`)
+		assert.Contains(t, apmServerInternals.Data,
+			`id":"arn:aws:lambda:eu-central-1:627286350134:function:main_unit_test"`)
 	case <-time.After(timeout):
 		t.Fatalf("timed out waiting for app to finish")
 	}
@@ -858,11 +879,11 @@ func runAppFull(t *testing.T, logsapiAddr string, disableLogsAPI bool) <-chan st
 	if disableLogsAPI {
 		opts = append(opts, app.WithoutLogsAPI())
 	}
-	app, err := app.New(ctx, opts...)
+	application, err := app.New(ctx, opts...)
 	require.NoError(t, err)
 
 	go func() {
-		require.NoError(t, app.Run(ctx))
+		assert.NoError(t, application.Run(ctx))
 		cancel()
 	}()
 

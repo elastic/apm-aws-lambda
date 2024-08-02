@@ -56,7 +56,7 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			c.logger.Debug("Invocation context cancelled, not processing any more agent data")
+			c.logger.Debug("Invocation context canceled, not processing any more agent data")
 			return nil
 		case data := <-c.AgentDataChannel:
 			if err := c.forwardAgentData(ctx, data); err != nil {
@@ -312,11 +312,11 @@ func (c *Client) ComputeGracePeriod() time.Duration {
 	// The grace period for the first reconnection count was 0 but that
 	// leads to collisions with multiple environments.
 	if c.ReconnectionCount == 0 {
-		gracePeriod := rand.Float64() * 5
+		gracePeriod := rand.Float64() * 5 //nolint:gosec
 		return time.Duration(gracePeriod * float64(time.Second))
 	}
 	gracePeriodWithoutJitter := math.Pow(math.Min(float64(c.ReconnectionCount), 6), 2)
-	jitter := rand.Float64()/5 - 0.1
+	jitter := rand.Float64()/5 - 0.1 //nolint:gosec
 	return time.Duration((gracePeriodWithoutJitter + jitter*gracePeriodWithoutJitter) * float64(time.Second))
 }
 
@@ -334,7 +334,7 @@ func (c *Client) ResetFlush() {
 	c.flushCh = make(chan struct{})
 }
 
-// WaitForFlush returns a channel that is closed when the agent has signalled that
+// WaitForFlush returns a channel that is closed when the agent has signaled that
 // the Lambda invocation has completed, and there is no more APM data coming.
 func (c *Client) WaitForFlush() <-chan struct{} {
 	c.flushMutex.Lock()

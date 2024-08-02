@@ -15,6 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
+//nolint:dupl
 package apmproxy_test
 
 import (
@@ -41,12 +42,12 @@ func TestInfoProxy(t *testing.T) {
 	// Create apm server and handler
 	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		for key := range headers {
-			assert.Equal(t, 2, len(r.Header[key]))
+			assert.Len(t, r.Header[key], 2)
 			assert.Equal(t, headers[key], r.Header[key][0])
 		}
 		w.Header().Add("test", "header")
 		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}))
 	defer apmServer.Close()
 
@@ -70,7 +71,7 @@ func TestInfoProxy(t *testing.T) {
 	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	require.NoError(t, err)
 	for name, value := range headers {
 		req.Header.Add(name, value)
@@ -83,7 +84,7 @@ func TestInfoProxy(t *testing.T) {
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
-	assert.Equal(t, string(body), wantResp)
+	assert.Equal(t, wantResp, string(body))
 	assert.Equal(t, "header", resp.Header.Get("test"))
 	require.NoError(t, resp.Body.Close())
 }
@@ -122,7 +123,7 @@ func TestInfoProxyAuth(t *testing.T) {
 
 func TestInfoProxyErrorStatusCode(t *testing.T) {
 	// Create apm server and handler
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
 	defer apmServer.Close()
@@ -146,19 +147,20 @@ func TestInfoProxyErrorStatusCode(t *testing.T) {
 	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	require.NoError(t, err)
 
 	// Send the request to the extension
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
 func TestInfoProxyUnreachable(t *testing.T) {
 	// Create apm server and handler
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	apmServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	// Shutdown
 	apmServer.Close()
 
@@ -181,13 +183,14 @@ func TestInfoProxyUnreachable(t *testing.T) {
 	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	require.NoError(t, err)
 
 	// Send the request to the extension
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 
 	// Make sure we don't get a 200 OK
 	assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
@@ -233,6 +236,7 @@ func Test_handleInfoRequest(t *testing.T) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusAccepted, resp.StatusCode)
 }
 
@@ -240,8 +244,7 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	body := []byte(`{"metadata": {}`)
 
 	// Create apm server and handler
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	}))
+	apmServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer apmServer.Close()
 
 	// Create extension config and start the server
@@ -266,8 +269,11 @@ func Test_handleIntakeV2EventsQueryParam(t *testing.T) {
 	// Send the request to the extension
 	client := &http.Client{}
 	go func() {
-		_, err := client.Do(req)
-		require.NoError(t, err)
+		resp, err := client.Do(req)
+		assert.NoError(t, err)
+		if err == nil {
+			resp.Body.Close()
+		}
 	}()
 
 	select {
@@ -281,8 +287,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 	body := []byte(`{"metadata": {}`)
 
 	// Create apm server and handler
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	}))
+	apmServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer apmServer.Close()
 
 	// Create extension config and start the server
@@ -310,6 +315,7 @@ func Test_handleIntakeV2EventsNoQueryParam(t *testing.T) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	select {
 	case <-apmClient.AgentDataChannel:
 	case <-time.After(1 * time.Second):
@@ -323,8 +329,7 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	body := []byte(``)
 
 	// Create apm server and handler
-	apmServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	}))
+	apmServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	defer apmServer.Close()
 
 	// Create extension config and start the server
@@ -349,8 +354,11 @@ func Test_handleIntakeV2EventsQueryParamEmptyData(t *testing.T) {
 	// Send the request to the extension
 	client := &http.Client{}
 	go func() {
-		_, err := client.Do(req)
-		require.NoError(t, err)
+		resp, err := client.Do(req)
+		assert.NoError(t, err)
+		if err == nil {
+			resp.Body.Close()
+		}
 	}()
 
 	select {
@@ -365,10 +373,10 @@ func TestWithVerifyCerts(t *testing.T) {
 	clientConnected := false
 
 	// Create apm server and handler
-	apmServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apmServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("test", "header")
 		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		clientConnected = true
 	}))
 	defer apmServer.Close()
@@ -393,7 +401,7 @@ func TestWithVerifyCerts(t *testing.T) {
 	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	require.NoError(t, err)
 	for name, value := range headers {
 		req.Header.Add(name, value)
@@ -413,10 +421,10 @@ func TestWithRootCerts(t *testing.T) {
 	clientConnected := false
 
 	// Create apm server and handler
-	apmServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apmServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("test", "header")
 		_, err := w.Write([]byte(`{"foo": "bar"}`))
-		require.NoError(t, err)
+		assert.NoError(t, err)
 		clientConnected = true
 	}))
 	defer apmServer.Close()
@@ -443,7 +451,7 @@ func TestWithRootCerts(t *testing.T) {
 	url := "http://127.0.0.1:1234"
 
 	// Create a request to send to the extension
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, http.NoBody)
 	require.NoError(t, err)
 	for name, value := range headers {
 		req.Header.Add(name, value)
