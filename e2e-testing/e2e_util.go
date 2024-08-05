@@ -89,7 +89,7 @@ func Unzip(l *zap.SugaredLogger, archivePath string, destinationFolderPath strin
 	defer openedArchive.Close()
 
 	// Permissions setup
-	err = os.MkdirAll(destinationFolderPath, 0755)
+	err = os.MkdirAll(destinationFolderPath, 0o755)
 	if err != nil {
 		l.Errorf("Could not create folders required to unzip, %v", err)
 	}

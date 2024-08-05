@@ -172,7 +172,7 @@ func changeJavaAgentPermissions(l *zap.SugaredLogger, samJavaPath string) {
 	agentFiles, err := os.ReadDir(agentFolderPath)
 	ProcessError(l, err)
 	for _, f := range agentFiles {
-		if err = os.Chmod(filepath.Join(agentFolderPath, f.Name()), 0755); err != nil {
+		if err = os.Chmod(filepath.Join(agentFolderPath, f.Name()), 0o755); err != nil {
 			l.Errorf("Could not change java agent permissions : %v", err)
 		}
 	}
