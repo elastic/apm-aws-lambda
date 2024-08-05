@@ -66,7 +66,6 @@ linters:
     - nestif
     - nlreturn
     - noctx # might be worth fixing
-    - nolintlint
     - nonamedreturns
     - paralleltest
     - protogetter
