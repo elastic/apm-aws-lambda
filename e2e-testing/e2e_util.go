@@ -35,7 +35,7 @@ import (
 
 // GetEnvVarValueOrSetDefault retrieves the environment variable envVarName.
 // If the desired variable is not defined, defaultVal is returned.
-func GetEnvVarValueOrSetDefault(envVarName string, defaultVal string) string {
+func GetEnvVarValueOrSetDefault(envVarName, defaultVal string) string {
 	val := os.Getenv(envVarName)
 	if val == "" {
 		return defaultVal
@@ -83,7 +83,7 @@ func ProcessError(l *zap.SugaredLogger, err error) {
 }
 
 // Unzip is a utility function that unzips a specified zip archive to a specified destination.
-func Unzip(l *zap.SugaredLogger, archivePath string, destinationFolderPath string) {
+func Unzip(l *zap.SugaredLogger, archivePath, destinationFolderPath string) {
 	openedArchive, err := zip.OpenReader(archivePath)
 	ProcessError(l, err)
 	defer openedArchive.Close()

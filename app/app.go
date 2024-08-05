@@ -186,7 +186,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 	return app, nil
 }
 
-func parseDurationTimeout(l *zap.SugaredLogger, flag string, deprecatedFlag string) (time.Duration, bool, error) {
+func parseDurationTimeout(l *zap.SugaredLogger, flag, deprecatedFlag string) (time.Duration, bool, error) {
 	if strValue, ok := os.LookupEnv(flag); ok {
 		d, err := time.ParseDuration(strValue)
 		if err != nil {

@@ -106,7 +106,7 @@ func TestEndToEnd(t *testing.T) {
 	assert.True(t, strings.Contains(mockAPMServerLog, testUUID))
 }
 
-func runTestWithTimer(l *zap.SugaredLogger, path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) string {
+func runTestWithTimer(l *zap.SugaredLogger, path, serviceName, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) string {
 	timer := time.NewTimer(time.Duration(lambdaFuncTimeout) * time.Second * 2)
 	defer timer.Stop()
 	go runTest(l, path, serviceName, serverURL, buildFlag, lambdaFuncTimeout, resultsChan)
@@ -122,7 +122,7 @@ func buildExtensionBinaries(l *zap.SugaredLogger) {
 	RunCommandInDir(l, "make", []string{}, "..")
 }
 
-func runTest(l *zap.SugaredLogger, path string, serviceName string, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) {
+func runTest(l *zap.SugaredLogger, path, serviceName, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) {
 	l.Infof("Starting to test %s", serviceName)
 
 	if !FolderExists(filepath.Join(path, ".aws-sam")) || buildFlag {
@@ -144,7 +144,7 @@ func runTest(l *zap.SugaredLogger, path string, serviceName string, serverURL st
 	resultsChan <- uuidWithHyphen
 }
 
-func retrieveJavaAgent(l *zap.SugaredLogger, samJavaPath string, version string) {
+func retrieveJavaAgent(l *zap.SugaredLogger, samJavaPath, version string) {
 	agentFolderPath := filepath.Join(samJavaPath, "agent")
 	agentArchivePath := filepath.Join(samJavaPath, "agent.zip")
 
