@@ -103,7 +103,7 @@ resource "aws_lambda_function" "test_lambda" {
 }
 
 resource "aws_cloudwatch_log_group" "example" {
-  name              = "/aws/lambda/${local.user_name}-smoke-testing-test"
+  name              = "/aws/lambda/${local.user_name}-smoke-testing-test-${var.github_workflow_id}"
   retention_in_days = 1
 }
 

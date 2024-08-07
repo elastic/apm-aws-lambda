@@ -33,3 +33,9 @@ variable "ess_version" {
   description = "ess version"
   default     = "8.[0-9]?([0-9]).[0-9]?([0-9])$"
 }
+
+variable "github_workflow_id" {
+  type        = string
+  description = "The GitHub Workflow ID"
+  default     = "1"
+}
