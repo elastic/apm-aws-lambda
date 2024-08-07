@@ -122,7 +122,7 @@ data "aws_iam_policy_document" "lambda_logging" {
 }
 
 resource "aws_iam_policy" "lambda_logging" {
-  name        = "${local.user_name}-smoketest_extension_lambda_logging-${var.github_workflow_id}"
+  name        = "${local.user_name}-smoke-testing-test-${var.github_workflow_id}"
   path        = "/"
   description = "IAM policy for logging during smoketest for apm aws lambda extension"
   policy      = data.aws_iam_policy_document.lambda_logging.json
