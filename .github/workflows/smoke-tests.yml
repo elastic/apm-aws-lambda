@@ -53,3 +53,9 @@ jobs:
       - if: always()
         name: Tear down
         run: make smoketest/cleanup
+
+      - if: always()
+        uses: elastic/oblt-actions/slack/notify-result@v1.9.3
+        with:
+          bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          channel-id: "#apm-aws-lambda"
