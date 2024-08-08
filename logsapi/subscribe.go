@@ -82,7 +82,7 @@ func (lc *Client) startHTTPServer() (string, error) {
 	return addr, nil
 }
 
-func (lc *Client) subscribe(types []SubscriptionType, extensionID string, uri string) error {
+func (lc *Client) subscribe(types []SubscriptionType, extensionID, uri string) error {
 	data, err := json.Marshal(&SubscribeRequest{
 		SchemaVersion: SchemaVersionLatest,
 		LogTypes:      types,
