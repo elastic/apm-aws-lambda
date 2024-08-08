@@ -8,6 +8,7 @@ provider "aws" {
 module "tags" {
   source  = "github.com/elastic/apm-server//testing/infra/terraform/modules/tags?depth=1"
   project = local.user_name
+  build   = vars.github_workflow_id
 }
 
 module "ec_deployment" {
