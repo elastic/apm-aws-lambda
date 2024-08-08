@@ -85,3 +85,9 @@ variable "elasticsearch_zone_count" {
   description = "Optional Elasticsearch zone count"
   default     = 2
 }
+
+variable "github_workflow_id" {
+  type        = string
+  description = "The GitHub Workflow ID"
+  default     = "1"
+}
