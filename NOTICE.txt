@@ -3560,11 +3560,11 @@ Contents of probable licence file $GOMODCACHE/go.elastic.co/ecszap@v1.0.3/LICENS
 
 --------------------------------------------------------------------------------
 Module  : go.elastic.co/fastjson
-Version : v1.3.0
-Time    : 2023-06-19T07:59:46Z
+Version : v1.4.0
+Time    : 2024-08-21T17:08:53Z
 Licence : MIT
 
-Contents of probable licence file $GOMODCACHE/go.elastic.co/fastjson@v1.3.0/LICENSE:
+Contents of probable licence file $GOMODCACHE/go.elastic.co/fastjson@v1.4.0/LICENSE:
 
 Copyright 2018 Elasticsearch BV
 
