@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.30.4
-	github.com/aws/aws-sdk-go-v2/config v1.27.29
+	github.com/aws/aws-sdk-go-v2/config v1.27.30
 	github.com/aws/aws-sdk-go-v2/service/acm v1.28.6
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.32.6
 	github.com/google/uuid v1.6.0
