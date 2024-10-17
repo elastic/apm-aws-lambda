@@ -19,11 +19,11 @@ Third party libraries used by the Elastic APM AWS Lambda extension.
 
 --------------------------------------------------------------------------------
 Module  : github.com/aws/aws-sdk-go-v2/config
-Version : v1.27.43
-Time    : 2024-10-08T18:24:31Z
+Version : v1.28.0
+Time    : 2024-10-16T18:25:20Z
 Licence : Apache-2.0
 
-Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/config@v1.27.43/LICENSE.txt:
+Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/config@v1.28.0/LICENSE.txt:
 
 
                                  Apache License
