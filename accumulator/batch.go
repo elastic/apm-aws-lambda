@@ -151,7 +151,10 @@ func (b *Batch) OnAgentInit(reqID, contentEncoding string, raw []byte) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	if b.metadataBytes == 0 && len(metadata) > 0 {
-		b.metadataBytes, _ = b.buf.Write(metadata)
+		b.metadataBytes, err = b.buf.Write(metadata)
+		if err != nil {
+			return fmt.Errorf("failed to write metadata to buffer: %v", err)
+		}
 	}
 	i, ok := b.invocations[reqID]
 	if !ok {
@@ -195,7 +198,10 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 	// first line being metadata.
 	data, after, _ := bytes.Cut(raw, newLineSep)
 	if b.metadataBytes == 0 {
-		b.metadataBytes, _ = b.buf.Write(data)
+		b.metadataBytes, err = b.buf.Write(data)
+		if err != nil {
+			return fmt.Errorf("failed to write data to buffer: %v", err)
+		}
 	}
 	for {
 		data, after, _ = bytes.Cut(after, newLineSep)
