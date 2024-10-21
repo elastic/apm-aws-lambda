@@ -153,7 +153,7 @@ func (b *Batch) OnAgentInit(reqID, contentEncoding string, raw []byte) error {
 	if b.metadataBytes == 0 && len(metadata) > 0 {
 		b.metadataBytes, err = b.buf.Write(metadata)
 		if err != nil {
-			return fmt.Errorf("failed to write metadata to buffer: %v", bufErr)
+			return fmt.Errorf("failed to write metadata to buffer: %v", err)
 		}
 	}
 	i, ok := b.invocations[reqID]
