@@ -202,7 +202,7 @@ func (b *Batch) AddAgentData(apmData APMData) error {
 		var bufErr error
 		b.metadataBytes, bufErr = b.buf.Write(data)
 		if bufErr != nil {
-			fmt.Errorf("failed to write data to buffer: %v", err)
+			return fmt.Errorf("failed to write data to buffer: %v", err)
 		}
 	}
 	for {
