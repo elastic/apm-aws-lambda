@@ -28,8 +28,8 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/elastic/apm-aws-lambda/accumulator"
 	"github.com/elastic/apm-aws-lambda/version"
