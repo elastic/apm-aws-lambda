@@ -63,7 +63,7 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 		case data := <-c.AgentDataChannel:
 			if err := c.forwardAgentData(ctx, data); err != nil {
 				if errors.Is(err, accumulator.ErrNoData) {
-					c.logger.Debugf("received something from '%s' without APMData", data.AgentInfo)
+					c.logger.Debugf("Received something from '%s' without APMData", data.AgentInfo)
 					continue
 				}
 				return err
