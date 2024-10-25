@@ -29,6 +29,7 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
+	"sync"
 
 	"github.com/elastic/apm-aws-lambda/accumulator"
 	"github.com/elastic/apm-aws-lambda/version"
@@ -52,6 +53,7 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 		c.logger.Warn("Failed to start APM data forwarder due to client unhealthy")
 		return nil
 	}
+	var once sync.Once
 	var lambdaDataChan chan []byte
 	for {
 		select {
@@ -66,9 +68,11 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 				}
 				return err
 			}
-			// Wait for metadata to be available, metadata will be available as soon as
-			// the first agent data is processed.
-			lambdaDataChan = c.LambdaDataChannel
+			once.Do(func() {
+				// Wait for metadata to be available, metadata will be available as soon as
+				// the first agent data is processed.
+				lambdaDataChan = c.LambdaDataChannel
+			})
 		case data := <-lambdaDataChan:
 			if err := c.forwardLambdaData(ctx, data); err != nil {
 				return err
