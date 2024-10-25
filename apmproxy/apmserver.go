@@ -61,11 +61,11 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 			c.logger.Debug("Invocation context cancelled, not processing any more agent data")
 			return nil
 		case data := <-c.AgentDataChannel:
+			if len(data.Data) == 0 {
+				c.logger.Debugf("Received something from '%s' without APMData", data.AgentInfo)
+				continue
+			}
 			if err := c.forwardAgentData(ctx, data); err != nil {
-				if errors.Is(err, accumulator.ErrNoData) {
-					c.logger.Debugf("Received something from '%s' without APMData", data.AgentInfo)
-					continue
-				}
 				return err
 			}
 			once.Do(func() {
