@@ -60,6 +60,10 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 			return nil
 		case data := <-c.AgentDataChannel:
 			if err := c.forwardAgentData(ctx, data); err != nil {
+				if errors.Is(err, accumulator.ErrNoData) {
+					c.logger.Debug("received something from AgentDataChannel without APMData")
+					continue
+				}
 				return err
 			}
 			// Wait for metadata to be available, metadata will be available as soon as
