@@ -69,8 +69,8 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 				return err
 			}
 			once.Do(func() {
-				// Wait for metadata to be available, metadata will be available as soon as
-				// the first agent data is processed.
+				// With the first successful request to c.forwardAgent Data() metadata should be
+				// available and processing data from c.LambdaDataChannel can start.
 				lambdaDataChan = c.LambdaDataChannel
 			})
 		case data := <-lambdaDataChan:
