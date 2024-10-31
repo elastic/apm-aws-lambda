@@ -28,7 +28,6 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/elastic/apm-aws-lambda/accumulator"
@@ -53,7 +52,6 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 		c.logger.Warn("Failed to start APM data forwarder due to client unhealthy")
 		return nil
 	}
-	var once sync.Once
 	var lambdaDataChan chan []byte
 	for {
 		select {
@@ -68,11 +66,12 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 			if err := c.forwardAgentData(ctx, data); err != nil {
 				return err
 			}
-			once.Do(func() {
+			if lambdaDataChan == nil {
 				// With the first successful request to c.forwardAgent Data() metadata should be
 				// available and processing data from c.LambdaDataChannel can start.
 				lambdaDataChan = c.LambdaDataChannel
-			})
+				c.logger.Debug("Assigned Lambda data channel")
+			}
 		case data := <-lambdaDataChan:
 			if err := c.forwardLambdaData(ctx, data); err != nil {
 				return err
