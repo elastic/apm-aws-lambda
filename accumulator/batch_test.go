@@ -48,6 +48,10 @@ func TestAdd(t *testing.T) {
 
 		assert.ErrorIs(t, ErrBatchFull, b.AddLambdaData([]byte(`{"log":{}}`)))
 	})
+	t.Run("empty AddAgentData", func(t *testing.T) {
+		b := NewBatch(1, time.Hour)
+		assert.ErrorIs(t, ErrNoData, b.AddAgentData(APMData{}))
+	})
 }
 
 func TestReset(t *testing.T) {

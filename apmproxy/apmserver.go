@@ -59,12 +59,19 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 			c.logger.Debug("Invocation context canceled, not processing any more agent data")
 			return nil
 		case data := <-c.AgentDataChannel:
+			if len(data.Data) == 0 {
+				c.logger.Debugf("Received something from '%s' without APMData", data.AgentInfo)
+				continue
+			}
 			if err := c.forwardAgentData(ctx, data); err != nil {
 				return err
 			}
-			// Wait for metadata to be available, metadata will be available as soon as
-			// the first agent data is processed.
-			lambdaDataChan = c.LambdaDataChannel
+			if lambdaDataChan == nil {
+				// With the first successful request to c.forwardAgent Data() metadata should be
+				// available and processing data from c.LambdaDataChannel can start.
+				lambdaDataChan = c.LambdaDataChannel
+				c.logger.Debug("Assigned Lambda data channel")
+			}
 		case data := <-lambdaDataChan:
 			if err := c.forwardLambdaData(ctx, data); err != nil {
 				return err

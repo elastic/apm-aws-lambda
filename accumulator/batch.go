@@ -37,6 +37,8 @@ var (
 	// ErrInvalidEncoding is returned for any APMData that is encoded
 	// with any encoding format
 	ErrInvalidEncoding = errors.New("encoded data not supported")
+	// ErrNoData indicates that APMData.data is empty
+	ErrNoData = errors.New("no data")
 )
 
 var (
@@ -174,7 +176,7 @@ func (b *Batch) OnAgentInit(reqID, contentEncoding string, raw []byte) error {
 // before adding any events then ErrBatchFull is returned.
 func (b *Batch) AddAgentData(apmData APMData) error {
 	if len(apmData.Data) == 0 {
-		return nil
+		return ErrNoData
 	}
 	raw, err := GetUncompressedBytes(apmData.Data, apmData.ContentEncoding)
 	if err != nil {

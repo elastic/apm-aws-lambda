@@ -136,18 +136,20 @@ func (c *Client) handleIntakeV2Events() func(w http.ResponseWriter, r *http.Requ
 
 		agentFlushed := r.URL.Query().Get("flushed") == "true"
 
-		agentData := accumulator.APMData{
-			Data:            rawBytes,
-			ContentEncoding: r.Header.Get("Content-Encoding"),
-			AgentInfo:       r.UserAgent(),
-		}
+		if len(rawBytes) != 0 {
+			agentData := accumulator.APMData{
+				Data:            rawBytes,
+				ContentEncoding: r.Header.Get("Content-Encoding"),
+				AgentInfo:       r.UserAgent(),
+			}
 
-		if len(agentData.Data) != 0 {
 			select {
 			case c.AgentDataChannel <- agentData:
 			default:
 				c.logger.Warnf("Channel full: dropping a subset of agent data")
 			}
+		} else {
+			c.logger.Debugf("Received empy request from '%s'", r.UserAgent())
 		}
 
 		if agentFlushed {
