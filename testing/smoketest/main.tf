@@ -6,7 +6,7 @@ provider "aws" {
 }
 
 module "tags" {
-  source  = "github.com/elastic/apm-server//testing/infra/terraform/modules/tags?depth=1"
+  source  = "../tf-modules/tags"
   project = local.user_name
   build   = var.github_workflow_id
 }
