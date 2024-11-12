@@ -24,7 +24,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: elastic/oblt-actions/aws/auth@v1.10.0
+      - uses: elastic/oblt-actions/aws/auth@v1
         with:
           aws-account-id: "267093732750"
 
@@ -89,7 +89,7 @@ jobs:
           VERSION: ${{ github.ref_name }}
 
       - if: ${{ success() }}
-        uses: elastic/oblt-actions/slack/send@v1.9.3
+        uses: elastic/oblt-actions/slack/send@v1
         with:
           bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
           channel-id: "#apm-aws-lambda"
@@ -98,7 +98,7 @@ jobs:
             Build: (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|here>)
 
       - if: ${{ failure() }}
-        uses: elastic/oblt-actions/slack/send@v1.9.3
+        uses: elastic/oblt-actions/slack/send@v1
         with:
           bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
           channel-id: "#apm-aws-lambda"
