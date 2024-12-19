@@ -2,8 +2,6 @@ module github.com/elastic/apm-aws-lambda/tools
 
 go 1.23
 
-toolchain go1.23.4
-
 require github.com/terraform-docs/terraform-docs v0.19.0
 
 require (
