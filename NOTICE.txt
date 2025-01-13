@@ -19,11 +19,11 @@ Third party libraries used by the Elastic APM AWS Lambda extension.
 
 --------------------------------------------------------------------------------
 Module  : github.com/aws/aws-sdk-go-v2/config
-Version : v1.28.9
-Time    : 2025-01-09T19:24:23Z
+Version : v1.28.10
+Time    : 2025-01-10T19:24:30Z
 Licence : Apache-2.0
 
-Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/config@v1.28.9/LICENSE.txt:
+Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/config@v1.28.10/LICENSE.txt:
 
 
                                  Apache License
@@ -231,11 +231,11 @@ Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/confi
 
 --------------------------------------------------------------------------------
 Module  : github.com/aws/aws-sdk-go-v2/credentials
-Version : v1.17.50
-Time    : 2025-01-09T19:24:23Z
+Version : v1.17.51
+Time    : 2025-01-10T19:24:30Z
 Licence : Apache-2.0
 
-Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/credentials@v1.17.50/LICENSE.txt:
+Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/credentials@v1.17.51/LICENSE.txt:
 
 
                                  Apache License
@@ -2563,11 +2563,11 @@ Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/servi
 
 --------------------------------------------------------------------------------
 Module  : github.com/aws/aws-sdk-go-v2/service/sts
-Version : v1.33.5
-Time    : 2025-01-09T19:24:23Z
+Version : v1.33.6
+Time    : 2025-01-10T19:24:30Z
 Licence : Apache-2.0
 
-Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/service/sts@v1.33.5/LICENSE.txt:
+Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/service/sts@v1.33.6/LICENSE.txt:
 
 
                                  Apache License
