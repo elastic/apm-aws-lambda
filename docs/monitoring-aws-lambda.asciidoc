@@ -10,6 +10,8 @@ To get started with the setup of Elastic APM for your Lambda functions, checkout
 * {apm-py-ref}/lambda-support.html[Quick Start with APM on AWS Lambda - Python]
 * {apm-java-ref}/aws-lambda.html[Quick Start with APM on AWS Lambda - Java]
 
+Note that AWS Step Functions are currently not supported by any of the languages.
+
 Learn more about the <<aws-lambda-arch, architecture>> of Elastic APM for AWS Lambda.
 
 [[aws-lambda-arch]]
