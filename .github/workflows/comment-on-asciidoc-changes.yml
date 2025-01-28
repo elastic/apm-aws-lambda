@@ -9,6 +9,7 @@ on:
       - reopened
     branches:
       - main
+      - "9.0"
 
 jobs:
   comment-on-asciidoc-change:
