@@ -31,7 +31,7 @@ linters:
     #   - too many non-sensical warnings
     #   - not relevant for us
     #   - false positives
-    # 
+    #
     # "might be worth fixing" means we should investigate/fix in the mid term
     - canonicalheader
     - contextcheck # might be worth fixing
@@ -54,7 +54,6 @@ linters:
     - godot
     - godox # complains about TODO etc
     - gofumpt
-    - gomnd
     - gomoddirectives
     - inamedparam
     - interfacebloat
@@ -77,8 +76,6 @@ linters:
     - wastedassign
     - wsl
     - wrapcheck
-    # the following linters are deprecated
-    - execinquery
     # we don't want to change code to Go 1.22+ yet
     - intrange
     - copyloopvar

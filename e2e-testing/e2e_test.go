@@ -39,10 +39,12 @@ import (
 	"go.uber.org/zap"
 )
 
-var rebuildPtr = flag.Bool("rebuild", false, "rebuild lambda functions")
-var langPtr = flag.String("lang", "nodejs", "the language of the Lambda test function : Java, Node, or Python")
-var timerPtr = flag.Int("timer", 20, "the timeout of the test lambda function")
-var javaAgentVerPtr = flag.String("java-agent-ver", "1.28.4", "the version of the java APM agent")
+var (
+	rebuildPtr      = flag.Bool("rebuild", false, "rebuild lambda functions")
+	langPtr         = flag.String("lang", "nodejs", "the language of the Lambda test function : Java, Node, or Python")
+	timerPtr        = flag.Int("timer", 20, "the timeout of the test lambda function")
+	javaAgentVerPtr = flag.String("java-agent-ver", "1.28.4", "the version of the java APM agent")
+)
 
 func TestEndToEnd(t *testing.T) {
 	// Check the only mandatory environment variable
@@ -103,7 +105,7 @@ func TestEndToEnd(t *testing.T) {
 		t.Fail()
 	}
 	l.Infof("Querying the mock server for transaction bound to %s...", samServiceName)
-	assert.True(t, strings.Contains(mockAPMServerLog, testUUID))
+	assert.Contains(t, mockAPMServerLog, testUUID)
 }
 
 func runTestWithTimer(l *zap.SugaredLogger, path, serviceName, serverURL string, buildFlag bool, lambdaFuncTimeout int, resultsChan chan string) string {
@@ -134,10 +136,12 @@ func runTest(l *zap.SugaredLogger, path, serviceName, serverURL string, buildFla
 	uuidWithHyphen := uuid.New().String()
 	urlSlice := strings.Split(serverURL, ":")
 	port := urlSlice[len(urlSlice)-1]
-	RunCommandInDir(l, "sam", []string{"local", "invoke", "--parameter-overrides",
+	RunCommandInDir(l, "sam", []string{
+		"local", "invoke", "--parameter-overrides",
 		"ParameterKey=ApmServerURL,ParameterValue=http://host.docker.internal:" + port,
 		"ParameterKey=TestUUID,ParameterValue=" + uuidWithHyphen,
-		"ParameterKey=TimeoutParam,ParameterValue=" + strconv.Itoa(lambdaFuncTimeout)},
+		"ParameterKey=TimeoutParam,ParameterValue=" + strconv.Itoa(lambdaFuncTimeout),
+	},
 		path)
 	l.Infof("%s execution complete", serviceName)
 
