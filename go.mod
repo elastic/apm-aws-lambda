@@ -1,6 +1,7 @@
 module github.com/elastic/apm-aws-lambda
 
 go 1.22
+toolchain go1.23.6
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.1
@@ -13,7 +14,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	go.elastic.co/ecszap v1.0.3
-	go.elastic.co/fastjson v1.4.0
+	go.elastic.co/fastjson v1.5.0
 	go.uber.org/zap v1.27.0
 )
 
