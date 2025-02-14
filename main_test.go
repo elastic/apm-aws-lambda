@@ -26,7 +26,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -439,7 +438,7 @@ func startLogSender(ctx context.Context, q <-chan logsapi.LogEvent, logsapiAddr 
 			return err
 		}
 		defer resp.Body.Close()
-		if resp.StatusCode/100 != 2 { //nolint:usestdlibvars
+		if resp.StatusCode/100 != 2 {
 			return fmt.Errorf("received a non 2xx status code: %d", resp.StatusCode)
 		}
 		return nil
@@ -569,8 +568,7 @@ func TestLateFlush(t *testing.T) {
 	case <-runApp(t, logsapiAddr):
 		assert.Regexp(
 			t,
-			regexp.MustCompile(fmt.Sprintf(".*\n%s.*\n%s", TimelyResponse,
-				TimelyResponse)), // metadata followed by TimelyResponsex2
+			fmt.Sprintf(".*\n%s.*\n%s", TimelyResponse, TimelyResponse), // metadata followed by TimelyResponsex2
 			apmServerInternals.Data,
 		)
 	case <-time.After(timeout):
