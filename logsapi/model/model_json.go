@@ -82,7 +82,7 @@ func (v *FAAS) MarshalFastJSON(w *fastjson.Writer) error {
 	return nil
 }
 
-func (v *MetricsContainer) MarshalFastJSON(w *fastjson.Writer) error {
+func (v MetricsContainer) MarshalFastJSON(w *fastjson.Writer) error {
 	var firstErr error
 	w.RawByte('{')
 	if v.Metrics != nil {
