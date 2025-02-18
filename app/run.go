@@ -216,7 +216,7 @@ func (app *App) processEvent(
 				func(ctx context.Context, b []byte) error {
 					select {
 					case app.apmClient.LambdaDataChannel <- b:
-					case <-invocationCtx.Done():
+					case <-ctx.Done():
 					}
 					return nil
 				},
