@@ -62,13 +62,13 @@ func (lc *Client) ProcessLogs(
 	ctx context.Context,
 	requestID string,
 	invokedFnArn string,
-	forwarFn Forwarder,
+	forwardFn Forwarder,
 	isShutdown bool,
 ) {
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
-			if shouldExit := lc.handleEvent(ctx, logEvent, requestID, invokedFnArn, forwarFn, isShutdown); shouldExit {
+			if shouldExit := lc.handleEvent(ctx, logEvent, requestID, invokedFnArn, forwardFn, isShutdown); shouldExit {
 				return
 			}
 		case <-ctx.Done():
