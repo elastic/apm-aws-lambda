@@ -25,6 +25,8 @@ import (
 // LogEventType represents the log type that is received in the log messages
 type LogEventType string
 
+type Forwarder func(context.Context, []byte) error
+
 const (
 	// PlatformRuntimeDone event is sent when lambda function is finished it's execution
 	PlatformRuntimeDone LogEventType = "platform.runtimeDone"
@@ -60,13 +62,13 @@ func (lc *Client) ProcessLogs(
 	ctx context.Context,
 	requestID string,
 	invokedFnArn string,
-	dataChan chan []byte,
+	forwarFn Forwarder,
 	isShutdown bool,
 ) {
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
-			if shouldExit := lc.handleEvent(ctx, logEvent, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
+			if shouldExit := lc.handleEvent(ctx, logEvent, requestID, invokedFnArn, forwarFn, isShutdown); shouldExit {
 				return
 			}
 		case <-ctx.Done():
@@ -80,14 +82,14 @@ func (lc *Client) FlushData(
 	ctx context.Context,
 	requestID string,
 	invokedFnArn string,
-	dataChan chan []byte,
+	forwardFn Forwarder,
 	isShutdown bool,
 ) {
 	lc.logger.Infof("flushing %d buffered logs", len(lc.logsChannel))
 	for {
 		select {
 		case logEvent := <-lc.logsChannel:
-			if shouldExit := lc.handleEvent(ctx, logEvent, requestID, invokedFnArn, dataChan, isShutdown); shouldExit {
+			if shouldExit := lc.handleEvent(ctx, logEvent, requestID, invokedFnArn, forwardFn, isShutdown); shouldExit {
 				return
 			}
 		case <-ctx.Done():
@@ -106,7 +108,7 @@ func (lc *Client) handleEvent(ctx context.Context,
 	logEvent LogEvent,
 	requestID string,
 	invokedFnArn string,
-	dataChan chan []byte,
+	forwardFn Forwarder,
 	isShutdown bool,
 ) bool {
 	lc.logger.Debugf("Received log event %v for request ID %s", logEvent.Type, logEvent.Record.RequestID)
@@ -139,9 +141,8 @@ func (lc *Client) handleEvent(ctx context.Context,
 			if err != nil {
 				lc.logger.Errorf("Error processing Lambda platform metrics: %v", err)
 			} else {
-				select {
-				case dataChan <- processedMetrics:
-				case <-ctx.Done():
+				if err := forwardFn(ctx, processedMetrics); err != nil {
+					lc.logger.Errorf("Error forwarding Lambda platform metrics: %v", err)
 				}
 			}
 		}
@@ -166,9 +167,8 @@ func (lc *Client) handleEvent(ctx context.Context,
 		if err != nil {
 			lc.logger.Warnf("Error processing function log : %v", err)
 		} else {
-			select {
-			case dataChan <- processedLog:
-			case <-ctx.Done():
+			if err := forwardFn(ctx, processedLog); err != nil {
+				lc.logger.Warnf("Error forwarding function log : %v", err)
 			}
 		}
 	}

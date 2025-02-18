@@ -98,7 +98,7 @@ func (app *App) Run(ctx context.Context) error {
 				app.logger.Infof("Exiting due to shutdown event with reason %s", event.ShutdownReason)
 				if app.logsClient != nil {
 					// Flush buffered logs if any
-					app.logsClient.FlushData(ctx, event.RequestID, event.InvokedFunctionArn, app.apmClient.LambdaDataChannel, true)
+					app.logsClient.FlushData(ctx, event.RequestID, event.InvokedFunctionArn, app.apmClient.ForwardLambdaData, true)
 				}
 				// Since we have waited for the processEvent loop to finish we
 				// already have received all the data we can from the agent. So, we
@@ -131,7 +131,7 @@ func (app *App) Run(ctx context.Context) error {
 				flushCtx, cancel := context.WithCancel(ctx)
 				if app.logsClient != nil {
 					// Flush buffered logs if any
-					app.logsClient.FlushData(ctx, event.RequestID, event.InvokedFunctionArn, app.apmClient.LambdaDataChannel, false)
+					app.logsClient.FlushData(ctx, event.RequestID, event.InvokedFunctionArn, app.apmClient.ForwardLambdaData, false)
 				}
 				// Flush APM data now that the function invocation has completed
 				app.apmClient.FlushAPMData(flushCtx)
@@ -213,7 +213,13 @@ func (app *App) processEvent(
 				invocationCtx,
 				event.RequestID,
 				event.InvokedFunctionArn,
-				app.apmClient.LambdaDataChannel,
+				func(ctx context.Context, b []byte) error {
+					select {
+					case app.apmClient.LambdaDataChannel <- b:
+					case <-invocationCtx.Done():
+					}
+					return nil
+				},
 				event.EventType == extension.Shutdown,
 			)
 		}()
