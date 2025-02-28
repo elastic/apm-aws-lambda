@@ -9,9 +9,9 @@ The recommended way of configuring the {{apm-lambda-ext}} and the APM agents on 
 
 The configuration options for the APM agents are documented in the corresponding language agents:
 
-* [Configuration options - Node.js APM agent](apm-agent-nodejs://docs/reference/configuration.md)
-* [Configuration options - Python APM agent](apm-agent-php://docs/reference/configuration.md)
-* [Configuration options - Java APM agent](apm-agent-java://docs/reference/configuration.md)
+* [Configuration options - Node.js APM agent](apm-agent-nodejs://reference/configuration.md)
+* [Configuration options - Python APM agent](apm-agent-php://reference/configuration.md)
+* [Configuration options - Java APM agent](apm-agent-java://reference/configuration.md)
 
 ::::{note}
 Some APM agent configuration options don’t make sense when the APM agent is running in a Lambda environment. For example, instead of using the Python APM agent configuration variable, `verify_server_cert`, you must use the `ELASTIC_APM_LAMBDA_VERIFY_SERVER_CERT` variable described below.

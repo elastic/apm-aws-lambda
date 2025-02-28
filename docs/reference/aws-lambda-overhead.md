@@ -21,9 +21,9 @@ When your function experiences a cold start, the Elastic APM AWS Lambda extensio
 
 APM agents enrich your application’s code with measurement code that collects APM data. This measurement code introduces a small performance overhead to your application, which is usually in a negligible range. The same is true with Lambda functions. The concrete performance overhead introduced by APM agents highly depends on the configuration of the agent and on the characteristics of your function’s code. The following agent-specific documentation pages provide insights and instructions on tuning the performance the APM agents:
 
-* [Performance Tuning - Node.js](apm-agent-nodejs://docs/reference/performance-tuning.md)
-* [Performance Tuning - Python](apm-agent-python://docs/reference/performance-tuning.md)
-* [Performance Tuning - Java](apm-agent-java://docs/reference/overhead-performance-tuning.md)
+* [Performance Tuning - Node.js](apm-agent-nodejs://reference/performance-tuning.md)
+* [Performance Tuning - Python](apm-agent-python://reference/performance-tuning.md)
+* [Performance Tuning - Java](apm-agent-java://reference/overhead-performance-tuning.md)
 
-Similar to the Elastic APM AWS Lambda extension, APM agents are initialized at cold start time. As a consequence, the APM agent’s overhead will be higher for cold starts as compared to their overhead on *warm* invocations. This effect is especially relevant for the Java APM agent on AWS Lambda. Learn more about corresponding tuning options in the [Java Agent’s AWS Lambda documentation](apm-agent-java://docs/reference/aws-lambda.md#aws-lambda-caveats).
+Similar to the Elastic APM AWS Lambda extension, APM agents are initialized at cold start time. As a consequence, the APM agent’s overhead will be higher for cold starts as compared to their overhead on *warm* invocations. This effect is especially relevant for the Java APM agent on AWS Lambda. Learn more about corresponding tuning options in the [Java Agent’s AWS Lambda documentation](apm-agent-java://reference/aws-lambda.md#aws-lambda-caveats).
 
