@@ -266,9 +266,9 @@ Provide the name of the secret you created in [Step 1](#aws-lambda-secrets-manag
 
 The language-specific instructions describe how to set environment variables for configuring AWS Lambda for Elastic APM:
 
-* [Configure APM on AWS Lambda - Node.js](apm-agent-nodejs://reference/lambda.md#_step_3_configure_apm_on_aws_lambda)
-* [Configure APM on AWS Lambda - Python](apm-agent-python://reference/lambda-support.md#_step_3_configure_apm_on_aws_lambda)
-* [Configure APM on AWS Lambda - Java](apm-agent-java://reference/aws-lambda.md#_step_3_configure_apm_on_aws_lambda)
+* [Configure APM on AWS Lambda - Node.js](apm-agent-nodejs://reference/lambda.md#configure_apm_on_aws_lambda)
+* [Configure APM on AWS Lambda - Python](apm-agent-python://reference/lambda-support.md#configure_apm_on_aws_lambda)
+* [Configure APM on AWS Lambda - Java](apm-agent-java://reference/aws-lambda.md#configure_apm_on_aws_lambda)
 
 That’s it. With the first invocation (cold start) of your Lambda function you should see a log message from the {{apm-lambda-ext}} indicating that a secret from the secrets manager is used:
 
