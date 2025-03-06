@@ -10,7 +10,7 @@ When using the config options [`ELASTIC_APM_SECRET_TOKEN` or `ELASTIC_APM_API_KE
 
 ## Step 1: Create a secret in the AWS Secrets Manager. [aws-lambda-secrets-manager-create-secret]
 
-[Create a secret in the AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.md) for the [APM Secret Token](docs-content://solutions/observability/apps/secret-token.md) or the [APM API key](docs-content://solutions/observability/apps/api-keys.md), depending on which one you prefer to use. Make sure to create the secret as a **Plaintext** typed secret and ensure it is created **in the same AWS region** as your target Lambda function that will use the secret.
+[Create a secret in the AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.html) for the [APM Secret Token](docs-content://solutions/observability/apps/secret-token.md) or the [APM API key](docs-content://solutions/observability/apps/api-keys.md), depending on which one you prefer to use. Make sure to create the secret as a **Plaintext** typed secret and ensure it is created **in the same AWS region** as your target Lambda function that will use the secret.
 
 We recommend using the AWS-managed encryption key `aws/secretsmanager`. However, you can optionally create and select a custom KMS key for encryption. Note that with a custom encryption key, you will need additional key permissions on your Lambda function (see [Step 2](#aws-lambda-secrets-manager-permissions)).
 
