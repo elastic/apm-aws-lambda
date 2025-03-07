@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.36.3
 	github.com/aws/aws-sdk-go-v2/config v1.29.9
 	github.com/aws/aws-sdk-go-v2/service/acm v1.31.1
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.35.1
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.35.2
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.10.0
