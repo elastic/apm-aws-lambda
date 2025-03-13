@@ -45,11 +45,11 @@ lint:
 NOTICE.txt: go.mod
 	@bash ./scripts/notice.sh
 
-.PHONY: check-linceses
+.PHONY: check-licenses
 check-licenses:
-	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing .
-	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -ext .java .
-	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -ext .js .
+	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -exclude e2e-testing .
+	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -exclude e2e-testing -ext .java .
+	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -exclude e2e-testing -ext .js .
 
 
 .PHONY: check-notice
