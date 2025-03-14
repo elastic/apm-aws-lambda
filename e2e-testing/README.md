@@ -13,7 +13,7 @@ In order to run the Lambda functions locally, the following dependencies must be
 ## Run
 
 ```shell
-cd apm-lambda-extension/e2e-testing
+cd e2e-testing
 go test
 ```
 
