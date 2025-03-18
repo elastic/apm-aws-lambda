@@ -54,3 +54,36 @@ The `Makefile` also provides a `build-and-publish` command which will perform th
     AWS_ACCESS_KEY_ID=A...X \
     AWS_SECRET_ACCESS_KEY=h...E \
     make build-and-publish
+
+## Running smoketests
+
+If you haven't yet, go to https://elastic-observability.signin.aws.amazon.com/console ,
+login and and create an API key (drop down your login on the right top corner, select "Security credentials").
+
+On the command line, export the environment variables
+```
+export EC_API_KEY="..."
+export AWS_PROFILE=observability
+```
+The `AWS_PROFILE` value is the profile that you created with `aws configure --profile observability`.
+In `~/.aws/config` there should be an entry like this
+```
+[profile observability]
+region = eu-central-1
+```
+
+Now run the smoke tests with
+```
+make smoketest/run
+```
+
+If you want to keep the AWS Lambda test environment for manual testing
+```
+make smoketest/run SKIP_DESTROY=1
+```
+Now you can find your environment under Lambda/Functions in the AWS console.
+
+Destroy the environment with
+```
+make smoketest/destroy
+```
