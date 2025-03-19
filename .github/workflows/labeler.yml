@@ -27,13 +27,13 @@ jobs:
             "issues": "read"
           }
     - name: Add aws-λ-extension label
-      uses: github/issue-labeler@v3.4
+      uses: github/issue-labeler@c1b0f9f52a63158c4adc09425e858e87b32e9685 # v3.4
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         configuration-path: .github/labeler-config.yml
         enable-versioned-regex: 0
     - name: Check team membership for user
-      uses: elastic/get-user-teams-membership@1.1.0
+      uses: elastic/get-user-teams-membership@5fa8d08135326e44d74d0ec4ef8705d8e36df12d # 1.1.0
       id: checkUserMember
       with:
         username: ${{ github.actor }}
@@ -48,13 +48,13 @@ jobs:
         echo "::debug::isExcluded: ${{ steps.checkUserMember.outputs.isExcluded }}"
     - name: Add community and triage labels
       if: steps.checkUserMember.outputs.isTeamMember != 'true' && steps.checkUserMember.outputs.isExcluded != 'true'
-      uses: github/issue-labeler@v3.4
+      uses: github/issue-labeler@c1b0f9f52a63158c4adc09425e858e87b32e9685 # v3.4
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         configuration-path: .github/community-label.yml
         enable-versioned-regex: 0
     - name: Assign new internal pull requests to project
-      uses: elastic/assign-one-project-github-action@1.2.2
+      uses: elastic/assign-one-project-github-action@2573c8fb01aadfde8f5b653eea21dd24569ca831 # 1.2.2
       if: (steps.checkUserMember.outputs.isTeamMember == 'true' || steps.checkUserMember.outputs.isExcluded == 'true') && github.event.pull_request
       with:
         project: 'https://github.com/orgs/elastic/projects/454'
