@@ -20,11 +20,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
         with:
           fetch-depth: 0
 
-      - uses: elastic/oblt-actions/aws/auth@v1
+      - uses: elastic/oblt-actions/aws/auth@31e93d1dfb82adc106fc7820f505db1afefe43b1 # v1
         with:
           aws-account-id: "267093732750"
 
@@ -53,7 +53,7 @@ jobs:
         run: make release
 
       # Store artifacts to help with troubleshooting
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4
         if: always()
         with:
           name: release
@@ -89,7 +89,7 @@ jobs:
           VERSION: ${{ github.ref_name }}
 
       - if: ${{ success() }}
-        uses: elastic/oblt-actions/slack/send@v1
+        uses: elastic/oblt-actions/slack/send@31e93d1dfb82adc106fc7820f505db1afefe43b1 # v1
         with:
           bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
           channel-id: "#apm-aws-lambda"
@@ -98,7 +98,7 @@ jobs:
             Build: (<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|here>)
 
       - if: ${{ failure() }}
-        uses: elastic/oblt-actions/slack/send@v1
+        uses: elastic/oblt-actions/slack/send@31e93d1dfb82adc106fc7820f505db1afefe43b1 # v1
         with:
           bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
           channel-id: "#apm-aws-lambda"
