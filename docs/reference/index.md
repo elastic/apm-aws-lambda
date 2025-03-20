@@ -15,7 +15,7 @@ To accomplish the above, Elastic APM agents instrument AWS Lambda functions and 
 
 Normally, during the execution of a Lambda function, there’s only a single language process running in the AWS Lambda execution environment. With an AWS Lambda extension, Lambda users run a *second* process alongside their main service/application process.
 
-![image showing data flow from lambda function](../images/architecture-white.png "")
+![image showing data flow from lambda function](images/architecture-white.png "")
 
 By using an AWS Lambda extension, Elastic APM agents can send data to a local Lambda extension process, and that process will forward data on to APM Server asynchronously. The Lambda extension ensures that any potential latency between the Lambda function and the APM Server instance will not cause latency in the request flow of the Lambda function itself.
 
