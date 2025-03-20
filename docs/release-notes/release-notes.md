@@ -4,9 +4,9 @@ mapped_pages:
   - https://www.elastic.co/guide/en/apm/lambda/current/aws-lambda-release-notes.html
 ---
 
-# Elastic APM AWS Lambda Extension release notes [elastic-apm-aws-lambda-extension-release-notes]
+# {{apm-lambda-ext}} release notes [elastic-apm-aws-lambda-extension-release-notes]
 
-Review the changes, fixes, and more in each version of Elastic APM AWS Lambda Extension. 
+Review the changes, fixes, and more in each version of {{apm-lambda-ext}}. 
 
 To check for security updates, go to [Security announcements for the Elastic stack](https://discuss.elastic.co/c/announcements/security-announcements/31).
 
