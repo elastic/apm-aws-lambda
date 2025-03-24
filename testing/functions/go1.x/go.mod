@@ -1,6 +1,6 @@
 module apm-aws-lambda-example-go
 
-go 1.19
+go 1.23.7
 
 require (
 	github.com/aws/aws-lambda-go v1.34.1
