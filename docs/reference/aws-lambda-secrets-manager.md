@@ -19,7 +19,7 @@ We recommend using the AWS-managed encryption key `aws/secretsmanager`. However,
 ::::::{tab-item} AWS Web Console
 In the Web Console of the AWS Secrets Manager, navigate to `Store a new secret`, select `Other type of secret` as the secret type, and choose the `Plaintext` tab for entering the secret value. Enter your APM secret token or APM API key value as a plain string (**not** as a JSON key value pair).
 
-![image showing the creation of a plaintext secret in Secrets Manager](../images/secrets-manager.png "")
+![image showing the creation of a plaintext secret in Secrets Manager](images/secrets-manager.png "")
 
 Click `Next`, choose a secret name, and finalize the creation of the secret.
 ::::::
