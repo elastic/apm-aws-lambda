@@ -2,7 +2,7 @@ module github.com/elastic/apm-aws-lambda/tools
 
 go 1.23.7
 
-require github.com/terraform-docs/terraform-docs v0.19.0
+require github.com/terraform-docs/terraform-docs v0.20.0
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
