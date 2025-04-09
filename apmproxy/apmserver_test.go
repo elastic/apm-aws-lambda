@@ -83,7 +83,7 @@ func TestPostToApmServerDataCompressed(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	require.NoError(t, apmClient.PostToApmServer(t.Context(), agentData))
 }
 
 func TestPostToApmServerDataNotCompressed(t *testing.T) {
@@ -129,7 +129,7 @@ func TestPostToApmServerDataNotCompressed(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	require.NoError(t, apmClient.PostToApmServer(t.Context(), agentData))
 }
 
 func TestGracePeriod(t *testing.T) {
@@ -178,7 +178,7 @@ func TestSetHealthyTransport(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Healthy)
 	assert.Equal(t, apmproxy.Healthy, apmClient.Status)
 	assert.Equal(t, apmClient.ReconnectionCount, -1)
 }
@@ -192,7 +192,7 @@ func TestSetFailingTransport(t *testing.T) {
 	)
 	require.NoError(t, err)
 	apmClient.ReconnectionCount = 0
-	apmClient.UpdateStatus(context.Background(), apmproxy.Failing)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Failing)
 	assert.Equal(t, apmproxy.Failing, apmClient.Status)
 	assert.Equal(t, 1, apmClient.ReconnectionCount)
 }
@@ -203,8 +203,8 @@ func TestSetPendingTransport(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Failing)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Healthy)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Failing)
 	require.Eventually(t, func() bool {
 		return !apmClient.IsUnhealthy()
 	}, 7*time.Second, 50*time.Millisecond)
@@ -218,8 +218,8 @@ func TestSetPendingTransportExplicitly(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Started)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Healthy)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Started)
 	assert.Equal(t, apmproxy.Healthy, apmClient.Status)
 	assert.Equal(t, apmClient.ReconnectionCount, -1)
 }
@@ -230,8 +230,8 @@ func TestSetInvalidTransport(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
-	apmClient.UpdateStatus(context.Background(), "Invalid")
+	apmClient.UpdateStatus(t.Context(), apmproxy.Healthy)
+	apmClient.UpdateStatus(t.Context(), "Invalid")
 	assert.Equal(t, apmproxy.Healthy, apmClient.Status)
 	assert.Equal(t, apmClient.ReconnectionCount, -1)
 }
@@ -274,12 +274,12 @@ func TestEnterBackoffFromHealthy(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Healthy)
 
 	// Close the APM server early so that POST requests fail and that backoff is enabled
 	apmServer.Close()
 
-	if err := apmClient.PostToApmServer(context.Background(), agentData); err != nil {
+	if err := apmClient.PostToApmServer(t.Context(), agentData); err != nil {
 		return
 	}
 	// No way to know for sure if failing or pending (0 sec grace period)
@@ -329,14 +329,14 @@ func TestEnterBackoffFromFailing(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Failing)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Healthy)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Failing)
 	require.Eventually(t, func() bool {
 		return !apmClient.IsUnhealthy()
 	}, 7*time.Second, 50*time.Millisecond)
 	assert.Equal(t, apmproxy.Started, apmClient.Status)
 
-	require.Error(t, apmClient.PostToApmServer(context.Background(), agentData))
+	require.Error(t, apmClient.PostToApmServer(t.Context(), agentData))
 	assert.Equal(t, apmproxy.Failing, apmClient.Status)
 	assert.Equal(t, 1, apmClient.ReconnectionCount)
 }
@@ -383,14 +383,14 @@ func TestAPMServerRecovery(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Failing)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Healthy)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Failing)
 	require.Eventually(t, func() bool {
 		return !apmClient.IsUnhealthy()
 	}, 7*time.Second, 50*time.Millisecond)
 	assert.Equal(t, apmproxy.Started, apmClient.Status)
 
-	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	require.NoError(t, apmClient.PostToApmServer(t.Context(), agentData))
 	assert.Equal(t, apmproxy.Healthy, apmClient.Status)
 }
 
@@ -428,13 +428,13 @@ func TestAPMServerAuthFails(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Failing)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Healthy)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Failing)
 	require.Eventually(t, func() bool {
 		return !apmClient.IsUnhealthy()
 	}, 7*time.Second, 50*time.Millisecond)
 	assert.Equal(t, apmproxy.Started, apmClient.Status)
-	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	require.NoError(t, apmClient.PostToApmServer(t.Context(), agentData))
 	assert.NotEqual(t, apmproxy.Healthy, apmClient.Status)
 }
 
@@ -482,11 +482,11 @@ func TestAPMServerRatelimit(t *testing.T) {
 	assert.Equal(t, apmproxy.Started, apmClient.Status)
 
 	// First request fails but does not trigger the backoff
-	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	require.NoError(t, apmClient.PostToApmServer(t.Context(), agentData))
 	assert.Equal(t, apmproxy.RateLimited, apmClient.Status)
 
 	// Followup request is successful
-	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	require.NoError(t, apmClient.PostToApmServer(t.Context(), agentData))
 	assert.Equal(t, apmproxy.Healthy, apmClient.Status)
 }
 
@@ -534,11 +534,11 @@ func TestAPMServerClientFail(t *testing.T) {
 	assert.Equal(t, apmproxy.Started, apmClient.Status)
 
 	// First request fails but does not trigger the backoff
-	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	require.NoError(t, apmClient.PostToApmServer(t.Context(), agentData))
 	assert.Equal(t, apmproxy.ClientFailing, apmClient.Status)
 
 	// Followup request is successful
-	require.NoError(t, apmClient.PostToApmServer(context.Background(), agentData))
+	require.NoError(t, apmClient.PostToApmServer(t.Context(), agentData))
 	assert.Equal(t, apmproxy.Healthy, apmClient.Status)
 }
 
@@ -581,13 +581,13 @@ func TestContinuedAPMServerFailure(t *testing.T) {
 		apmproxy.WithLogger(zaptest.NewLogger(t).Sugar()),
 	)
 	require.NoError(t, err)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Healthy)
-	apmClient.UpdateStatus(context.Background(), apmproxy.Failing)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Healthy)
+	apmClient.UpdateStatus(t.Context(), apmproxy.Failing)
 	require.Eventually(t, func() bool {
 		return !apmClient.IsUnhealthy()
 	}, 7*time.Second, 50*time.Millisecond)
 	assert.Equal(t, apmproxy.Started, apmClient.Status)
-	require.Error(t, apmClient.PostToApmServer(context.Background(), agentData))
+	require.Error(t, apmClient.PostToApmServer(t.Context(), agentData))
 	assert.Equal(t, apmproxy.Failing, apmClient.Status)
 }
 
@@ -628,7 +628,7 @@ func TestForwardApmData(t *testing.T) {
 	require.NoError(t, err)
 
 	// Start forwarding APM data
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -703,7 +703,7 @@ func BenchmarkFlushAPMData(b *testing.B) {
 		for j := 0; j < 99; j++ {
 			apmClient.LambdaDataChannel <- []byte(`{"log":{"message":this is test log"}}`)
 		}
-		apmClient.FlushAPMData(context.Background())
+		apmClient.FlushAPMData(b.Context())
 	}
 }
 
@@ -742,7 +742,7 @@ func BenchmarkPostToAPM(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if err := apmClient.PostToApmServer(context.Background(), agentData); err != nil {
+		if err := apmClient.PostToApmServer(b.Context(), agentData); err != nil {
 			b.Fatal(err)
 		}
 	}

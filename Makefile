@@ -1,8 +1,5 @@
 SHELL = /bin/bash -eo pipefail
 
-GORELEASER_VERSION = "v1.19.2"
-GO_LICENSER_VERSION = "v0.4.0"
-GOLANGCI_LINT_VERSION = "v1.64.4"
 export DOCKER_IMAGE_NAME = observability/apm-lambda-extension
 export DOCKER_REGISTRY = docker.elastic.co
 
@@ -12,18 +9,18 @@ clean:
 
 .PHONY: dist
 dist:
-	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --snapshot --clean
+	@go tool github.com/goreleaser/goreleaser/v2 release --snapshot --clean
 
 .PHONY: zip
 zip:
-	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --snapshot --clean --skip-docker
+	@go tool github.com/goreleaser/goreleaser/v2 release --snapshot --clean --skip docker
 
 build:
-	@go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) build --snapshot --clean
+	@go tool github.com/goreleaser/goreleaser/v2 build --snapshot --clean
 
 .PHONY: release
 release:
-	go run github.com/goreleaser/goreleaser@$(GORELEASER_VERSION) release --clean
+	go tool github.com/goreleaser/goreleaser/v2 release --clean
 
 .PHONY: release-notes
 release-notes:
@@ -31,7 +28,7 @@ release-notes:
 
 .PHONY: test
 test:
-	@go run gotest.tools/gotestsum@v1.9.0 --format testname --junitfile $(junitfile)
+	@go tool gotest.tools/gotestsum --format testname --junitfile $(junitfile)
 
 .PHONY: lint-prep
 lint-prep:
@@ -39,17 +36,17 @@ lint-prep:
 
 .PHONY: lint
 lint:
-	@if [ "$(CI)" != "" ]; then go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) version; fi
-	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --build-tags tools
+	@if [ "$(CI)" != "" ]; then go tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint version; fi
+	@go tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint run
 
 NOTICE.txt: go.mod
 	@bash ./scripts/notice.sh
 
 .PHONY: check-licenses
 check-licenses:
-	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -exclude e2e-testing .
-	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -exclude e2e-testing -ext .java .
-	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -exclude e2e-testing -ext .js .
+	@go tool github.com/elastic/go-licenser -d -exclude tf -exclude testing -exclude e2e-testing .
+	@go tool github.com/elastic/go-licenser -d -exclude tf -exclude testing -exclude e2e-testing -ext .java .
+	@go tool github.com/elastic/go-licenser -d -exclude tf -exclude testing -exclude e2e-testing -ext .js .
 
 
 .PHONY: check-notice

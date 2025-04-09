@@ -33,7 +33,7 @@ generate_notice() {
         for pkg in $pkgs; do
           deps+="$(go list -m -json $pkg)\n"
         done
-        echo -e $deps | go run go.elastic.co/go-licence-detector@v0.3.0 \
+        echo -e $deps | go tool go.elastic.co/go-licence-detector \
             -depsTemplate="${SCRIPT_DIR}"/templates/dependencies.asciidoc.tmpl \
             -depsOut="${PROJECT_DIR}"/dependencies.asciidoc \
             -noticeTemplate="${SCRIPT_DIR}"/templates/NOTICE.txt.tmpl \

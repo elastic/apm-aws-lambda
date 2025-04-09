@@ -9,11 +9,6 @@ updates:
       aws:
         patterns:
         - "github.com/aws/*"
-  # go tools
-  - package-ecosystem: "gomod"
-    directory: "tools/"
-    schedule:
-      interval: "weekly"
 
   # GitHub actions
   - package-ecosystem: "github-actions"
