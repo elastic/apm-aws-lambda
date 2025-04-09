@@ -10,7 +10,7 @@ When using the config options [`ELASTIC_APM_SECRET_TOKEN` or `ELASTIC_APM_API_KE
 
 ## Step 1: Create a secret in the AWS Secrets Manager. [aws-lambda-secrets-manager-create-secret]
 
-[Create a secret in the AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.html) for the [APM Secret Token](docs-content://solutions/observability/apps/secret-token.md) or the [APM API key](docs-content://solutions/observability/apps/api-keys.md), depending on which one you prefer to use. Make sure to create the secret as a **Plaintext** typed secret and ensure it is created **in the same AWS region** as your target Lambda function that will use the secret.
+[Create a secret in the AWS Secrets Manager](https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.html) for the [APM Secret Token](docs-content://solutions/observability/apm/secret-token.md) or the [APM API key](docs-content://solutions/observability/apm/api-keys.md), depending on which one you prefer to use. Make sure to create the secret as a **Plaintext** typed secret and ensure it is created **in the same AWS region** as your target Lambda function that will use the secret.
 
 We recommend using the AWS-managed encryption key `aws/secretsmanager`. However, you can optionally create and select a custom KMS key for encryption. Note that with a custom encryption key, you will need additional key permissions on your Lambda function (see [Step 2](#aws-lambda-secrets-manager-permissions)).
 
@@ -262,7 +262,7 @@ resource "aws_iam_policy_attachment" "secrets_manager_elastic_apm_policy_attach"
 
 Finally, you will need to configure the {{apm-lambda-ext}} to use the secret from the Secrets Manager *instead of* the value provided through [`ELASTIC_APM_SECRET_TOKEN` or `ELASTIC_APM_API_KEY`](/reference/aws-lambda-config-options.md#aws-lambda-config-authentication-keys).
 
-Provide the name of the secret you created in [Step 1](#aws-lambda-secrets-manager-create-secret) as the value for the [`ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID` or `ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID`](/reference/aws-lambda-config-options.md#aws-lambda-config-secrets-manager-options) config option, respectively, depending on whether you want to use the [APM Secret Token](docs-content://solutions/observability/apps/secret-token.md) or the [APM API key](docs-content://solutions/observability/apps/api-keys.md).
+Provide the name of the secret you created in [Step 1](#aws-lambda-secrets-manager-create-secret) as the value for the [`ELASTIC_APM_SECRETS_MANAGER_SECRET_TOKEN_ID` or `ELASTIC_APM_SECRETS_MANAGER_API_KEY_ID`](/reference/aws-lambda-config-options.md#aws-lambda-config-secrets-manager-options) config option, respectively, depending on whether you want to use the [APM Secret Token](docs-content://solutions/observability/apm/secret-token.md) or the [APM API key](docs-content://solutions/observability/apm/api-keys.md).
 
 The language-specific instructions describe how to set environment variables for configuring AWS Lambda for Elastic APM:
 
