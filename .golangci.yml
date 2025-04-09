@@ -1,62 +1,31 @@
-service:
-  golangci-lint-version: 1.59.x
-
-issues:
-  exclude-dirs:
-    - artifacts
-    - build-targets
-    - design
-    - docker-images
-    - docs
-    - etc
-    - experiments
-    - infrastructure
-    - legal
-    - libpf-rs
-    - mocks
-    - pf-code-indexing-service/cibackend/gomock_*
-    - pf-debug-metadata-service/dmsbackend/gomock_*
-    - pf-host-agent/support/ci-kernels
-    - pf-storage-backend/storagebackend/gomock_*
-    - scratch
-    - systemtests/benchmarks/_outdata
-    - target
-    - virt-tests
-    - vm-images
-
+version: "2"
 linters:
-  enable-all: true
+  default: all
   disable:
-    # Disabled because of
-    #   - too many non-sensical warnings
-    #   - not relevant for us
-    #   - false positives
-    #
-    # "might be worth fixing" means we should investigate/fix in the mid term
     - canonicalheader
-    - contextcheck # might be worth fixing
+    - contextcheck
+    - copyloopvar
     - cyclop
     - depguard
     - dupword
     - err113
-    - errorlint # might be worth fixing
+    - errorlint
     - exhaustive
     - exhaustruct
     - forbidigo
-    - forcetypeassert # might be worth fixing
+    - forcetypeassert
     - funlen
-    - gci # might be worth fixing
     - gochecknoglobals
     - gochecknoinits
     - gocognit
     - goconst
     - gocyclo
     - godot
-    - godox # complains about TODO etc
-    - gofumpt
+    - godox
     - gomoddirectives
     - inamedparam
     - interfacebloat
+    - intrange
     - ireturn
     - lll
     - maintidx
@@ -64,7 +33,7 @@ linters:
     - mnd
     - nestif
     - nlreturn
-    - noctx # might be worth fixing
+    - noctx
     - nonamedreturns
     - paralleltest
     - protogetter
@@ -74,47 +43,62 @@ linters:
     - thelper
     - varnamelen
     - wastedassign
-    - wsl
     - wrapcheck
-    # we don't want to change code to Go 1.22+ yet
-    - intrange
-    - copyloopvar
-
-linters-settings:
-  goconst:
-    min-len: 2
-    min-occurrences: 2
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
-      - ifElseChain
-      - whyNoLint
-      - sloppyReassign
-      - uncheckedInlineErr # Experimental rule with high false positive rate.
-
-      # Broken with Go 1.18 feature (https://github.com/golangci/golangci-lint/issues/2649):
-      - hugeParam
-  gocyclo:
-    min-complexity: 15
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment
-    settings:
-      printf: # analyzer name, run `go tool vet help` to see all analyzers
-        funcs: # run `go tool vet help printf` to see available settings for `printf` analyzer
-          - debug,debugf,debugln
-          - error,errorf,errorln
-          - fatal,fatalf,fataln
-          - info,infof,infoln
-          - log,logf,logln
-          - warn,warnf,warnln
-          - print,printf,println,sprint,sprintf,sprintln,fprint,fprintf,fprintln
-  misspell:
-    locale: US
+    - wsl
+  settings:
+    goconst:
+      min-len: 2
+      min-occurrences: 2
+    gocritic:
+      disabled-checks:
+        - dupImport
+        - ifElseChain
+        - whyNoLint
+        - sloppyReassign
+        - uncheckedInlineErr
+        - hugeParam
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+    gocyclo:
+      min-complexity: 15
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: true
+      settings:
+        printf:
+          funcs:
+            - debug,debugf,debugln
+            - error,errorf,errorln
+            - fatal,fatalf,fataln
+            - info,infof,infoln
+            - log,logf,logln
+            - warn,warnf,warnln
+            - print,printf,println,sprint,sprintf,sprintln,fprint,fprintf,fprintln
+    misspell:
+      locale: US
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

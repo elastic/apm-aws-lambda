@@ -1,5 +1,7 @@
 project_name: apm-lambda-extension
 
+version: 2
+
 before:
   hooks:
     - make check-licenses
@@ -22,7 +24,7 @@ builds:
 
 archives:
   - id: zip
-    format: zip
+    formats: zip
     name_template: |-
       {{ .Tag }}-{{ .Os }}-{{ .Arch }}
     files:

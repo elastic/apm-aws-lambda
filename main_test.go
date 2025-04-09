@@ -127,11 +127,12 @@ func newMockApmServer(t *testing.T, l *zap.SugaredLogger) (*MockServerInternals,
 			}
 		}
 
-		if r.RequestURI == "/intake/v2/events" {
+		switch r.RequestURI {
+		case "/intake/v2/events":
 			apmServerInternals.Data += string(decompressedBytes)
 			l.Debug("APM Payload processed")
 			w.WriteHeader(http.StatusAccepted)
-		} else if r.RequestURI == "/" {
+		case "/":
 			infoPayload, err := json.Marshal(ApmInfo{
 				BuildDate:    time.Now(),
 				BuildSHA:     "7814d524d3602e70b703539c57568cba6964fc20",
@@ -162,7 +163,7 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 	var lambdaServerInternals MockServerInternals
 	// A big queue that can hold all the events required for a test
 	mockLogEventQ := make(chan logsapi.LogEvent, 100)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -867,7 +868,7 @@ func runApp(t *testing.T, logsapiAddr string) <-chan struct{} {
 }
 
 func runAppFull(t *testing.T, logsapiAddr string, disableLogsAPI bool) <-chan struct{} {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	opts := []app.ConfigOption{
 		app.WithExtensionName("apm-lambda-extension"),
 		app.WithLambdaRuntimeAPI(os.Getenv("AWS_LAMBDA_RUNTIME_API")),
