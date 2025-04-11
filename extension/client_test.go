@@ -18,7 +18,6 @@
 package extension
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -30,8 +29,6 @@ import (
 )
 
 func TestRegister(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	extensionName := "helloWorld"
 	expectedRequest := `{"events":["INVOKE","SHUTDOWN"]}`
 	response := []byte(`
@@ -53,7 +50,7 @@ func TestRegister(t *testing.T) {
 	defer runtimeServer.Close()
 
 	client := NewClient(runtimeServer.Listener.Addr().String(), zaptest.NewLogger(t).Sugar())
-	res, err := client.Register(ctx, extensionName)
+	res, err := client.Register(t.Context(), extensionName)
 	require.NoError(t, err)
 	assert.Equal(t, "helloWorld", res.FunctionName)
 	assert.Equal(t, "$LATEST", res.FunctionVersion)
@@ -61,8 +58,6 @@ func TestRegister(t *testing.T) {
 }
 
 func TestNextEvent(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	response := []byte(`
 		{
 			"eventType": "INVOKE",
@@ -85,7 +80,7 @@ func TestNextEvent(t *testing.T) {
 	defer runtimeServer.Close()
 
 	client := NewClient(runtimeServer.Listener.Addr().String(), zaptest.NewLogger(t).Sugar())
-	res, err := client.NextEvent(ctx)
+	res, err := client.NextEvent(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, Invoke, res.EventType)
 	assert.Equal(t, int64(1646394703586), res.DeadlineMs)
