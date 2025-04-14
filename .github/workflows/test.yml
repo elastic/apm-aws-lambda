@@ -93,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: check
-        uses: elastic/oblt-actions/check-dependent-jobs@31e93d1dfb82adc106fc7820f505db1afefe43b1 # v1
+        uses: elastic/oblt-actions/check-dependent-jobs@db0844c27572a45966ce669e4d3073c205c8d5e4 # v1
         with:
           jobs: ${{ toJSON(needs) }}
       - run: ${{ steps.check.outputs.is-success }}
