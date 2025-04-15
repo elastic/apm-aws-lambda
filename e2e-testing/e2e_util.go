@@ -56,12 +56,12 @@ func RunCommandInDir(l *zap.SugaredLogger, command string, args []string, dir st
 	scannerOut := bufio.NewScanner(stdout)
 	for scannerOut.Scan() {
 		m := scannerOut.Text()
-		l.Debugf(m)
+		l.Debug(m)
 	}
 	scannerErr := bufio.NewScanner(stderr)
 	for scannerErr.Scan() {
 		m := scannerErr.Text()
-		l.Debugf(m)
+		l.Debug(m)
 	}
 	if err := e.Wait(); err != nil {
 		l.Errorf("Could not wait for the execution of %s : %v", command, err)
