@@ -17,7 +17,7 @@ jobs:
   report:
     runs-on: ubuntu-latest
     steps:
-      - uses: elastic/oblt-actions/test-report@db0844c27572a45966ce669e4d3073c205c8d5e4 # v1
+      - uses: elastic/oblt-actions/test-report@476391c0e6815110ce488b8b09c80ed61848a28a # v1
         with:
           artifact: /test-results(.*)/
           name: 'Test Report $1'
