@@ -1,4 +1,6 @@
 project: 'APM Architecture for AWS Lambda'
+products:
+  - id: apm
 cross_links:
   - apm-agent-java
   - apm-agent-nodejs
