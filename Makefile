@@ -1,7 +1,6 @@
 SHELL = /bin/bash -eo pipefail
 
 GORELEASER_VERSION = "v1.19.2"
-GO_LICENSER_VERSION = "v0.4.0"
 GOLANGCI_LINT_VERSION = "v1.64.4"
 export DOCKER_IMAGE_NAME = observability/apm-lambda-extension
 export DOCKER_REGISTRY = docker.elastic.co
@@ -42,14 +41,22 @@ lint:
 	@if [ "$(CI)" != "" ]; then go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) version; fi
 	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --build-tags tools
 
+MODULE_DEPS=$(sort $(shell go list -deps -f "{{with .Module}}{{if not .Main}}{{.Path}}{{end}}{{end}}" .))
+
 NOTICE.txt: go.mod
-	@bash ./scripts/notice.sh
+	go list -m -json $(MODULE_DEPS) | go tool go.elastic.co/go-licence-detector \
+		-includeIndirect \
+		-rules scripts/rules.json \
+		-noticeTemplate scripts/templates/NOTICE.txt.tmpl \
+		-noticeOut NOTICE.txt \
+		-depsTemplate scripts/templates/dependencies.asciidoc.tmpl \
+		-depsOut dependencies.asciidoc
 
 .PHONY: check-licenses
 check-licenses:
-	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -exclude e2e-testing .
-	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -exclude e2e-testing -ext .java .
-	@go run github.com/elastic/go-licenser@$(GO_LICENSER_VERSION) -d -exclude tf -exclude testing -exclude e2e-testing -ext .js .
+	@go tool github.com/elastic/go-licenser -d -exclude tf -exclude testing -exclude e2e-testing .
+	@go tool github.com/elastic/go-licenser -d -exclude tf -exclude testing -exclude e2e-testing -ext .java .
+	@go tool github.com/elastic/go-licenser -d -exclude tf -exclude testing -exclude e2e-testing -ext .js .
 
 
 .PHONY: check-notice
