@@ -133,5 +133,5 @@ func TestLoggerSetOffLevel(t *testing.T) {
 	l.Errorf("%s", "logger-test-trace")
 	tempFileContents, err := os.ReadFile(tempFile.Name())
 	require.NoError(t, err)
-	assert.Equal(t, "", string(tempFileContents))
+	assert.Empty(t, string(tempFileContents))
 }
