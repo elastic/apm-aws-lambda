@@ -19,11 +19,11 @@ Third party libraries used by the Elastic APM AWS Lambda extension.
 
 --------------------------------------------------------------------------------
 Module  : github.com/aws/aws-sdk-go-v2/config
-Version : v1.29.13
-Time    : 2025-04-03T18:31:54Z
+Version : v1.29.14
+Time    : 2025-04-10T18:32:01Z
 Licence : Apache-2.0
 
-Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/config@v1.29.13/LICENSE.txt:
+Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/config@v1.29.14/LICENSE.txt:
 
 
                                  Apache License
@@ -231,11 +231,11 @@ Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/confi
 
 --------------------------------------------------------------------------------
 Module  : github.com/aws/aws-sdk-go-v2/credentials
-Version : v1.17.66
-Time    : 2025-04-03T18:31:54Z
+Version : v1.17.67
+Time    : 2025-04-10T18:32:01Z
 Licence : Apache-2.0
 
-Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/credentials@v1.17.66/LICENSE.txt:
+Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/credentials@v1.17.67/LICENSE.txt:
 
 
                                  Apache License
@@ -1291,11 +1291,11 @@ Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/inter
 
 --------------------------------------------------------------------------------
 Module  : github.com/aws/aws-sdk-go-v2/service/acm
-Version : v1.31.2
-Time    : 2025-04-03T18:31:54Z
+Version : v1.32.0
+Time    : 2025-04-28T18:22:09Z
 Licence : Apache-2.0
 
-Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/service/acm@v1.31.2/LICENSE.txt:
+Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/service/acm@v1.32.0/LICENSE.txt:
 
 
                                  Apache License
@@ -1927,11 +1927,11 @@ Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/servi
 
 --------------------------------------------------------------------------------
 Module  : github.com/aws/aws-sdk-go-v2/service/secretsmanager
-Version : v1.35.3
-Time    : 2025-04-03T18:31:54Z
+Version : v1.35.4
+Time    : 2025-04-16T18:34:35Z
 Licence : Apache-2.0
 
-Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/service/secretsmanager@v1.35.3/LICENSE.txt:
+Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/service/secretsmanager@v1.35.4/LICENSE.txt:
 
 
                                  Apache License
@@ -2563,11 +2563,11 @@ Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/servi
 
 --------------------------------------------------------------------------------
 Module  : github.com/aws/aws-sdk-go-v2/service/sts
-Version : v1.33.18
-Time    : 2025-04-03T18:31:54Z
+Version : v1.33.19
+Time    : 2025-04-10T18:32:01Z
 Licence : Apache-2.0
 
-Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/service/sts@v1.33.18/LICENSE.txt:
+Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/service/sts@v1.33.19/LICENSE.txt:
 
 
                                  Apache License
@@ -3537,11 +3537,11 @@ Contents of probable licence file $GOMODCACHE/go.elastic.co/ecszap@v1.0.3/LICENS
 
 --------------------------------------------------------------------------------
 Module  : go.elastic.co/fastjson
-Version : v1.5.0
-Time    : 2025-02-13T12:25:25Z
+Version : v1.5.1
+Time    : 2025-05-06T14:56:09Z
 Licence : MIT
 
-Contents of probable licence file $GOMODCACHE/go.elastic.co/fastjson@v1.5.0/LICENSE:
+Contents of probable licence file $GOMODCACHE/go.elastic.co/fastjson@v1.5.1/LICENSE:
 
 Copyright 2018 Elasticsearch BV
 

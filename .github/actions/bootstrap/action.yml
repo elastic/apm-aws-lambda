@@ -12,7 +12,7 @@ runs:
   using: "composite"
   steps:
 
-    - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5
+    - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5
       with:
         go-version-file: 'go.mod'
 
@@ -28,4 +28,4 @@ runs:
     # See https://goreleaser.com/blog/supply-chain-security/
     - name: installs syft for generating the SBOM with goreleaser
       if: "${{ inputs.goreleaser == 'true' }}"
-      uses: anchore/sbom-action/download-syft@f325610c9f50a54015d37c8d16cb3b0e2c8f4de0 # v0.18.0
+      uses: anchore/sbom-action/download-syft@9f7302141466aa6482940f15371237e9d9f4c34a # v0.19.0

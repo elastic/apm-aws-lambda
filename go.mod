@@ -4,16 +4,16 @@ go 1.24.2
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.3
-	github.com/aws/aws-sdk-go-v2/config v1.29.13
-	github.com/aws/aws-sdk-go-v2/service/acm v1.31.2
-	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.35.3
+	github.com/aws/aws-sdk-go-v2/config v1.29.14
+	github.com/aws/aws-sdk-go-v2/service/acm v1.32.0
+	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.35.4
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	go.elastic.co/ecszap v1.0.3
-	go.elastic.co/fastjson v1.5.0
+	go.elastic.co/fastjson v1.5.1
 	go.uber.org/zap v1.27.0
 )
 
@@ -105,7 +105,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.58.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.25.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.30.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.33.18 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.33.19 // indirect
 	github.com/aws/smithy-go v1.22.2 // indirect
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.9.1 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect

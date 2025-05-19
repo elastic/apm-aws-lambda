@@ -163,16 +163,14 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 	var lambdaServerInternals MockServerInternals
 	// A big queue that can hold all the events required for a test
 	mockLogEventQ := make(chan logsapi.LogEvent, 100)
-	ctx, cancel := context.WithCancel(t.Context())
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		startLogSender(ctx, mockLogEventQ, logsapiAddr, l)
+		startLogSender(t.Context(), mockLogEventQ, logsapiAddr, l)
 	}()
 	t.Cleanup(func() {
-		cancel()
 		wg.Wait()
 	})
 

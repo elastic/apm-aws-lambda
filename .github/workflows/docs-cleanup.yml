@@ -7,7 +7,7 @@ on:
 
 jobs:
   docs-preview:
-    uses: elastic/docs-builder/.github/workflows/preview-cleanup.yml@4fd8e89dd8147ac5301c55a24f9dfce0bedb06cf # main
+    uses: elastic/docs-builder/.github/workflows/preview-cleanup.yml@b133c9db88bc1d1bd83464bd6e275b010601f7af # main
     permissions:
       contents: none
       id-token: write
