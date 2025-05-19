@@ -28,4 +28,4 @@ runs:
     # See https://goreleaser.com/blog/supply-chain-security/
     - name: installs syft for generating the SBOM with goreleaser
       if: "${{ inputs.goreleaser == 'true' }}"
-      uses: anchore/sbom-action/download-syft@9f7302141466aa6482940f15371237e9d9f4c34a # v0.19.0
+      uses: anchore/sbom-action/download-syft@e11c554f704a0b820cbf8c51673f6945e0731532 # v0.20.0
