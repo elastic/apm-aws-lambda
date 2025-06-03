@@ -30,7 +30,7 @@ release-notes:
 
 .PHONY: test
 test:
-	@go run gotest.tools/gotestsum@v1.9.0 --format testname --junitfile $(junitfile)
+	@go test -v ./...
 
 .PHONY: lint-prep
 lint-prep:
