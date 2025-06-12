@@ -1,4 +1,4 @@
-name: "Project Bot"
+name: "Issue+PR Labeler and Project Management"
 on:
   issues:
     types: [opened, edited, closed, reopened, labeled, unlabeled]
@@ -14,7 +14,7 @@ permissions:
   repository-projects: write
 
 jobs:
-  project_bot:
+  triage:
     runs-on: ubuntu-latest
     steps:
     - name: Get token
@@ -32,11 +32,11 @@ jobs:
             "repository_projects": "write"
           }
     
-    - name: Run Project Bot
-      uses: philschatz/project-bot@v1
+    - name: Add to project
+      uses: actions/add-to-project@v0.6.0
       with:
+        project-url: https://github.com/orgs/elastic/projects/1511
         github-token: ${{ steps.get_token.outputs.token }}
-        config-path: .github/project-bot.yml
         
     - name: Add aws-λ-extension label
       uses: github/issue-labeler@c1b0f9f52a63158c4adc09425e858e87b32e9685 # v3.4
