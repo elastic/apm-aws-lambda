@@ -1,0 +1,95 @@
+# Project Bot Configuration for APM AWS Lambda Extension
+# This configuration automates project management for issues and pull requests
+
+# Define project configuration
+project:
+  # Target project URL
+  url: "https://github.com/orgs/elastic/projects/454"
+  
+# Rules for automatically managing issues and pull requests
+rules:
+  # Rule for new issues
+  - name: "New Issues"
+    condition:
+      - type: "issue"
+        action: "opened"
+    actions:
+      - type: "add_to_project"
+        column: "To Do"
+        
+  # Rule for new internal pull requests  
+  - name: "New Internal PRs"
+    condition:
+      - type: "pull_request"
+        action: "opened"
+        author_association: ["MEMBER", "COLLABORATOR", "OWNER"]
+    actions:
+      - type: "add_to_project" 
+        column: "In Progress"
+        
+  # Rule for new community pull requests
+  - name: "New Community PRs"
+    condition:
+      - type: "pull_request"
+        action: "opened"
+        author_association: ["FIRST_TIME_CONTRIBUTOR", "CONTRIBUTOR", "NONE"]
+    actions:
+      - type: "add_to_project"
+        column: "Community Review"
+        
+  # Rule for when PRs are ready for review
+  - name: "Ready for Review"
+    condition:
+      - type: "pull_request"
+        action: "ready_for_review"
+    actions:
+      - type: "move_to_column"
+        column: "Review"
+        
+  # Rule for when PRs are converted to draft
+  - name: "Draft PRs"
+    condition:
+      - type: "pull_request"
+        action: "converted_to_draft"
+    actions:
+      - type: "move_to_column"
+        column: "In Progress"
+        
+  # Rule for closed issues and PRs
+  - name: "Completed Items"
+    condition:
+      - type: "issue"
+        action: "closed"
+      - type: "pull_request"
+        action: "closed"
+        merged: true
+    actions:
+      - type: "move_to_column"
+        column: "Done"
+        
+  # Rule for items with specific labels
+  - name: "Bug Issues"
+    condition:
+      - type: "issue"
+        labels: ["bug"]
+    actions:
+      - type: "add_to_project"
+        column: "Bug Triage"
+        
+  - name: "Enhancement Requests"
+    condition:
+      - type: "issue"
+        labels: ["enhancement", "feature-request"]
+    actions:
+      - type: "add_to_project"
+        column: "Backlog"
+
+# Columns that should exist in the project
+columns:
+  - "To Do"
+  - "In Progress" 
+  - "Review"
+  - "Community Review"
+  - "Bug Triage"
+  - "Backlog"
+  - "Done"

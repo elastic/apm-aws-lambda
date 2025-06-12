@@ -1,17 +1,20 @@
-name: "Issue+PR Labeler"
+name: "Project Bot"
 on:
   issues:
-    types: [opened]
+    types: [opened, edited, closed, reopened, labeled, unlabeled]
   pull_request_target:
-    types: [opened]
+    types: [opened, edited, closed, reopened, labeled, unlabeled, ready_for_review, converted_to_draft]
+  project_card:
+    types: [created, moved, deleted]
 
 permissions:
   contents: read
   issues: write
   pull-requests: write
+  repository-projects: write
 
 jobs:
-  triage:
+  project_bot:
     runs-on: ubuntu-latest
     steps:
     - name: Get token
@@ -24,14 +27,24 @@ jobs:
           {
             "members": "read",
             "organization_projects": "write",
-            "issues": "read"
+            "issues": "write",
+            "pull_requests": "write",
+            "repository_projects": "write"
           }
+    
+    - name: Run Project Bot
+      uses: philschatz/project-bot@v1
+      with:
+        github-token: ${{ steps.get_token.outputs.token }}
+        config-path: .github/project-bot.yml
+        
     - name: Add aws-λ-extension label
       uses: github/issue-labeler@c1b0f9f52a63158c4adc09425e858e87b32e9685 # v3.4
       with:
-        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        repo-token: "${{ steps.get_token.outputs.token }}"
         configuration-path: .github/labeler-config.yml
         enable-versioned-regex: 0
+        
     - name: Check team membership for user
       uses: elastic/get-user-teams-membership@5fa8d08135326e44d74d0ec4ef8705d8e36df12d # 1.1.0
       id: checkUserMember
@@ -42,23 +55,11 @@ jobs:
           apmmachine
           dependabot
         GITHUB_TOKEN: ${{ steps.get_token.outputs.token }}
-    - name: Show team membership
-      run: |
-        echo "::debug::isTeamMember: ${{ steps.checkUserMember.outputs.isTeamMember }}"
-        echo "::debug::isExcluded: ${{ steps.checkUserMember.outputs.isExcluded }}"
+        
     - name: Add community and triage labels
       if: steps.checkUserMember.outputs.isTeamMember != 'true' && steps.checkUserMember.outputs.isExcluded != 'true'
       uses: github/issue-labeler@c1b0f9f52a63158c4adc09425e858e87b32e9685 # v3.4
       with:
-        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        repo-token: "${{ steps.get_token.outputs.token }}"
         configuration-path: .github/community-label.yml
         enable-versioned-regex: 0
-    - name: Assign new internal pull requests to project
-      uses: elastic/assign-one-project-github-action@2573c8fb01aadfde8f5b653eea21dd24569ca831 # 1.2.2
-      if: (steps.checkUserMember.outputs.isTeamMember == 'true' || steps.checkUserMember.outputs.isExcluded == 'true') && github.event.pull_request
-      with:
-        project: 'https://github.com/orgs/elastic/projects/454'
-        project_id: '5882982'
-        column_name: 'In Progress'
-      env:
-        MY_GITHUB_TOKEN: ${{ steps.get_token.outputs.token }}
