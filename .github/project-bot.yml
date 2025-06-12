@@ -4,7 +4,7 @@
 # Define project configuration
 project:
   # Target project URL
-  url: "https://github.com/orgs/elastic/projects/454"
+  url: "https://github.com/orgs/elastic/projects/1511"
   
 # Rules for automatically managing issues and pull requests
 rules:
