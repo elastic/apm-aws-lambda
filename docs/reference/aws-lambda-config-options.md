@@ -10,7 +10,7 @@ The recommended way of configuring the {{apm-lambda-ext}} and the APM agents on 
 The configuration options for the APM agents are documented in the corresponding language agents:
 
 * [Configuration options - Node.js APM agent](apm-agent-nodejs://reference/configuration.md)
-* [Configuration options - Python APM agent](apm-agent-php://reference/configuration.md)
+* [Configuration options - Python APM agent](apm-agent-python://reference/configuration.md)
 * [Configuration options - Java APM agent](apm-agent-java://reference/configuration.md)
 
 ::::{note}
