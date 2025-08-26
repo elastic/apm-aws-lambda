@@ -53,12 +53,3 @@ jobs:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
         configuration-path: .github/community-label.yml
         enable-versioned-regex: 0
-    - name: Assign new internal pull requests to project
-      uses: elastic/assign-one-project-github-action@2573c8fb01aadfde8f5b653eea21dd24569ca831 # 1.2.2
-      if: (steps.checkUserMember.outputs.isTeamMember == 'true' || steps.checkUserMember.outputs.isExcluded == 'true') && github.event.pull_request
-      with:
-        project: 'https://github.com/orgs/elastic/projects/454'
-        project_id: '5882982'
-        column_name: 'In Progress'
-      env:
-        MY_GITHUB_TOKEN: ${{ steps.get_token.outputs.token }}
