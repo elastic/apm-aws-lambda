@@ -1,6 +1,14 @@
 ---
 mapped_pages:
   - https://www.elastic.co/guide/en/apm/lambda/current/aws-lambda-secrets-manager.html
+applies_to:
+  stack:
+  serverless:
+    observability:
+products:
+  - id: cloud-serverless
+  - id: observability
+  - id: apm
 ---
 
 # Using AWS Secrets Manager to manage APM authentication keys [aws-lambda-secrets-manager]

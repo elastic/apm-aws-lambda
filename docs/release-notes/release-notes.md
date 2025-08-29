@@ -2,6 +2,14 @@
 navigation_title: "Elastic APM AWS Lambda Extension"
 mapped_pages:
   - https://www.elastic.co/guide/en/apm/lambda/current/aws-lambda-release-notes.html
+applies_to:
+  stack:
+  serverless:
+    observability:
+products:
+  - id: cloud-serverless
+  - id: observability
+  - id: apm
 ---
 
 # {{apm-lambda-ext}} release notes [elastic-apm-aws-lambda-extension-release-notes]
