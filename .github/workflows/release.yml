@@ -20,7 +20,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
         with:
           fetch-depth: 0
 
@@ -61,7 +61,7 @@ jobs:
           retention-days: 5
 
       - name: generate build provenance (binaries)
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a  # v3.0.0
         with:
           subject-path: "${{ github.workspace }}/dist/*.*"
 
@@ -71,13 +71,13 @@ jobs:
         run: .ci/get-docker-provenance.sh
 
       - name: generate build provenance (containers x86_64)
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a  # v3.0.0
         with:
           subject-name: ${{ steps.image.outputs.name_1 }}
           subject-digest: ${{ steps.image.outputs.digest_1 }}
 
       - name: generate build provenance (containers arm64)
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be  # v2.4.0
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a  # v3.0.0
         with:
           subject-name: ${{ steps.image.outputs.name_2 }}
           subject-digest: ${{ steps.image.outputs.digest_2 }}
