@@ -33,7 +33,7 @@ jobs:
           - "macos-latest"
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+      - uses: actions/checkout@v5
       - name: Bootstrap Action Workspace
         uses: ./.github/actions/bootstrap
       - name: Test
@@ -41,7 +41,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+      - uses: actions/checkout@v5
 
       - name: Bootstrap Action Workspace
         uses: ./.github/actions/bootstrap
@@ -51,7 +51,7 @@ jobs:
       - name: Build
         run: make dist
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: snapshots
@@ -61,7 +61,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+      - uses: actions/checkout@v5
       - name: Bootstrap Action Workspace
         uses: ./.github/actions/bootstrap
       - run: make lint-prep
@@ -70,7 +70,7 @@ jobs:
   notice:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v4
+      - uses: actions/checkout@v5
       - name: Bootstrap Action Workspace
         uses: ./.github/actions/bootstrap
       - name: notice
@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: check
-        uses: elastic/oblt-actions/check-dependent-jobs@476391c0e6815110ce488b8b09c80ed61848a28a # v1
+        uses: elastic/oblt-actions/check-dependent-jobs@v1
         with:
           jobs: ${{ toJSON(needs) }}
       - run: ${{ steps.check.outputs.is-success }}
