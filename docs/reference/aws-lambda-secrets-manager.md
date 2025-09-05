@@ -5,10 +5,6 @@ applies_to:
   stack:
   serverless:
     observability:
-products:
-  - id: cloud-serverless
-  - id: observability
-  - id: apm
 ---
 
 # Using AWS Secrets Manager to manage APM authentication keys [aws-lambda-secrets-manager]

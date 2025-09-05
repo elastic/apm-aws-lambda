@@ -6,10 +6,6 @@ applies_to:
   stack:
   serverless:
     observability:
-products:
-  - id: cloud-serverless
-  - id: observability
-  - id: apm
 ---
 
 # {{apm-lambda-ext}} release notes [elastic-apm-aws-lambda-extension-release-notes]

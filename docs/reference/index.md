@@ -6,10 +6,6 @@ applies_to:
   stack:
   serverless:
     observability:
-products:
-  - id: cloud-serverless
-  - id: observability
-  - id: apm
 ---
 
 # APM Architecture for AWS Lambda [aws-lambda-arch]
