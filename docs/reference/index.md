@@ -2,6 +2,10 @@
 mapped_pages:
   - https://www.elastic.co/guide/en/apm/lambda/current/aws-lambda-arch.html
   - https://www.elastic.co/guide/en/apm/lambda/current/index.html
+applies_to:
+  stack:
+  serverless:
+    observability:
 ---
 
 # APM Architecture for AWS Lambda [aws-lambda-arch]
