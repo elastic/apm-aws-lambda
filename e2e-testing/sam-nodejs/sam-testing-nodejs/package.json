@@ -7,14 +7,6 @@
   "author": "SAM CLI",
   "license": "MIT",
   "dependencies": {
-    "axios": "^0.28.1",
-    "elastic-apm-node": "^3.26.0"
-  },
-  "scripts": {
-    "test": "mocha tests/unit/"
-  },
-  "devDependencies": {
-    "chai": "^4.2.0",
-    "mocha": "^8.2.1"
+    "elastic-apm-node": "^4.11.0"
   }
 }

@@ -21,7 +21,7 @@ jobs:
               "organization_projects": "write",
               "issues": "read"
             }
-      - uses: octokit/graphql-action@v2.x
+      - uses: octokit/graphql-action@51bf543c240dcd14761320e2efc625dc32ec0d32 # v2.x
         id: add_to_project
         with:
           query: |
@@ -39,7 +39,7 @@ jobs:
         env:
           PROJECT_ID: "PVT_kwDOAGc3Zs0VSg"
           GITHUB_TOKEN: ${{ steps.get_token.outputs.token }}
-      - uses: octokit/graphql-action@v2.x
+      - uses: octokit/graphql-action@51bf543c240dcd14761320e2efc625dc32ec0d32 # v2.x
         id: label_team
         with:
           query: |

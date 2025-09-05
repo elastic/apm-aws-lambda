@@ -16,16 +16,16 @@ runs:
       with:
         go-version-file: 'go.mod'
 
-    - uses: docker/setup-qemu-action@v3
+    - uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
       if: "${{ inputs.goreleaser == 'true' }}"
       with:
         platforms: linux/arm64, linux/amd64
 
     - name: Set up Docker Buildx
       if: "${{ inputs.goreleaser == 'true' }}"
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435
 
     # See https://goreleaser.com/blog/supply-chain-security/
     - name: installs syft for generating the SBOM with goreleaser
       if: "${{ inputs.goreleaser == 'true' }}"
-      uses: anchore/sbom-action/download-syft@v0.18.0
+      uses: anchore/sbom-action/download-syft@da167eac915b4e86f08b264dbdbc867b61be6f0c # v0.20.5

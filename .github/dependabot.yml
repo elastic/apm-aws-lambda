@@ -9,35 +9,16 @@ updates:
       aws:
         patterns:
         - "github.com/aws/*"
-  # go tools
-  - package-ecosystem: "gomod"
-    directory: "tools/"
-    schedule:
-      interval: "weekly"
 
   # GitHub actions
   - package-ecosystem: "github-actions"
-    directory: "/"
-    reviewers:
-      - "elastic/observablt-ci"
+    directories:
+      - "/"
+      - "/.github/actions/*"
     schedule:
       interval: "weekly"
       day: "sunday"
       time: "22:00"
-    groups:
-      github-actions:
-        patterns:
-          - "*"
-
-  # GitHub composite actions
-  - package-ecosystem: "github-actions"
-    directory: "/.github/actions/bootstrap"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-      time: "22:00"
-    reviewers:
-      - "elastic/observablt-ci"
     groups:
       github-actions:
         patterns:

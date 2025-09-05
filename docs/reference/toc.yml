@@ -1,0 +1,6 @@
+project: 'APM architecture for AWS Lambda reference'
+toc:
+  - file: index.md
+  - file: aws-lambda-overhead.md
+  - file: aws-lambda-config-options.md
+  - file: aws-lambda-secrets-manager.md

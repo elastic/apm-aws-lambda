@@ -1,0 +1,16 @@
+project: 'APM Architecture for AWS Lambda'
+products:
+  - id: apm
+cross_links:
+  - apm-agent-java
+  - apm-agent-nodejs
+  - apm-agent-php
+  - apm-agent-python
+  - docs-content
+toc:
+  - toc: reference
+  - toc: release-notes
+subs:
+  stack:   "Elastic Stack"
+  kib:   "Kibana"
+  apm-lambda-ext:   "Elastic APM AWS Lambda extension"
