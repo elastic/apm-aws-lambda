@@ -25,6 +25,8 @@ To create the zip file, run the following commands from the root of your project
 $ make zip
 ```
 
+Please note that this requires [syft](https://github.com/anchore/syft) to be installed.
+
 To publish the zip file as a layer, run the following command using the AWS cli (presumes you have v2 of the aws-cli installed).
 
 Ensure that you have aws-cli v2 for the commands below.
