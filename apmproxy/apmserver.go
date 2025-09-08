@@ -63,7 +63,7 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 				c.logger.Debugf("Received something from '%s' without APMData", data.AgentInfo)
 				continue
 			}
-			if err := c.forwardAgentData(ctx, data); err != nil {
+			if err := c.ForwardAgentData(ctx, data); err != nil {
 				return err
 			}
 			if lambdaDataChan == nil {
@@ -73,7 +73,7 @@ func (c *Client) ForwardApmData(ctx context.Context) error {
 				c.logger.Debug("Assigned Lambda data channel")
 			}
 		case data := <-lambdaDataChan:
-			if err := c.forwardLambdaData(ctx, data); err != nil {
+			if err := c.ForwardLambdaData(ctx, data); err != nil {
 				return err
 			}
 		}
@@ -91,7 +91,7 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 	// Flush agent data first to make sure metadata is available if possible
 	for i := len(c.AgentDataChannel); i > 0; i-- {
 		data := <-c.AgentDataChannel
-		if err := c.forwardAgentData(ctx, data); err != nil {
+		if err := c.ForwardAgentData(ctx, data); err != nil {
 			c.logger.Errorf("Error sending to APM Server, skipping: %v", err)
 		}
 	}
@@ -107,7 +107,7 @@ func (c *Client) FlushAPMData(ctx context.Context) {
 	for {
 		select {
 		case apmData := <-c.LambdaDataChannel:
-			if err := c.forwardLambdaData(ctx, apmData); err != nil {
+			if err := c.ForwardLambdaData(ctx, apmData); err != nil {
 				c.logger.Errorf("Error sending to APM server, skipping: %v", err)
 			}
 		case <-ctx.Done():
@@ -349,7 +349,7 @@ func (c *Client) WaitForFlush() <-chan struct{} {
 	return c.flushCh
 }
 
-func (c *Client) forwardAgentData(ctx context.Context, apmData accumulator.APMData) error {
+func (c *Client) ForwardAgentData(ctx context.Context, apmData accumulator.APMData) error {
 	if err := c.batch.AddAgentData(apmData); err != nil {
 		c.logger.Warnf("Dropping agent data due to error: %v", err)
 	}
@@ -359,7 +359,7 @@ func (c *Client) forwardAgentData(ctx context.Context, apmData accumulator.APMDa
 	return nil
 }
 
-func (c *Client) forwardLambdaData(ctx context.Context, data []byte) error {
+func (c *Client) ForwardLambdaData(ctx context.Context, data []byte) error {
 	if err := c.batch.AddLambdaData(data); err != nil {
 		c.logger.Warnf("Dropping lambda data due to error: %v", err)
 	}
