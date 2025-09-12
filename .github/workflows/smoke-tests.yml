@@ -52,7 +52,7 @@ jobs:
         with:
           export_to_environment: true
           secrets: |-
-            EC_API_KEY:911195782929/elastic-cloud-observability-team-pro-api-key
+            EC_API_KEY:elastic-observability-ci/elastic-cloud-observability-team-pro-api-key
       - run: make smoketest/run
 
       # Secrets are rotated daily, if the benchmarks run between the rotation window, then
@@ -64,7 +64,7 @@ jobs:
         with:
           export_to_environment: true
           secrets: |-
-            EC_API_KEY:911195782929/elastic-cloud-observability-team-pro-api-key
+            EC_API_KEY:elastic-observability-ci/elastic-cloud-observability-team-pro-api-key
 
       - if: always()
         name: Tear down
