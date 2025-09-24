@@ -42,7 +42,7 @@ To check for security updates, go to [Security announcements for the Elastic sta
 **Release date:** May 3, 2023
 
 ### Features and enhancements [elastic-apm-aws-lambda-extension-150-features-enhancements]
-* [preview] Allow metadata in register transaction [384](https://github.com/elastic/apm-aws-lambda/pull/384)
+* {applies_to}`product: preview` Allow metadata in register transaction [384](https://github.com/elastic/apm-aws-lambda/pull/384)
 
 ## 1.3.1 [elastic-apm-aws-lambda-extension-131-release-notes]
 **Release date:** April 4, 2023
@@ -54,7 +54,7 @@ To check for security updates, go to [Security announcements for the Elastic sta
 **Release date:** April 22, 2023
 
 ### Features and enhancements [elastic-apm-aws-lambda-extension-130-features-enhancements]
-* [preview] Create proxy transaction with error results if not reported by agent [315](https://github.com/elastic/apm-aws-lambda/pull/315)
+* {applies_to}`product: preview` Create proxy transaction with error results if not reported by agent [315](https://github.com/elastic/apm-aws-lambda/pull/315)
 * Wait for the final platform report metrics on shutdown [347](https://github.com/elastic/apm-aws-lambda/pull/347)
 * Process platform report metrics when extension is lagging [358](https://github.com/elastic/apm-aws-lambda/pull/358)
 * Add TLS support [357](https://github.com/elastic/apm-aws-lambda/pull/357)

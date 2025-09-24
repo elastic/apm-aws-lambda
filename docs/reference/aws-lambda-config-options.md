@@ -61,7 +61,6 @@ The configured name of your application or service.  The APM agent will use this
 
 
 ### `ELASTIC_APM_DATA_RECEIVER_TIMEOUT` [aws-lambda-config-data-receiver-timeout]
-
 ```{applies_to}
 product: ga 1.2.0
 ```
@@ -77,7 +76,6 @@ The port on which the {{apm-lambda-ext}} listens to receive data from the APM ag
 
 
 ### `ELASTIC_APM_DATA_FORWARDER_TIMEOUT` [aws-lambda-config-data-forwarder-timeout]
-
 ```{applies_to}
 product: ga 1.2.0
 ```
@@ -101,12 +99,14 @@ The logging level to be used by both the APM Agent and the {{apm-lambda-ext}}. S
 
 
 ### `ELASTIC_APM_LAMBDA_CAPTURE_LOGS` [_elastic_apm_lambda_capture_logs]
+```{applies_to}
+product: preview
+```
 
-[preview] Starting in Elastic Stack version 8.5.0, the Elastic APM lambda extension supports the collection of log events by default. Log events can be viewed in {{kib}} in the APM UI. Disable log collection by setting this to `false`.
+Starting in Elastic Stack version 8.5.0, the Elastic APM lambda extension supports the collection of log events by default. Log events can be viewed in {{kib}} in the APM UI. Disable log collection by setting this to `false`.
 
 
 ### `ELASTIC_APM_LAMBDA_VERIFY_SERVER_CERT` [_elastic_apm_lambda_verify_server_cert]
-
 ```{applies_to}
 product: ga 1.3.0
 ```
@@ -115,7 +115,6 @@ Whether to enable {{apm-lambda-ext}} to verify APM Server's certificate chain an
 
 
 ### `ELASTIC_APM_LAMBDA_SERVER_CA_CERT_PEM` [_elastic_apm_lambda_server_ca_cert_pem]
-
 ```{applies_to}
 product: ga 1.3.0
 ```
@@ -124,7 +123,6 @@ The certificate passed as environment variable. To be used to verify APM Server'
 
 
 ### `ELASTIC_APM_SERVER_CA_CERT_FILE` [_elastic_apm_server_ca_cert_file]
-
 ```{applies_to}
 product: ga 1.3.0
 ```
@@ -133,7 +131,6 @@ The certificate passed as a file name available to the extension. To be used to 
 
 
 ### `ELASTIC_APM_SERVER_CA_CERT_ACM_ID` [_elastic_apm_server_ca_cert_acm_id]
-
 ```{applies_to}
 product: ga 1.3.0
 ```
@@ -158,15 +155,21 @@ Users on older versions should disable log collection by setting `ELASTIC_APM_LA
 
 
 ### `ELASTIC_APM_DATA_RECEIVER_TIMEOUT_SECONDS` [aws-lambda-config-data-receiver-timeout-seconds]
+```{applies_to}
+product: deprecated 1.2.0
+```
 
-Deprecated in: v1.2.0. Use [`ELASTIC_APM_DATA_RECEIVER_TIMEOUT`](#aws-lambda-config-data-receiver-timeout) instead.
+Use [`ELASTIC_APM_DATA_RECEIVER_TIMEOUT`](#aws-lambda-config-data-receiver-timeout) instead.
 
 The {{apm-lambda-ext}}'s timeout value, in seconds, for receiving data from the APM agent. The *default* is `15`.
 
 
 ### `ELASTIC_APM_DATA_FORWARDER_TIMEOUT_SECONDS` [aws-lambda-config-data-forwarder-timeout-seconds]
+```{applies_to}
+product: deprecated 1.2.0
+```
 
-Deprecated in: v1.2.0. Use [`ELASTIC_APM_DATA_FORWARDER_TIMEOUT`](#aws-lambda-config-data-forwarder-timeout) instead.
+Use [`ELASTIC_APM_DATA_FORWARDER_TIMEOUT`](#aws-lambda-config-data-forwarder-timeout) instead.
 
 The timeout value, in seconds, for the {{apm-lambda-ext}}'s HTTP client sending data to the APM Server. The *default* is `3`. If the extension’s attempt to send APM data during this time interval is not successful, the extension queues back the data. Further attempts at sending the data are governed by an exponential backoff algorithm: data will be sent after a increasingly large grace period of 0, then circa 1, 4, 9, 16, 25 and 36 seconds, provided that the Lambda function execution is ongoing.
 
