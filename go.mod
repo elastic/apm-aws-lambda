@@ -14,7 +14,7 @@ require (
 	github.com/tidwall/sjson v1.2.5
 	go.elastic.co/ecszap v1.0.3
 	go.elastic.co/fastjson v1.5.1
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 )
 
 tool (
