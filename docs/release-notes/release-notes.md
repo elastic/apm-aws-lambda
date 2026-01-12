@@ -23,6 +23,67 @@ To check for security updates, go to [Security announcements for the Elastic sta
 
 % ### Fixes [elastic-apm-aws-lambda-extension-versionext-fixes]
 
+## 1.6.0 [elastic-apm-aws-lambda-extension-160-release-notes]
+**Release date:** September 8, 2025
+
+### Features and enhancements [elastic-apm-aws-lambda-extension-160-features-enhancements]
+* Bump Go to 1.24.2 [644](https://github.com/elastic/apm-aws-lambda/pull/644)
+* Replace tools folder with native go tool [649](https://github.com/elastic/apm-aws-lambda/pull/649)
+* Update notice file generation and move licenser to go tool [664](https://github.com/elastic/apm-aws-lambda/pull/664)
+
+### Fixes [elastic-apm-aws-lambda-extension-160-fixes]
+* Forward logs directly when invocation is over [613](https://github.com/elastic/apm-aws-lambda/pull/613)
+
+## 1.5.8 [elastic-apm-aws-lambda-extension-158-release-notes]
+**Release date:** April 10, 2025
+
+### Features and enhancements [elastic-apm-aws-lambda-extension-158-features-enhancements]
+* Upgrade go to 1.23 and golangci-lint to 1.64 [612](https://github.com/elastic/apm-aws-lambda/pull/612)
+* Migrate docs from AsciiDoc to Markdown [616](https://github.com/elastic/apm-aws-lambda/pull/616)
+* Go: update to Go 1.23.7 [634](https://github.com/elastic/apm-aws-lambda/pull/634)
+* Bump Go to 1.23.8 [645](https://github.com/elastic/apm-aws-lambda/pull/645)
+
+### Fixes [elastic-apm-aws-lambda-extension-158-fixes]
+* Avoid race conditions when handling data [570](https://github.com/elastic/apm-aws-lambda/pull/570)
+* Update terraform team tag to profiling [577](https://github.com/elastic/apm-aws-lambda/pull/577)
+
+## 1.5.7 [elastic-apm-aws-lambda-extension-157-release-notes]
+**Release date:** July 25, 2024
+
+### Fixes [elastic-apm-aws-lambda-extension-157-fixes]
+* Create a new bytes reader instead of sharing bytes buffer [511](https://github.com/elastic/apm-aws-lambda/pull/511)
+* Do not close log processing channel if logs api is disabled [512](https://github.com/elastic/apm-aws-lambda/pull/512)
+* Only flush logs if logs collection is enabled [510](https://github.com/elastic/apm-aws-lambda/pull/510)
+
+## 1.5.6 [elastic-apm-aws-lambda-extension-156-release-notes]
+**Release date:** July 24, 2024
+
+### Fixes [elastic-apm-aws-lambda-extension-156-fixes]
+* Ensure buffered logs are flushed [509](https://github.com/elastic/apm-aws-lambda/pull/509)
+
+## 1.5.5 [elastic-apm-aws-lambda-extension-155-release-notes]
+**Release date:** June 25, 2024
+
+### Features and enhancements [elastic-apm-aws-lambda-extension-155-features-enhancements]
+* Build: Bump go to 1.22 [480](https://github.com/elastic/apm-aws-lambda/pull/480)
+
+## 1.5.4 [elastic-apm-aws-lambda-extension-154-release-notes]
+**Release date:** April 26, 2024
+
+This release contains no user-facing changes.
+
+## 1.5.3 [elastic-apm-aws-lambda-extension-153-release-notes]
+**Release date:** January 22, 2024
+
+### Features and enhancements [elastic-apm-aws-lambda-extension-153-features-enhancements]
+* Add `ELASTIC_APM_LAMBDA_DISABLE_LOGS_API` env var to disable logs api [434](https://github.com/elastic/apm-aws-lambda/pull/434)
+
+## 1.5.2 [elastic-apm-aws-lambda-extension-152-release-notes]
+**Release date:** January 11, 2024
+
+### Features and enhancements [elastic-apm-aws-lambda-extension-152-features-enhancements]
+* Use sandbox.localdomain as logsapi address [425](https://github.com/elastic/apm-aws-lambda/pull/425)
+
 ## 1.5.1 [elastic-apm-aws-lambda-extension-151-release-notes]
 **Release date:** October 6, 2023
 
