@@ -1,5 +1,5 @@
 Elastic APM AWS Lambda extension
-Copyright 2021-2025 Elasticsearch BV
+Copyright 2021-2026 Elasticsearch BV
 
 ================================================================================
 Third party libraries used by the Elastic APM AWS Lambda extension.
