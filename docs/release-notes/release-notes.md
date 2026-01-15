@@ -64,8 +64,7 @@ To check for security updates, go to [Security announcements for the Elastic sta
 ## 1.5.5 [elastic-apm-aws-lambda-extension-155-release-notes]
 **Release date:** June 25, 2024
 
-### Features and enhancements [elastic-apm-aws-lambda-extension-155-features-enhancements]
-* Build: Bump go to 1.22 [480](https://github.com/elastic/apm-aws-lambda/pull/480)
+This release contains no user-facing changes.
 
 ## 1.5.4 [elastic-apm-aws-lambda-extension-154-release-notes]
 **Release date:** April 26, 2024
