@@ -26,26 +26,14 @@ To check for security updates, go to [Security announcements for the Elastic sta
 ## 1.6.0 [elastic-apm-aws-lambda-extension-160-release-notes]
 **Release date:** September 8, 2025
 
-### Features and enhancements [elastic-apm-aws-lambda-extension-160-features-enhancements]
-* Bump Go to 1.24.2 [644](https://github.com/elastic/apm-aws-lambda/pull/644)
-* Replace tools folder with native go tool [649](https://github.com/elastic/apm-aws-lambda/pull/649)
-* Update notice file generation and move licenser to go tool [664](https://github.com/elastic/apm-aws-lambda/pull/664)
-
 ### Fixes [elastic-apm-aws-lambda-extension-160-fixes]
 * Forward logs directly when invocation is over [613](https://github.com/elastic/apm-aws-lambda/pull/613)
 
 ## 1.5.8 [elastic-apm-aws-lambda-extension-158-release-notes]
 **Release date:** April 10, 2025
 
-### Features and enhancements [elastic-apm-aws-lambda-extension-158-features-enhancements]
-* Upgrade go to 1.23 and golangci-lint to 1.64 [612](https://github.com/elastic/apm-aws-lambda/pull/612)
-* Migrate docs from AsciiDoc to Markdown [616](https://github.com/elastic/apm-aws-lambda/pull/616)
-* Go: update to Go 1.23.7 [634](https://github.com/elastic/apm-aws-lambda/pull/634)
-* Bump Go to 1.23.8 [645](https://github.com/elastic/apm-aws-lambda/pull/645)
-
 ### Fixes [elastic-apm-aws-lambda-extension-158-fixes]
 * Avoid race conditions when handling data [570](https://github.com/elastic/apm-aws-lambda/pull/570)
-* Update terraform team tag to profiling [577](https://github.com/elastic/apm-aws-lambda/pull/577)
 
 ## 1.5.7 [elastic-apm-aws-lambda-extension-157-release-notes]
 **Release date:** July 25, 2024
