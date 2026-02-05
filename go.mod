@@ -1,6 +1,6 @@
 module github.com/elastic/apm-aws-lambda
 
-go 1.24.2
+go 1.25.7
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.1
