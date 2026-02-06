@@ -21,7 +21,6 @@ env:
 
 permissions:
   contents: read
-  id-token: write
   pull-requests: read
 
 jobs:
@@ -31,26 +30,6 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
-      - uses: elastic/oblt-actions/aws/auth@v1
-        with:
-          aws-account-id: "267093732750"
-
-      - name: Validate GitHub release is not available yet
-        run: |
-          if gh release view "${{ github.ref_name }}" > /dev/null ; then
-            echo "The GitHub release ${{ github.ref_name  }} already exists"
-            exit 1
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
-
-      - name: Log in to the Elastic Container registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-        with:
-          registry: ${{ secrets.ELASTIC_DOCKER_REGISTRY }}
-          username: ${{ secrets.ELASTIC_DOCKER_USERNAME }}
-          password: ${{ secrets.ELASTIC_DOCKER_PASSWORD }}
 
       - name: Bootstrap Action Workspace
         uses: ./.github/actions/bootstrap
