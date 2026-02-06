@@ -44,7 +44,6 @@ dockers_v2:
       - 'linux/amd64'
     images:
       - '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-x86_64'
-      - "{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-x86_64"
     tags:
       - 'latest'
       - '{{ trimprefix .Tag "v" }}'
