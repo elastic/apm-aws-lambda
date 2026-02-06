@@ -89,7 +89,7 @@ publishers:
       - ARCHITECTURE={{ if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
       - GOOS={{ .Runtime.Goos }}
       - GOARCH={{ .Runtime.Goarch }}
-      - AWS_FOLDER=.aws-{{ .Os }}-{{ .Arch }}
+      - AWS_FOLDER=.aws-{{ .Runtime.Goos }}-{{ .Runtime.Goarch }}
 release:
   # Custom GitHub release
   disable: true
