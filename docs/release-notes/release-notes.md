@@ -23,6 +23,12 @@ To check for security updates, go to [Security announcements for the Elastic sta
 
 % ### Fixes [elastic-apm-aws-lambda-extension-versionext-fixes]
 
+## 1.7.0 [elastic-apm-aws-lambda-extension-170-release-notes]
+**Release date:** February 6, 2026
+
+### Fixes [elastic-apm-aws-lambda-extension-170-fixes]
+* Upgrade Go to 1.25 [740](https://github.com/elastic/apm-aws-lambda/pull/740)
+
 ## 1.6.0 [elastic-apm-aws-lambda-extension-160-release-notes]
 **Release date:** September 8, 2025
 
