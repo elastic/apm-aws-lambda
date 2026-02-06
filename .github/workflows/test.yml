@@ -49,7 +49,7 @@ jobs:
           goreleaser: 'true'
 
       - name: Build
-        run: make dist
+        run: make build dist
 
       - uses: actions/upload-artifact@v6
         if: always()

@@ -1,5 +1,6 @@
 project_name: apm-lambda-extension
 
+version: 2
 before:
   hooks:
     - make check-licenses
@@ -22,7 +23,7 @@ builds:
 
 archives:
   - id: zip
-    format: zip
+    formats: ['zip']
     name_template: |-
       {{ .Tag }}-{{ .Os }}-{{ .Arch }}
     files:
@@ -35,52 +36,46 @@ archives:
     builds_info:
       mtime: "{{ .CommitTimestamp }}"
 
-dockers:
+dockers_v2:
 
   - &default-docker-image
     id: linux-amd64-image
-    use: buildx
-    goos: linux
-    goarch: amd64
-    image_templates:
-      - '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-x86_64:{{ trimprefix .Tag "v" }}'
-      - "{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-x86_64:latest"
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--build-arg=EXTENSION_FILE={{ .ProjectName }}"
-      - "--build-arg=COMMIT_TIMESTAMP={{ .CommitTimestamp }}"
-      - "--label=org.opencontainers.image.created={{ .Date }}"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
+    platforms:
+      - 'linux/amd64'
+    images:
+      - '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-x86_64'
+    tags:
+      - 'latest'
+      - '{{ trimprefix .Tag "v" }}'
+    labels:
+      'org.opencontainers.image.created': '{{ .Date }}'
+      'org.opencontainers.image.title': '{{ .ProjectName }}'
+      'org.opencontainers.image.revision': '{{ .FullCommit }}'
+      'org.opencontainers.image.version': '{{ .Version }}'
+    build_args:
+      'EXTENSION_FILE': 'linux/amd64/extensions/{{ .ProjectName }}'
+      'COMMIT_TIMESTAMP': '{{ .CommitTimestamp }}'
     extra_files:
       - NOTICE.txt
       - dependencies.asciidoc
 
   - <<: *default-docker-image
     id: linux-arm64-image
-    goarch: arm64
-    image_templates:
-      - '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-arm64:{{ trimprefix .Tag "v" }}'
-      - "{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-arm64:latest"
-    build_flag_templates:
-      - "--platform=linux/arm64"
-      - "--build-arg=EXTENSION_FILE={{ .ProjectName }}"
-      - "--build-arg=COMMIT_TIMESTAMP={{ .CommitTimestamp }}"
-      - "--label=org.opencontainers.image.created={{ .Date }}"
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-
-docker_manifests:
-  - name_template: '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}:{{ trimprefix .Tag "v" }}'
-    image_templates:
-    - '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-x86_64:{{ trimprefix .Tag "v" }}'
-    - '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-arm64:{{ trimprefix .Tag "v" }}'
-  - name_template: '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}:latest'
-    image_templates:
-    - "{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-x86_64:latest"
-    - "{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-arm64:latest"
+    platforms:
+      - 'linux/arm64'
+    images:
+      - '{{ .Env.DOCKER_REGISTRY }}/{{ .Env.DOCKER_IMAGE_NAME }}-arm64'
+    tags:
+      - 'latest'
+      - '{{ trimprefix .Tag "v" }}'
+    labels:
+      'org.opencontainers.image.created': '{{ .Date }}'
+      'org.opencontainers.image.title': '{{ .ProjectName }}'
+      'org.opencontainers.image.revision': '{{ .FullCommit }}'
+      'org.opencontainers.image.version': '{{ .Version }}'
+    build_args:
+      'EXTENSION_FILE': 'linux/arm64/extensions/{{ .ProjectName }}'
+      'COMMIT_TIMESTAMP': '{{ .CommitTimestamp }}'
 
 publishers:
   - name: publish-aws
