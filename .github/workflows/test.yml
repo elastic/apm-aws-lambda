@@ -20,7 +20,7 @@ env:
   DOCKER_IMAGE_NAME: observability/apm-lambda-extension
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
   pull-requests: read
 
@@ -58,7 +58,7 @@ jobs:
           goreleaser: 'true'
 
       - name: Release
-        run: make build
+        run: make release
 
       # Store artifacts to help with troubleshooting
       - uses: actions/upload-artifact@v6
