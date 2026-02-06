@@ -87,8 +87,8 @@ publishers:
       - ELASTIC_LAYER_NAME=elastic-apm-extension-ver-{{ replace (trimprefix .Tag "v") "." "-" }}
       - VERSION={{ .Tag }}
       - ARCHITECTURE={{ if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
-      - GOOS={{ .Os }}
-      - GOARCH={{ .Arch }}
+      - GOOS={{ .Runtime.Goos }}
+      - GOARCH={{ .Runtime.Goarch }}
       - AWS_FOLDER=.aws-{{ .Os }}-{{ .Arch }}
 release:
   # Custom GitHub release
