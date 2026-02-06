@@ -14,81 +14,78 @@ on:
       - "**/*.md"
       - "**/*.png"
 
-permissions:
-  contents: read
+env:
+  DOCKER_BUILDKIT: 1
+  DOCKER_REGISTRY: docker.elastic.co
+  DOCKER_IMAGE_NAME: observability/apm-lambda-extension
 
-## Concurrency only allowed in the main branch.
-## So old builds running for old commits within the same Pull Request are cancelled
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+permissions:
+  contents: write
+  id-token: write
+  pull-requests: read
 
 jobs:
-  test:
-    strategy:
-      fail-fast: false
-      matrix:
-        platform:
-          - "ubuntu-latest"
-          - "macos-latest"
-    runs-on: ${{ matrix.platform }}
-    steps:
-      - uses: actions/checkout@v6
-      - name: Bootstrap Action Workspace
-        uses: ./.github/actions/bootstrap
-      - name: Test
-        run: make test
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: elastic/oblt-actions/aws/auth@v1
+        with:
+          aws-account-id: "267093732750"
+
+      - name: Validate GitHub release is not available yet
+        run: |
+          if gh release view "${{ github.ref_name }}" > /dev/null ; then
+            echo "The GitHub release ${{ github.ref_name  }} already exists"
+            exit 1
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Log in to the Elastic Container registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ${{ secrets.ELASTIC_DOCKER_REGISTRY }}
+          username: ${{ secrets.ELASTIC_DOCKER_USERNAME }}
+          password: ${{ secrets.ELASTIC_DOCKER_PASSWORD }}
 
       - name: Bootstrap Action Workspace
         uses: ./.github/actions/bootstrap
         with:
           goreleaser: 'true'
 
-      - name: Build
-        run: make build dist
+      - name: Release
+        run: make build
 
+      # Store artifacts to help with troubleshooting
       - uses: actions/upload-artifact@v6
         if: always()
         with:
-          name: snapshots
+          name: release
           path: "dist/*.*"
           retention-days: 5
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Bootstrap Action Workspace
-        uses: ./.github/actions/bootstrap
-      - run: make lint-prep
-      - run: make lint
-      - run: go vet
-  notice:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Bootstrap Action Workspace
-        uses: ./.github/actions/bootstrap
-      - name: notice
-        run: make check-notice
-
-  # The very last job to report whether the Workflow passed.
-  # This will act as the Branch Protection gatekeeper
-  ci:
-    if: always()
-    needs:
-      - build
-      - lint
-      - notice
-      - test
-    runs-on: ubuntu-latest
-    steps:
-      - id: check
-        uses: elastic/oblt-actions/check-dependent-jobs@v1
+      - name: generate build provenance (binaries)
+        uses: actions/attest-build-provenance@v3
         with:
-          jobs: ${{ toJSON(needs) }}
-      - run: ${{ steps.check.outputs.is-success }}
+          subject-path: "${{ github.workspace }}/dist/*.*"
+
+      # See https://github.com/github-early-access/generate-build-provenance/issues/162
+      - name: container image digest
+        id: image
+        run: .ci/get-docker-provenance.sh
+
+      - name: generate build provenance (containers x86_64)
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: ${{ steps.image.outputs.name_1 }}
+          subject-digest: ${{ steps.image.outputs.digest_1 }}
+
+      - name: generate build provenance (containers arm64)
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: ${{ steps.image.outputs.name_2 }}
+          subject-digest: ${{ steps.image.outputs.digest_2 }}
