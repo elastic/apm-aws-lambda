@@ -22,7 +22,7 @@ build:
 
 .PHONY: release
 release:
-	go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION) release --clean
+	go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION) release --clean --skip=announce,sbom,sign
 
 .PHONY: release-notes
 release-notes:
