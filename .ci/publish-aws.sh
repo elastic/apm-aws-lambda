@@ -24,11 +24,6 @@ FULL_LAYER_NAME="${ELASTIC_LAYER_NAME}-${ARCHITECTURE}"
 
 ALL_AWS_REGIONS=$(aws ec2 describe-regions --output json --no-cli-pager | jq -r '.Regions[].RegionName')
 
-if [ "${GOARCH}" != "amd64" ]; then
-  echo "Skipping AWS publish for ${GOARCH} (only runs for amd64)"
-  exit 0
-fi
-
 rm -rf "${AWS_FOLDER}"
 
 # Delete previous layers
