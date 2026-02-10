@@ -80,6 +80,8 @@ dockers_v2:
 publishers:
   - name: publish-aws
     cmd: ./.ci/publish-aws.sh
+    ids:
+      - zip
     env:
       - AWS_ACCESS_KEY_ID={{ .Env.AWS_ACCESS_KEY_ID }}
       - AWS_SECRET_ACCESS_KEY={{ .Env.AWS_SECRET_ACCESS_KEY }}
