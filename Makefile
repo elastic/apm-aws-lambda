@@ -24,6 +24,10 @@ build:
 release:
 	go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION) release --clean
 
+.PHONY: release-skip-docker
+release-skip-docker:
+	go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION) release --clean --skip=docker
+
 .PHONY: release-notes
 release-notes:
 	@./.ci/release-github.sh
