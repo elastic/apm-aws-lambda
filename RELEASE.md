@@ -29,7 +29,7 @@ and a Release in the Github UI.
 
 ### Testing release locally
 
-> [!INFO]
+> [!TIP]
 > Configure your AWS credentials using https://github.com/okta/okta-aws-cli
 > Use gh cli to configure the GITHUB_TOKEN
 
