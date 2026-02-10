@@ -65,7 +65,7 @@ jobs:
         if: always()
         with:
           name: aws
-          path: ".aws*"
+          path: ".aws*/**/*"
           retention-days: 5
 
       - name: generate build provenance (binaries)
