@@ -60,6 +60,14 @@ jobs:
           path: "dist/*.*"
           retention-days: 5
 
+      # Store artifacts to help with troubleshooting
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: aws
+          path: ".aws*/**/*"
+          retention-days: 5
+
       - name: generate build provenance (binaries)
         uses: actions/attest-build-provenance@v3
         with:

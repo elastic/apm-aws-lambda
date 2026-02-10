@@ -45,7 +45,7 @@ zip_file="./dist/${VERSION}-${GOOS}-${GOARCH}.zip"
 
 for region in $ALL_AWS_REGIONS; do
   echo "Publish ${FULL_LAYER_NAME} in ${region}"
-  publish_output=$(aws lambda \
+  aws lambda \
     --output json \
     publish-layer-version \
     --region="${region}" \
@@ -53,11 +53,12 @@ for region in $ALL_AWS_REGIONS; do
     --compatible-architectures="${ARCHITECTURE}" \
     --description="AWS Lambda Extension Layer for Elastic APM ${ARCHITECTURE}" \
     --license="Apache-2.0" \
-    --zip-file="fileb://${zip_file}")
-  echo "${publish_output}" > "${AWS_FOLDER}/${region}"
+    --zip-file="fileb://${zip_file}" > "${AWS_FOLDER}/${region}"
+  publish_output=$(cat "${AWS_FOLDER}/${region}")
   layer_version=$(echo "${publish_output}" | jq '.Version')
+
   echo "Grant public layer access ${FULL_LAYER_NAME}:${layer_version} in ${region}"
-  grant_access_output=$(aws lambda \
+  aws lambda \
   		--output json \
   		add-layer-version-permission \
   		--region="${region}" \
@@ -65,8 +66,7 @@ for region in $ALL_AWS_REGIONS; do
   		--action="lambda:GetLayerVersion" \
   		--principal='*' \
   		--statement-id="${FULL_LAYER_NAME}" \
-  		--version-number="${layer_version}")
-  echo "${grant_access_output}" > "${AWS_FOLDER}/.${region}-public"
+  		--version-number="${layer_version}" > "${AWS_FOLDER}/.${region}-public"
 done
 
 sh -c "./.ci/create-arn-table.sh"
