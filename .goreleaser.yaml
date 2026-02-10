@@ -86,10 +86,10 @@ publishers:
       - AWS_SESSION_TOKEN={{ .Env.AWS_SESSION_TOKEN }}
       - ELASTIC_LAYER_NAME=elastic-apm-extension-ver-{{ replace (trimprefix .Tag "v") "." "-" }}
       - VERSION={{ .Tag }}
-      - ARCHITECTURE={{ if eq .Arch "amd64" }}x86_64{{ else }}{{ .Arch }}{{ end }}
-      - GOOS={{ .Os }}
-      - GOARCH={{ .Arch }}
-      - AWS_FOLDER=.aws-{{ .Os }}-{{ .Arch }}
+      - ARCHITECTURE={{ if eq .Runtime.Goarch "amd64" }}x86_64{{ else }}{{ .Runtime.Goarch }}{{ end }}
+      - GOOS={{ .Runtime.Goos }}
+      - GOARCH={{ .Runtime.Goarch }}
+      - AWS_FOLDER=.aws-{{ .Runtime.Goos }}-{{ .Runtime.Goarch }}
 release:
   # Custom GitHub release
   disable: true
