@@ -37,3 +37,9 @@ and a Release in the Github UI.
 2. export GITHUB_TOKEN=$(gh auth token)
 3. git tag "${GORELEASER_CURRENT_TAG}" -f
 3. make release-skip-docker
+
+#### Further details
+
+What does `GORELEASER_CURRENT_TAG` mean?
+
+  See https://goreleaser.com/cookbooks/set-a-custom-git-tag
