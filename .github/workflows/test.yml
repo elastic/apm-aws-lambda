@@ -65,30 +65,13 @@ jobs:
           path: "dist/*.*"
           retention-days: 5
 
+      # NOTE: snapshots won't push docker images hence we cannot run provenance on a PR basis
+      #       but only for binaries
       - name: generate build provenance (binaries)
         if: github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/attest-build-provenance@v3
         with:
-          subject-path: "${{ github.workspace }}/dist/*.*"
-
-      # See https://github.com/github-early-access/generate-build-provenance/issues/162
-      - name: container image digest
-        id: image
-        run: .ci/get-docker-provenance.sh
-
-      - name: generate build provenance (containers x86_64)
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/attest-build-provenance@v3
-        with:
-          subject-name: ${{ steps.image.outputs.name_1 }}
-          subject-digest: ${{ steps.image.outputs.digest_1 }}
-
-      - name: generate build provenance (containers arm64)
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/attest-build-provenance@v3
-        with:
-          subject-name: ${{ steps.image.outputs.name_2 }}
-          subject-digest: ${{ steps.image.outputs.digest_2 }}
+          subject-checksums: ./dist/checksums.txt
 
   lint:
     runs-on: ubuntu-latest
