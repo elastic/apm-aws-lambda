@@ -15,7 +15,7 @@ dist:
 
 .PHONY: zip
 zip:
-	@go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION) release --snapshot --clean --skip-docker
+	@go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION) release --snapshot --clean --skip=docker
 
 build:
 	@go run github.com/goreleaser/goreleaser/v2@$(GORELEASER_VERSION) build --snapshot --clean
