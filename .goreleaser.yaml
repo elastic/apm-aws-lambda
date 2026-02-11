@@ -100,3 +100,5 @@ release:
 # https://goreleaser.com/customization/sbom
 sboms:
   - artifacts: archive
+    documents:
+      - "{{ .ArtifactName }}.sbom.json"
