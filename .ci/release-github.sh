@@ -18,6 +18,6 @@ gh release \
   --title="${VERSION}" \
   --generate-notes \
   --notes-file="${SUFFIX_ARN_FILE}" \
-  ./dist/${VERSION}*.sbom \
+  ./dist/${VERSION}*.json \
   ./dist/${VERSION}*.zip \
   ./dist/*checksums.txt
