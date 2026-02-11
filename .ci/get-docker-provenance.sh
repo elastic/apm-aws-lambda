@@ -6,7 +6,10 @@ if [ ! -e dist/artifacts.json ] ; then
 fi
 
 echo "Gather the container images generated and published with goreleaser"
-images=$(jq -r '[.[] | select (.type=="Published Docker Image") | select(.name|endswith("latest")|not)]' dist/artifacts.json)
+# NOTE: we are assuming that the first two images in the artifacts.json file are the ones we just built and published, 
+#       which is true for now but may not be in the future if we add more images or other types of artifacts.
+#       We should consider adding some metadata to the goreleaser config to be able to identify our images more reliably.
+images=$(jq -r '[.[] | select (.type=="Docker Image") | select(.name|contains("latest")|not)]' dist/artifacts.json)
 image_1=$(echo "$images" | jq -r '.[0].name')
 image_2=$(echo "$images" | jq -r '.[1].name')
 digest_1=$(echo "$images" | jq -r '.[0].extra.Digest')
