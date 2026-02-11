@@ -100,6 +100,8 @@ release:
 # https://goreleaser.com/customization/sbom
 sboms:
   - artifacts: archive
+    documents:
+      - "{{ .ArtifactName }}.sbom.json"
 
 # Configure the checksums filename, to allow the GitHub attestation to pick up the correct filename
 checksum:
