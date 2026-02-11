@@ -14,6 +14,7 @@ export SUFFIX_ARN_FILE=${SUFFIX_ARN_FILE:-arn-file.md}
 # eu-west-1 is just a random region
 export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-eu-west-1}
 
+printenv
 GOOS=${GOOS:?Please provide GOOS environment variable.}
 GOARCH=${GOARCH:?Please provide GOARCH environment variable.}
 ELASTIC_LAYER_NAME=${ELASTIC_LAYER_NAME:?Please provide ELASTIC_LAYER_NAME environment variable.}
