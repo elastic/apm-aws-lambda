@@ -102,3 +102,10 @@ sboms:
   - artifacts: archive
     documents:
       - "{{ .ArtifactName }}.sbom.json"
+
+# Configure the checksums filename, to allow the GitHub attestation to pick up the correct filename
+checksum:
+  name_template: checksums.txt
+
+docker_digest:
+  name_template: "digests.txt"
