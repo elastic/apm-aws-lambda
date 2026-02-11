@@ -26,3 +26,20 @@ Tag the release via your preferred tagging method.  Tagging a release (v1.1.0) v
 
 This will trigger a build in the CI that will create the Build Artifacts
 and a Release in the Github UI.
+
+### Testing release locally
+
+> [!TIP]
+> Configure your AWS credentials using https://github.com/okta/okta-aws-cli
+> Use gh cli to configure the GITHUB_TOKEN
+
+1. export GORELEASER_CURRENT_TAG=v0.0.99999
+2. export GITHUB_TOKEN=$(gh auth token)
+3. git tag "${GORELEASER_CURRENT_TAG}" -f
+3. make release-skip-docker
+
+#### Further details
+
+What does `GORELEASER_CURRENT_TAG` mean?
+
+  See https://goreleaser.com/cookbooks/set-a-custom-git-tag
