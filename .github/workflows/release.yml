@@ -57,7 +57,7 @@ jobs:
         run: make release
 
       # Store artifacts to help with troubleshooting
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: release
@@ -65,7 +65,7 @@ jobs:
           retention-days: 5
 
       # Store artifacts to help with troubleshooting
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: aws
@@ -73,12 +73,12 @@ jobs:
           retention-days: 5
 
       - name: generate build provenance (binaries)
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-checksums: ./dist/checksums.txt
 
       - name: generate build provenance (docker images)
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-checksums: ./dist/digests.txt
 

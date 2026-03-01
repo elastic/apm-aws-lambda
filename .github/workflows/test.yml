@@ -58,7 +58,7 @@ jobs:
       - name: Build
         run: make build dist
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: snapshots
@@ -69,7 +69,7 @@ jobs:
       #       but only for binaries
       - name: generate build provenance (binaries)
         if: github.event.pull_request.head.repo.full_name == github.repository
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-checksums: ./dist/checksums.txt
 
