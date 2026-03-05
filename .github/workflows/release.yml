@@ -73,12 +73,12 @@ jobs:
           retention-days: 5
 
       - name: generate build provenance (binaries)
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest@v4
         with:
           subject-checksums: ./dist/checksums.txt
 
       - name: generate build provenance (docker images)
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest@v4
         with:
           subject-checksums: ./dist/digests.txt
 
