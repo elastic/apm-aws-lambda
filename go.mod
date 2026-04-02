@@ -5,7 +5,7 @@ go 1.25.7
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/config v1.32.13
-	github.com/aws/aws-sdk-go-v2/service/acm v1.37.23
+	github.com/aws/aws-sdk-go-v2/service/acm v1.38.0
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.41.5
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
