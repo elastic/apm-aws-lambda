@@ -27,13 +27,18 @@ ALL_AWS_REGIONS=$(aws ec2 describe-regions --output json --no-cli-pager | jq -r 
 
 rm -rf "${AWS_FOLDER}"
 
+failed_regions=()
+
 # Delete previous layers
 for region in $ALL_AWS_REGIONS; do
-  layer_versions=$(aws lambda list-layer-versions --region="${region}" --layer-name="${FULL_LAYER_NAME}" | jq '.LayerVersions[].Version')
+  layer_versions=$(aws --cli-connect-timeout 30 lambda list-layer-versions --region="${region}" --layer-name="${FULL_LAYER_NAME}" | jq '.LayerVersions[].Version') || {
+    echo "WARNING: Could not list layer versions in ${region}, skipping deletion"
+    continue
+  }
   echo "Found layer versions for ${FULL_LAYER_NAME} in ${region}: ${layer_versions:-none}"
   for version_number in $layer_versions; do
     echo "- Deleting ${FULL_LAYER_NAME}:${version_number} in ${region}"
-    aws lambda delete-layer-version \
+    aws --cli-connect-timeout 30 lambda delete-layer-version \
         --region="${region}" \
         --layer-name="${FULL_LAYER_NAME}" \
         --version-number="${version_number}"
@@ -46,7 +51,7 @@ zip_file="./dist/${VERSION}-${GOOS}-${GOARCH}.zip"
 
 for region in $ALL_AWS_REGIONS; do
   echo "Publish ${FULL_LAYER_NAME} in ${region}"
-  aws lambda \
+  if ! aws --cli-connect-timeout 30 lambda \
     --output json \
     publish-layer-version \
     --region="${region}" \
@@ -54,12 +59,16 @@ for region in $ALL_AWS_REGIONS; do
     --compatible-architectures="${ARCHITECTURE}" \
     --description="AWS Lambda Extension Layer for Elastic APM ${ARCHITECTURE}" \
     --license="Apache-2.0" \
-    --zip-file="fileb://${zip_file}" > "${AWS_FOLDER}/${region}"
+    --zip-file="fileb://${zip_file}" > "${AWS_FOLDER}/${region}"; then
+    echo "WARNING: Failed to publish to ${region}"
+    failed_regions+=("${region}")
+    continue
+  fi
   publish_output=$(cat "${AWS_FOLDER}/${region}")
   layer_version=$(echo "${publish_output}" | jq '.Version')
 
   echo "Grant public layer access ${FULL_LAYER_NAME}:${layer_version} in ${region}"
-  aws lambda \
+  if ! aws --cli-connect-timeout 30 lambda \
   		--output json \
   		add-layer-version-permission \
   		--region="${region}" \
@@ -67,7 +76,15 @@ for region in $ALL_AWS_REGIONS; do
   		--action="lambda:GetLayerVersion" \
   		--principal='*' \
   		--statement-id="${FULL_LAYER_NAME}" \
-  		--version-number="${layer_version}" > "${AWS_FOLDER}/.${region}-public"
+  		--version-number="${layer_version}" > "${AWS_FOLDER}/.${region}-public"; then
+    echo "WARNING: Failed to grant public access in ${region}"
+    failed_regions+=("${region}")
+  fi
 done
 
 sh -c "./.ci/create-arn-table.sh"
+
+if [ ${#failed_regions[@]} -gt 0 ]; then
+  echo "WARNING: Failed to publish to the following regions: ${failed_regions[*]}"
+  echo "WARNING: The layer is not available in those regions. Please publish manually or investigate connectivity."
+fi
