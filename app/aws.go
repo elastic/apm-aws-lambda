@@ -94,8 +94,3 @@ func loadAcmCertificate(ctx context.Context, arn string, cfg aws.Config) (*strin
 
 	return response.Certificate, nil
 }
-
-//go:fix inline
-func ptrFromString(v string) *string {
-	return new(v)
-}
