@@ -33,7 +33,7 @@ jobs:
           - "macos-latest"
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Bootstrap Action Workspace
         uses: ./.github/actions/bootstrap
       - name: Test
@@ -48,7 +48,7 @@ jobs:
       id-token: write
       pull-requests: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Bootstrap Action Workspace
         uses: ./.github/actions/bootstrap
@@ -76,7 +76,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Bootstrap Action Workspace
         uses: ./.github/actions/bootstrap
       - run: make lint-prep
@@ -85,7 +85,7 @@ jobs:
   notice:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Bootstrap Action Workspace
         uses: ./.github/actions/bootstrap
       - name: notice
