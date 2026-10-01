@@ -88,7 +88,7 @@ func (c *Client) handleInfoRequest() (func(w http.ResponseWriter, r *http.Reques
 	reverseProxy.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, err error) {
 		// Don't update the status of the transport as it is possible that the extension
 		// is frozen while processing the request and context is canceled due to timeout.
-		c.logger.Errorf("Error querying version from the APM server: %v", err)
+		c.logger.Debugf("Error querying version from the APM server: %v", err)
 
 		// Server is unreachable, return StatusBadGateway (default behavior) to avoid
 		// returning a Status OK.
