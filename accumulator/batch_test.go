@@ -72,7 +72,7 @@ func TestShouldShip_ReasonSize(t *testing.T) {
 	require.NoError(t, b.AddAgentData(APMData{Data: []byte(metadata)}))
 
 	// Should flush at 90% full
-	for i := 0; i < 9; i++ {
+	for range 9 {
 		assert.False(t, b.ShouldShip())
 		require.NoError(t, b.AddLambdaData([]byte(`{"log":{}}`)))
 	}

@@ -195,13 +195,11 @@ func (app *App) processEvent(
 	}
 
 	// APM Data Processing
-	backgroundDataSendWg.Add(1)
-	go func() {
-		defer backgroundDataSendWg.Done()
+	backgroundDataSendWg.Go(func() {
 		if err := app.apmClient.ForwardApmData(invocationCtx); err != nil {
 			app.logger.Error(err)
 		}
-	}()
+	})
 
 	// Lambda Service Logs Processing, also used to extract metrics from APM logs
 	// This goroutine should not be started if subscription failed

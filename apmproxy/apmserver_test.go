@@ -630,11 +630,9 @@ func TestForwardApmData(t *testing.T) {
 	// Start forwarding APM data
 	ctx, cancel := context.WithCancel(t.Context())
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		assert.NoError(t, apmClient.ForwardApmData(ctx))
-	}()
+	})
 
 	// Populate metadata by sending agent data
 	apmClient.AgentDataChannel <- accumulator.APMData{
@@ -646,7 +644,7 @@ func TestForwardApmData(t *testing.T) {
 	var expected bytes.Buffer
 	expected.WriteString(agentData)
 	// Send multiple lambda logs to batch data
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		if i == 4 {
 			// Wait for batch age to make sure the batch is mature to be sent
 			time.Sleep(maxBatchAge + time.Millisecond)
@@ -700,7 +698,7 @@ func BenchmarkFlushAPMData(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		apmClient.AgentDataChannel <- agentAPMData
-		for j := 0; j < 99; j++ {
+		for range 99 {
 			apmClient.LambdaDataChannel <- []byte(`{"log":{"message":this is test log"}}`)
 		}
 		apmClient.FlushAPMData(b.Context())

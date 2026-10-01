@@ -73,7 +73,7 @@ type Client struct {
 
 func NewClient(opts ...Option) (*Client, error) {
 	c := Client{
-		bufferPool: sync.Pool{New: func() interface{} {
+		bufferPool: sync.Pool{New: func() any {
 			return &bytes.Buffer{}
 		}},
 		AgentDataChannel:  make(chan accumulator.APMData, defaultAgentBufferSize),

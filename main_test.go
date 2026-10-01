@@ -104,7 +104,7 @@ func newMockApmServer(t *testing.T, l *zap.SugaredLogger) (*MockServerInternals,
 		}
 
 		sp := bytes.Split(decompressedBytes, []byte("\n"))
-		for i := 0; i < len(sp); i++ {
+		for i := range sp {
 			expectedBehavior := APMServerBehavior(sp[i])
 			l.Debugf("Event type received by mock APM server : %s", string(expectedBehavior))
 			switch expectedBehavior {
@@ -164,11 +164,9 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 	mockLogEventQ := make(chan logsapi.LogEvent, 100)
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		startLogSender(t.Context(), mockLogEventQ, logsapiAddr, l)
-	}()
+	})
 	t.Cleanup(func() {
 		wg.Wait()
 	})
@@ -290,16 +288,14 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 		time.Sleep(delay)
 		reqData, _ := http.NewRequest(http.MethodPost,
 			fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), buf)
-		internals.WaitGroup.Add(1)
-		go func() {
+		internals.WaitGroup.Go(func() {
 			<-ch
 			res, err := client.Do(reqData)
 			if err != nil {
 				l.Error(err.Error())
 			}
 			res.Body.Close()
-			internals.WaitGroup.Done()
-		}()
+		})
 		// For this specific scenario, we do not want to see metrics in the APM Server logs (in order to easily check if the logs contain to "TimelyResponse" back to back).
 		sendMetrics = false
 	case InvokeWaitgroupsRace:
@@ -329,9 +325,8 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 		// create two bytes.Reader to avoid a race condition
 		body := buf.Bytes()
 		wg := sync.WaitGroup{}
-		for i := 0; i < 10; i++ {
-			wg.Add(1)
-			go func() {
+		for range 10 {
+			wg.Go(func() {
 				time.Sleep(delay)
 				reqData, _ := http.NewRequest(http.MethodPost,
 					fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort),
@@ -341,8 +336,7 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 					l.Error(err.Error())
 				}
 				res.Body.Close()
-				wg.Done()
-			}()
+			})
 		}
 		wg.Wait()
 	case InvokeStandardInfo:
@@ -662,12 +656,10 @@ func TestAPMServerRecovery(t *testing.T) {
 	}
 	eventQueueGenerator(eventsChain, eventsChannel)
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		time.Sleep(2500 * time.Millisecond) // Cannot multiply time.Second by a float
 		apmServerInternals.UnlockSignalChannel <- struct{}{}
-	}()
+	})
 	select {
 	case <-runApp(t, logsapiAddr):
 		// Make sure mock APM Server processes the Hangs request

@@ -38,7 +38,7 @@ type RegisterResponse struct {
 
 // NextEventResponse is the response for /event/next
 type NextEventResponse struct {
-	Timestamp          time.Time `json:"timestamp,omitempty"`
+	Timestamp          time.Time `json:"timestamp"`
 	EventType          EventType `json:"eventType"`
 	ShutdownReason     string    `json:"shutdownReason,omitempty"`
 	DeadlineMs         int64     `json:"deadlineMs"`
@@ -96,7 +96,7 @@ func (e *Client) Register(ctx context.Context, filename string) (*RegisterRespon
 	const action = "/register"
 	url := e.baseURL + action
 
-	reqBody, err := json.Marshal(map[string]interface{}{
+	reqBody, err := json.Marshal(map[string]any{
 		"events": []EventType{Invoke, Shutdown},
 	})
 	if err != nil {
