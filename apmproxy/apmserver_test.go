@@ -180,7 +180,7 @@ func TestSetHealthyTransport(t *testing.T) {
 	require.NoError(t, err)
 	apmClient.UpdateStatus(t.Context(), apmproxy.Healthy)
 	assert.Equal(t, apmproxy.Healthy, apmClient.Status)
-	assert.Equal(t, apmClient.ReconnectionCount, -1)
+	assert.Equal(t, -1, apmClient.ReconnectionCount)
 }
 
 func TestSetFailingTransport(t *testing.T) {
@@ -221,7 +221,7 @@ func TestSetPendingTransportExplicitly(t *testing.T) {
 	apmClient.UpdateStatus(t.Context(), apmproxy.Healthy)
 	apmClient.UpdateStatus(t.Context(), apmproxy.Started)
 	assert.Equal(t, apmproxy.Healthy, apmClient.Status)
-	assert.Equal(t, apmClient.ReconnectionCount, -1)
+	assert.Equal(t, -1, apmClient.ReconnectionCount)
 }
 
 func TestSetInvalidTransport(t *testing.T) {
@@ -233,7 +233,7 @@ func TestSetInvalidTransport(t *testing.T) {
 	apmClient.UpdateStatus(t.Context(), apmproxy.Healthy)
 	apmClient.UpdateStatus(t.Context(), "Invalid")
 	assert.Equal(t, apmproxy.Healthy, apmClient.Status)
-	assert.Equal(t, apmClient.ReconnectionCount, -1)
+	assert.Equal(t, -1, apmClient.ReconnectionCount)
 }
 
 func TestEnterBackoffFromHealthy(t *testing.T) {

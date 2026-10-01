@@ -150,7 +150,7 @@ func New(ctx context.Context, opts ...ConfigOption) (*App, error) {
 	}
 
 	if certFile := os.Getenv("ELASTIC_APM_SERVER_CA_CERT_FILE"); certFile != "" {
-		cert, err := os.ReadFile(certFile)
+		cert, err := os.ReadFile(certFile) //nolint:gosec
 		if err != nil {
 			return nil, err
 		}

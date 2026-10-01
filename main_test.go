@@ -127,11 +127,12 @@ func newMockApmServer(t *testing.T, l *zap.SugaredLogger) (*MockServerInternals,
 			}
 		}
 
-		if r.RequestURI == "/intake/v2/events" {
+		switch r.RequestURI {
+		case "/intake/v2/events":
 			apmServerInternals.Data += string(decompressedBytes)
 			l.Debug("APM Payload processed")
 			w.WriteHeader(http.StatusAccepted)
-		} else if r.RequestURI == "/" {
+		case "/":
 			infoPayload, err := json.Marshal(ApmInfo{
 				BuildDate:    time.Now(),
 				BuildSHA:     "7814d524d3602e70b703539c57568cba6964fc20",
@@ -171,6 +172,14 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 		wg.Wait()
 	})
 
+	// Find unused port for the extension to listen to
+	extensionPort, err := e2eTesting.GetFreePort()
+	if err != nil {
+		l.Errorf("Could not find free port for the extension to listen on : %v", err)
+		extensionPort = 8200
+	}
+	t.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", strconv.Itoa(extensionPort))
+
 	lambdaServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.RequestURI {
 		// Extension registration request
@@ -192,7 +201,7 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 				sendNextEventInfo(w, currID, nextEvent.Timeout, nextEvent.Type == Shutdown, l)
 				wg.Add(1)
 				go processMockEvent(mockLogEventQ, currID, nextEvent,
-					os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals, l,
+					extensionPort, &lambdaServerInternals, l,
 					&wg)
 			default:
 				finalShutDown := MockEvent{
@@ -203,7 +212,7 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 				sendNextEventInfo(w, currID, finalShutDown.Timeout, true, l)
 				wg.Add(1)
 				go processMockEvent(mockLogEventQ, currID, finalShutDown,
-					os.Getenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT"), &lambdaServerInternals, l,
+					extensionPort, &lambdaServerInternals, l,
 					&wg)
 			}
 		// Logs API subscription request
@@ -216,14 +225,6 @@ func newMockLambdaServer(t *testing.T, logsapiAddr string, eventsChannel chan Mo
 	strippedLambdaURL := slicedLambdaURL[1]
 	t.Setenv("AWS_LAMBDA_RUNTIME_API", strippedLambdaURL)
 
-	// Find unused port for the extension to listen to
-	extensionPort, err := e2eTesting.GetFreePort()
-	if err != nil {
-		l.Errorf("Could not find free port for the extension to listen on : %v", err)
-		extensionPort = 8200
-	}
-	t.Setenv("ELASTIC_APM_DATA_RECEIVER_SERVER_PORT", strconv.Itoa(extensionPort))
-
 	t.Cleanup(func() { lambdaServer.Close() })
 	return &lambdaServerInternals
 }
@@ -234,7 +235,7 @@ func newTestStructs(_ *testing.T) chan MockEvent {
 	return eventsChannel
 }
 
-func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent, extensionPort string, internals *MockServerInternals, l *zap.SugaredLogger, wg *sync.WaitGroup) {
+func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent, extensionPort int, internals *MockServerInternals, l *zap.SugaredLogger, wg *sync.WaitGroup) {
 	defer wg.Done()
 	queueLogEvent(q, currID, logsapi.PlatformStart, l)
 	client := http.Client{}
@@ -265,7 +266,7 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 	case InvokeStandard:
 		time.Sleep(delay)
 		req, err := http.NewRequest(http.MethodPost,
-			fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort), buf)
+			fmt.Sprintf("http://localhost:%d/intake/v2/events", extensionPort), buf)
 		if err != nil {
 			l.Error(err.Error())
 		}
@@ -278,7 +279,7 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 	case InvokeStandardFlush:
 		time.Sleep(delay)
 		reqData, _ := http.NewRequest(http.MethodPost,
-			fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), buf)
+			fmt.Sprintf("http://localhost:%d/intake/v2/events?flushed=true", extensionPort), buf)
 		res, err := client.Do(reqData)
 		if err != nil {
 			l.Error(err.Error())
@@ -287,7 +288,7 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 	case InvokeLateFlush:
 		time.Sleep(delay)
 		reqData, _ := http.NewRequest(http.MethodPost,
-			fmt.Sprintf("http://localhost:%s/intake/v2/events?flushed=true", extensionPort), buf)
+			fmt.Sprintf("http://localhost:%d/intake/v2/events?flushed=true", extensionPort), buf)
 		internals.WaitGroup.Go(func() {
 			<-ch
 			res, err := client.Do(reqData)
@@ -304,10 +305,10 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 		// create two bytes.Reader to avoid a race condition
 		body := buf.Bytes()
 		reqData0, _ := http.NewRequest(http.MethodPost,
-			fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort),
+			fmt.Sprintf("http://localhost:%d/intake/v2/events", extensionPort),
 			bytes.NewReader(body))
 		reqData1, _ := http.NewRequest(http.MethodPost,
-			fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort),
+			fmt.Sprintf("http://localhost:%d/intake/v2/events", extensionPort),
 			bytes.NewReader(body))
 		res, err := client.Do(reqData0)
 		if err != nil {
@@ -329,7 +330,7 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 			wg.Go(func() {
 				time.Sleep(delay)
 				reqData, _ := http.NewRequest(http.MethodPost,
-					fmt.Sprintf("http://localhost:%s/intake/v2/events", extensionPort),
+					fmt.Sprintf("http://localhost:%d/intake/v2/events", extensionPort),
 					bytes.NewReader(body))
 				res, err := client.Do(reqData)
 				if err != nil {
@@ -342,7 +343,7 @@ func processMockEvent(q chan<- logsapi.LogEvent, currID string, event MockEvent,
 	case InvokeStandardInfo:
 		time.Sleep(delay)
 		req, _ := http.NewRequest(http.MethodPost,
-			fmt.Sprintf("http://localhost:%s/", extensionPort),
+			fmt.Sprintf("http://localhost:%d/", extensionPort),
 			bytes.NewBuffer([]byte(event.APMServerBehavior)))
 		res, err := client.Do(req)
 		if err != nil {

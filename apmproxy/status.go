@@ -17,29 +17,33 @@
 
 package apmproxy
 
-// Constants for the state of the transport used in
+// Status represents the state of the transport used in
 // the backoff implementation.
 type Status string
 
 const (
-	// The apmproxy started but no information can be
-	// inferred on the status of the transport.
+	// Started is returned when the apmproxy started but
+	// no information can be inferred on the status of
+	// the transport.
 	// Either because the apmproxy just started and no
 	// request was forwarded or because it recovered
 	// from a failure.
 	Started Status = "Started"
 
-	// Last request completed successfully.
+	// Healthy is returned when last request completed
+	// successfully.
 	Healthy Status = "Healthy"
 
-	// Last request failed.
+	// Failing is returned when last request failed.
 	Failing Status = "Failing"
 
-	// The APM Server returned status 429 and the extension
+	// RateLimited is returned when the APM Server
+	// returned status 429 and the extension
 	// was ratelimited.
 	RateLimited Status = "RateLimited"
 
-	// A failure on the client was observed. This does not
-	// trigger any backoff mechanism.
+	// ClientFailing is returned when a failure on the
+	// client was observed. This does not trigger any
+	// backoff mechanism.
 	ClientFailing Status = "ClientFailing"
 )
