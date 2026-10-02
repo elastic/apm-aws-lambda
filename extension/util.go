@@ -22,7 +22,7 @@ import (
 )
 
 // PrettyPrint prints formatted, legible json data.
-func PrettyPrint(v interface{}) string {
+func PrettyPrint(v any) string {
 	data, err := json.MarshalIndent(v, "", "\t")
 	if err != nil {
 		return ""

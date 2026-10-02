@@ -27,6 +27,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/elastic/apm-aws-lambda/accumulator"
@@ -138,12 +139,7 @@ func Unzip(l *zap.SugaredLogger, archivePath, destinationFolderPath string) {
 
 // IsStringInSlice is a utility function that checks if a slice of strings contains a specific string.
 func IsStringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, a)
 }
 
 // GetDecompressedBytesFromRequest takes a HTTP request in argument and return the raw (decompressed) bytes of the body.

@@ -61,8 +61,8 @@ func loadAWSOptions(ctx context.Context, cfg aws.Config, logger *zap.SugaredLogg
 
 func loadSecret(ctx context.Context, manager *secretsmanager.Client, secretID string) (string, error) {
 	input := &secretsmanager.GetSecretValueInput{
-		SecretId:     ptrFromString(secretID),
-		VersionStage: ptrFromString("AWSCURRENT"),
+		SecretId:     new(secretID),
+		VersionStage: new("AWSCURRENT"),
 	}
 
 	result, err := manager.GetSecretValue(ctx, input)
@@ -93,8 +93,4 @@ func loadAcmCertificate(ctx context.Context, arn string, cfg aws.Config) (*strin
 	}
 
 	return response.Certificate, nil
-}
-
-func ptrFromString(v string) *string {
-	return &v
 }

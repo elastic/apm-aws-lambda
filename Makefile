@@ -1,7 +1,7 @@
 SHELL = /bin/bash -eo pipefail
 
 GORELEASER_VERSION = "v2.13.3"
-GOLANGCI_LINT_VERSION = "v1.64.4"
+GOLANGCI_LINT_VERSION = "v2.14.0"
 export DOCKER_IMAGE_NAME = observability/apm-lambda-extension
 export DOCKER_REGISTRY = docker.elastic.co
 
@@ -42,8 +42,8 @@ lint-prep:
 
 .PHONY: lint
 lint:
-	@if [ "$(CI)" != "" ]; then go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) version; fi
-	@go run github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --build-tags tools
+	@if [ "$(CI)" != "" ]; then go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) version; fi
+	@go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --build-tags tools
 
 MODULE_DEPS=$(sort $(shell go list -deps -f "{{with .Module}}{{if not .Main}}{{.Path}}{{end}}{{end}}" .))
 
