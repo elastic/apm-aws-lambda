@@ -886,11 +886,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Dependency : github.com/tidwall/sjson
-Version: v1.2.5
+Version: v1.2.7
 Licence type (autodetected): MIT
 --------------------------------------------------------------------------------
 
-Contents of probable licence file $GOMODCACHE/github.com/tidwall/sjson@v1.2.5/LICENSE:
+Contents of probable licence file $GOMODCACHE/github.com/tidwall/sjson@v1.2.7/LICENSE:
 
 The MIT License (MIT)
 
