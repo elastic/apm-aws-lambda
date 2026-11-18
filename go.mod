@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.12.1
-	github.com/tidwall/gjson v1.20.0
+	github.com/tidwall/gjson v1.20.3
 	github.com/tidwall/sjson v1.2.7
 	go.elastic.co/ecszap v1.0.3
 	go.elastic.co/fastjson v1.5.1
@@ -81,7 +81,7 @@ require (
 	github.com/terraform-docs/terraform-config-inspect v0.0.0-20250408153412-5b88c7ed5b63 // indirect
 	github.com/terraform-docs/terraform-docs v0.21.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
-	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/pretty v1.3.0 // indirect
 	github.com/zclconf/go-cty v1.17.0 // indirect
 	go.elastic.co/go-licence-detector v0.10.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
