@@ -856,11 +856,11 @@ Contents of probable licence file $GOMODCACHE/github.com/aws/aws-sdk-go-v2/servi
 
 --------------------------------------------------------------------------------
 Dependency : github.com/tidwall/gjson
-Version: v1.20.0
+Version: v1.20.3
 Licence type (autodetected): MIT
 --------------------------------------------------------------------------------
 
-Contents of probable licence file $GOMODCACHE/github.com/tidwall/gjson@v1.20.0/LICENSE:
+Contents of probable licence file $GOMODCACHE/github.com/tidwall/gjson@v1.20.3/LICENSE:
 
 The MIT License (MIT)
 
@@ -3776,11 +3776,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 --------------------------------------------------------------------------------
 Dependency : github.com/tidwall/pretty
-Version: v1.2.1
+Version: v1.3.0
 Licence type (autodetected): MIT
 --------------------------------------------------------------------------------
 
-Contents of probable licence file $GOMODCACHE/github.com/tidwall/pretty@v1.2.1/LICENSE:
+Contents of probable licence file $GOMODCACHE/github.com/tidwall/pretty@v1.3.0/LICENSE:
 
 The MIT License (MIT)
 
